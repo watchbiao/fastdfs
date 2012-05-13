@@ -3354,7 +3354,7 @@ static int storage_server_trunk_get_binlog_size(struct fast_task_info *pTask)
 			"stat trunk binlog file: %s fail, " \
 			"errno: %d, error info: %s", \
 			 __LINE__, pHeader->cmd, pTask->client_ip, 
-			binlog_filename, errno, strerror(errno));
+			binlog_filename, errno, STRERROR(errno));
 		pClientInfo->total_length = sizeof (TrackerHeader);
 		return errno != 0 ? errno : ENOENT;
 	}
@@ -3363,6 +3363,103 @@ static int storage_server_trunk_get_binlog_size(struct fast_task_info *pTask)
 	long2buff(file_stat.st_size, p);
 
 	pClientInfo->total_length = p - pTask->data;
+	return 0;
+}
+
+static int storage_server_trunk_truncate_binlog_file(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	TrackerHeader *pHeader;
+	int64_t nInPackLen;
+
+	pHeader = (TrackerHeader *)pTask->data;
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof (TrackerHeader);
+
+	if (nInPackLen != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct, " \
+			"expect length: 0", __LINE__, \
+			pHeader->cmd, pTask->client_ip,  nInPackLen);
+		return EINVAL;
+	}
+
+	if (!g_if_use_trunk_file)
+	{
+		logError ("file: " __FILE__ ", line: %d, "
+			"client ip: %s, i don't support trunked file!", \
+			__LINE__, pTask->client_ip);
+		return EINVAL;
+	}
+
+	return trunk_binlog_truncate();
+}
+
+static int storage_server_trunk_delete_binlog_marks(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	TrackerHeader *pHeader;
+	FDFSStorageServer *pStorageServer;
+	FDFSStorageServer *pServerEnd;
+	char full_filename[MAX_PATH_SIZE];
+	int64_t nInPackLen;
+	int result;
+
+	pHeader = (TrackerHeader *)pTask->data;
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof (TrackerHeader);
+
+	if (nInPackLen != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct, " \
+			"expect length: 0", __LINE__, \
+			pHeader->cmd, pTask->client_ip,  nInPackLen);
+		return EINVAL;
+	}
+
+	if (!g_if_use_trunk_file)
+	{
+		logError ("file: " __FILE__ ", line: %d, "
+			"client ip: %s, i don't support trunked file!", \
+			__LINE__, pTask->client_ip);
+		return EINVAL;
+	}
+
+	pServerEnd = g_storage_servers + g_storage_count;
+	for (pStorageServer=g_storage_servers; pStorageServer<pServerEnd; 
+		pStorageServer++)
+	{
+		if (is_local_host_ip(pStorageServer->server.ip_addr))
+		{
+			continue;
+		}
+
+		trunk_get_mark_filename_by_ip_and_port(
+			pStorageServer->server.ip_addr, g_server_port, 
+			full_filename, sizeof(full_filename));
+		if (unlink(full_filename) != 0)
+		{
+			result = errno != 0 ? errno : ENOENT;
+			if (result != ENOENT)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"cmd=%d, client ip: %s, " \
+					"unlink trunk mark file: %s fail, " \
+					"errno: %d, error info: %s", \
+					 __LINE__, pHeader->cmd, \
+					pTask->client_ip, full_filename, \
+					result, STRERROR(result));
+				return result;
+			}
+		}
+	}
+
 	return 0;
 }
 
@@ -6590,6 +6687,12 @@ int storage_deal_task(struct fast_task_info *pTask)
 			break;
 		case STORAGE_PROTO_CMD_TRUNK_GET_BINLOG_SIZE:
 			result = storage_server_trunk_get_binlog_size(pTask);
+			break;
+		case STORAGE_PROTO_CMD_TRUNK_DELETE_BINLOG_MARKS:
+			result = storage_server_trunk_delete_binlog_marks(pTask);
+			break;
+		case STORAGE_PROTO_CMD_TRUNK_TRUNCATE_BINLOG_FILE:
+			result = storage_server_trunk_truncate_binlog_file(pTask);
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \

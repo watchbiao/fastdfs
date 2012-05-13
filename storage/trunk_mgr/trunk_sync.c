@@ -253,6 +253,31 @@ int trunk_binlog_sync_func(void *args)
 	}
 }
 
+int trunk_binlog_truncate()
+{
+	int result;
+
+	if (trunk_binlog_write_cache_len > 0)
+	{
+		if ((result=trunk_binlog_fsync(true)) != 0)
+		{
+			return result;
+		}
+	}
+
+	if (ftruncate(trunk_binlog_fd, 0) != 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"call ftruncate fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, STRERROR(result));
+		return result;
+	}
+
+	return 0;
+}
+
 static int trunk_binlog_fsync_ex(const bool bNeedLock, \
 		const char *buff, int *length)
 {
@@ -474,7 +499,7 @@ int trunk_open_readable_binlog(TrunkBinLogReader *pReader, \
 	return 0;
 }
 
-static char *trunk_get_mark_filename_by_ip_and_port(const char *ip_addr, \
+char *trunk_get_mark_filename_by_ip_and_port(const char *ip_addr, \
 		const int port, char *full_filename, const int filename_size)
 {
 	snprintf(full_filename, filename_size, \
@@ -1187,6 +1212,18 @@ static void* trunk_sync_thread_entrance(void* arg)
 				close(storage_server.sock);
 				trunk_reader_destroy(&reader);
 				sleep(1);
+				continue;
+			}
+		}
+
+		if (reader.binlog_offset == 0)
+		{
+			if (fdfs_deal_no_body_cmd(&storage_server, \
+				STORAGE_PROTO_CMD_TRUNK_TRUNCATE_BINLOG_FILE) != 0)
+			{
+				close(storage_server.sock);
+				trunk_reader_destroy(&reader);
+				sleep(5);
 				continue;
 			}
 		}

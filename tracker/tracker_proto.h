@@ -74,11 +74,13 @@
 #define STORAGE_PROTO_CMD_RESP			TRACKER_PROTO_CMD_RESP
 #define STORAGE_PROTO_CMD_UPLOAD_MASTER_FILE	STORAGE_PROTO_CMD_UPLOAD_FILE
 
-#define STORAGE_PROTO_CMD_TRUNK_ALLOC_SPACE	27  //since V3.00
-#define STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM	28  //since V3.00
-#define STORAGE_PROTO_CMD_TRUNK_FREE_SPACE	29  //since V3.00
-#define STORAGE_PROTO_CMD_TRUNK_SYNC_BINLOG	30  //since V3.00
-#define STORAGE_PROTO_CMD_TRUNK_GET_BINLOG_SIZE	31  //since V3.07
+#define STORAGE_PROTO_CMD_TRUNK_ALLOC_SPACE   	     27  //since V3.00
+#define STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM	     28  //since V3.00
+#define STORAGE_PROTO_CMD_TRUNK_FREE_SPACE	     29  //since V3.00
+#define STORAGE_PROTO_CMD_TRUNK_SYNC_BINLOG	     30  //since V3.00
+#define STORAGE_PROTO_CMD_TRUNK_GET_BINLOG_SIZE	     31  //since V3.07
+#define STORAGE_PROTO_CMD_TRUNK_DELETE_BINLOG_MARKS  32  //since V3.07
+#define STORAGE_PROTO_CMD_TRUNK_TRUNCATE_BINLOG_FILE 33  //since V3.07
 
 //for overwrite all old metadata
 #define STORAGE_SET_METADATA_FLAG_OVERWRITE	'O'
@@ -226,6 +228,8 @@ int fdfs_quit(TrackerServerInfo *pTrackerServer);
 	fdfs_deal_no_body_cmd(pTrackerServer, FDFS_PROTO_CMD_ACTIVE_TEST)
 
 int fdfs_deal_no_body_cmd(TrackerServerInfo *pTrackerServer, const int cmd);
+
+int fdfs_deal_no_body_cmd_ex(const char *ip_addr, const int port, const int cmd);
 
 #define fdfs_split_metadata(meta_buff, meta_count, err_no) \
 		fdfs_split_metadata_ex(meta_buff, FDFS_RECORD_SEPERATOR, \

@@ -200,6 +200,24 @@ int fdfs_deal_no_body_cmd(TrackerServerInfo *pTrackerServer, const int cmd)
 	}
 }
 
+int fdfs_deal_no_body_cmd_ex(const char *ip_addr, const int port, const int cmd)
+{
+	TrackerServerInfo server_info;
+	int result;
+
+	strcpy(server_info.ip_addr, ip_addr);
+	server_info.port = port;
+	server_info.sock = -1;
+	if ((result=tracker_connect_server(&server_info)) != 0)
+	{
+		return result;
+	}
+
+	result = fdfs_deal_no_body_cmd(&server_info, cmd);
+	tracker_disconnect_server(&server_info);
+	return result;
+}
+
 int fdfs_validate_group_name(const char *group_name)
 {
 	const char *p;

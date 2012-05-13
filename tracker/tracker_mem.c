@@ -5311,6 +5311,17 @@ int tracker_mem_check_alive(void *arg)
 
 		(*ppGroup)->pTrunkServer = NULL;
 		tracker_mem_find_trunk_server(*ppGroup, false);
+		if ((*ppGroup)->pTrunkServer != NULL)
+		{
+			if (fdfs_deal_no_body_cmd_ex(
+				(*ppGroup)->pTrunkServer->ip_addr, 
+				(*ppGroup)->storage_port, 
+				STORAGE_PROTO_CMD_TRUNK_DELETE_BINLOG_MARKS) != 0)
+			{
+				(*ppGroup)->pTrunkServer = NULL;  //rollback
+				continue;
+			}
+		}
 		(*ppGroup)->trunk_chg_count++;
 		g_trunk_server_chg_count++;
 
