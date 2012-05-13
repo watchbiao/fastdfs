@@ -1399,7 +1399,9 @@ int storage_service_init()
 	pthread_attr_destroy(&thread_attr);
 
 	last_stat_change_count = g_stat_change_count;
-	g_extra_open_file_flags = g_disk_rw_direct ? O_DIRECT : 0;
+
+	//DO NOT support direct IO !!!
+	//g_extra_open_file_flags = g_disk_rw_direct ? O_DIRECT : 0;
 
 	return result;
 }
@@ -3310,6 +3312,59 @@ static int storage_server_trunk_alloc_space(struct fast_task_info *pTask)
 
 #define storage_server_trunk_free_space(pTask) \
 	storage_server_trunk_confirm_or_free(pTask)
+
+static int storage_server_trunk_get_binlog_size(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	TrackerHeader *pHeader;
+	char *p;
+	char binlog_filename[MAX_PATH_SIZE];
+	struct stat file_stat;
+	int64_t nInPackLen;
+
+	pHeader = (TrackerHeader *)pTask->data;
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+
+	if (nInPackLen != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			INT64_PRINTF_FORMAT" is not correct, " \
+			"expect length: 0", __LINE__, \
+			pHeader->cmd, pTask->client_ip,  nInPackLen);
+		pClientInfo->total_length = sizeof (TrackerHeader);
+		return EINVAL;
+	}
+
+	if (!g_if_use_trunk_file)
+	{
+		logError ("file: " __FILE__ ", line: %d, "
+			"client ip: %s, i don't support trunked file!", \
+			__LINE__, pTask->client_ip);
+		pClientInfo->total_length = sizeof (TrackerHeader);
+		return EINVAL;
+	}
+
+	get_trunk_binlog_filename(binlog_filename);
+	if (stat(binlog_filename, &file_stat) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, " \
+			"stat trunk binlog file: %s fail, " \
+			"errno: %d, error info: %s", \
+			 __LINE__, pHeader->cmd, pTask->client_ip, 
+			binlog_filename, errno, strerror(errno));
+		pClientInfo->total_length = sizeof (TrackerHeader);
+		return errno != 0 ? errno : ENOENT;
+	}
+
+	p = pTask->data + sizeof(TrackerHeader);
+	long2buff(file_stat.st_size, p);
+
+	pClientInfo->total_length = p - pTask->data;
+	return 0;
+}
 
 /**
 request package format:
@@ -6532,6 +6587,9 @@ int storage_deal_task(struct fast_task_info *pTask)
 			break;
 		case STORAGE_PROTO_CMD_TRUNK_SYNC_BINLOG:
 			result = storage_server_trunk_sync_binlog(pTask);
+			break;
+		case STORAGE_PROTO_CMD_TRUNK_GET_BINLOG_SIZE:
+			result = storage_server_trunk_get_binlog_size(pTask);
 			break;
 		default:
 			logError("file: "__FILE__", line: %d, "  \
