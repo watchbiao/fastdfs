@@ -102,6 +102,7 @@ static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
 
 		if (*trunk_server_ip == '\0')
 		{
+			*(pGroup->last_trunk_server_ip) = '\0';
 			pGroup->pTrunkServer = NULL;
 			success_count++;
 			continue;
@@ -117,6 +118,8 @@ static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
 				__LINE__, pTrackerServer->ip_addr, \
 				group_name, trunk_server_ip);
 		}
+		snprintf(pGroup->last_trunk_server_ip, sizeof( \
+			pGroup->last_trunk_server_ip), "%s", trunk_server_ip);
 		success_count++;
 	}
 
