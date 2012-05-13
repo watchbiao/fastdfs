@@ -56,6 +56,24 @@ int insert_into_local_host_ip(const char *client_ip)
 	return 1;
 }
 
+static void log_local_host_ip_addrs()
+{
+	char *p;
+	char *pEnd;
+	char buff[512];
+	int len;
+
+	len = sprintf(buff, "local_host_ip_count: %d,", g_local_host_ip_count);
+	pEnd = g_local_host_ip_addrs + \
+		IP_ADDRESS_SIZE * g_local_host_ip_count;
+	for (p=g_local_host_ip_addrs; p<pEnd; p+=IP_ADDRESS_SIZE)
+	{
+		len += sprintf(buff + len, "  %s", p);
+	}
+
+	logInfo("%s", buff);
+}
+
 void load_local_host_ip_addrs()
 {
 #define STORAGE_MAX_ALIAS_PREFIX_COUNT   4
@@ -93,6 +111,7 @@ void load_local_host_ip_addrs()
 		insert_into_local_host_ip(ip_addresses[k]);
 	}
 
+	log_local_host_ip_addrs();
 	//print_local_host_ip_addrs();
 }
 
