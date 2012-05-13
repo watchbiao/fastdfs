@@ -3362,7 +3362,8 @@ static int storage_server_trunk_get_binlog_size(struct fast_task_info *pTask)
 	p = pTask->data + sizeof(TrackerHeader);
 	long2buff(file_stat.st_size, p);
 
-	pClientInfo->total_length = p - pTask->data;
+	pClientInfo->total_length = sizeof(TrackerHeader)
+				 + FDFS_PROTO_PKG_LEN_SIZE;
 	return 0;
 }
 
