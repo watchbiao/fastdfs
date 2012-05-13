@@ -41,6 +41,7 @@
 #define GROUP_ITEM_STORE_PATH_COUNT          "store_path_count"
 #define GROUP_ITEM_SUBDIR_COUNT_PER_PATH     "subdir_count_per_path"
 #define GROUP_ITEM_CURRENT_TRUNK_FILE_ID     "current_trunk_file_id"
+#define GROUP_ITEM_LAST_TRUNK_SERVER         "last_trunk_server"
 #define GROUP_ITEM_TRUNK_SERVER              "trunk_server"
 
 #define STORAGE_SECTION_NAME_GLOBAL            "Global"
@@ -630,6 +631,14 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path,
 		pGroup->current_trunk_file_id = iniGetIntValue(section_name, \
 			GROUP_ITEM_CURRENT_TRUNK_FILE_ID, &iniContext, 0);
 		pValue = iniGetStrValue(section_name, \
+			GROUP_ITEM_LAST_TRUNK_SERVER, &iniContext);
+		if (pValue != NULL)
+		{
+			snprintf(pGroup->last_trunk_server_ip, 
+				sizeof(pGroup->last_trunk_server_ip), "%s", pValue);
+		}
+
+		pValue = iniGetStrValue(section_name, \
 			GROUP_ITEM_TRUNK_SERVER, &iniContext);
 		if (pValue != NULL && *pValue != '\0')
 		{
@@ -716,6 +725,10 @@ static int tracker_locate_group_trunk_servers(FDFSGroups *pGroups, \
 
 		pGroup->pTrunkServer = pStorage;
 		pGroup->trunk_chg_count++;
+		if (*(pGroup->last_trunk_server_ip) == '\0')
+		{
+			strcpy (pGroup->last_trunk_server_ip, pStorage->ip_addr);
+		}
 	}
 
 	return 0;
@@ -1664,6 +1677,7 @@ int tracker_save_groups()
 				"\t%s=%d\n" \
 				"\t%s=%d\n" \
 				"\t%s=%d\n" \
+				"\t%s=%s\n" \
 				"\t%s=%s\n\n", \
 				(*ppGroup)->group_name, \
 				GROUP_SECTION_NAME_PREFIX, \
@@ -1682,7 +1696,9 @@ int tracker_save_groups()
 				(*ppGroup)->current_trunk_file_id, \
 				GROUP_ITEM_TRUNK_SERVER, \
 				(*ppGroup)->pTrunkServer ? \
-					(*ppGroup)->pTrunkServer->ip_addr : ""
+					(*ppGroup)->pTrunkServer->ip_addr : "",
+				GROUP_ITEM_LAST_TRUNK_SERVER, \
+				(*ppGroup)->last_trunk_server_ip
 			);
 
 		if (write(fd, buff, len) != len)
@@ -4586,7 +4602,7 @@ static int tracker_mem_get_trunk_binlog_size(
 	tracker_disconnect_server(&storage_server);
 
 
-	printf("storage %s:%d, trunk binlog file size: %lld\n", 
+	logDebug("storage %s:%d, trunk binlog file size: %lld", 
 		storage_server.ip_addr, storage_server.port, *file_size);
 	return result;
 }
@@ -4635,9 +4651,22 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 		}
 	}
 
+	if (*(pGroup->last_trunk_server_ip) != '\0' && 
+	    strcmp(pStoreServer->ip_addr, pGroup->last_trunk_server_ip) != 0)
+	{
+		if ((result=fdfs_deal_no_body_cmd_ex(
+			pStoreServer->ip_addr, 
+			pGroup->storage_port, 
+			STORAGE_PROTO_CMD_TRUNK_DELETE_BINLOG_MARKS)) != 0)
+		{
+			return result;
+		}
+	}
+
 	pGroup->pTrunkServer = pStoreServer;
 	pGroup->trunk_chg_count++;
 	g_trunk_server_chg_count++;
+	strcpy (pGroup->last_trunk_server_ip, pStoreServer->ip_addr);
 
 	logInfo("file: "__FILE__", line: %d, " \
 		"group: %s, trunk server set to %s:%d", __LINE__, \
@@ -5311,17 +5340,7 @@ int tracker_mem_check_alive(void *arg)
 
 		(*ppGroup)->pTrunkServer = NULL;
 		tracker_mem_find_trunk_server(*ppGroup, false);
-		if ((*ppGroup)->pTrunkServer != NULL)
-		{
-			if (fdfs_deal_no_body_cmd_ex(
-				(*ppGroup)->pTrunkServer->ip_addr, 
-				(*ppGroup)->storage_port, 
-				STORAGE_PROTO_CMD_TRUNK_DELETE_BINLOG_MARKS) != 0)
-			{
-				(*ppGroup)->pTrunkServer = NULL;  //rollback
-				continue;
-			}
-		}
+
 		(*ppGroup)->trunk_chg_count++;
 		g_trunk_server_chg_count++;
 

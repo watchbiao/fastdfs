@@ -51,6 +51,7 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 		"current_trunk_file_id=%d\n"
 		"pStoreServer=%s\n" 
 		"pTrunkServer=%s\n" 
+		"last_trunk_server_ip=%s\n" 
 		"chg_count=%d\n"
 		"trunk_chg_count=%d\n"
 		"last_source_update=%s\n"
@@ -69,6 +70,7 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 		pGroup->current_trunk_file_id,
 		pGroup->pStoreServer != NULL ? pGroup->pStoreServer->ip_addr : "",
 		pGroup->pTrunkServer != NULL ? pGroup->pTrunkServer->ip_addr : "",
+		pGroup->last_trunk_server_ip,
 		pGroup->chg_count,
 		pGroup->trunk_chg_count,
 		formatDatetime(pGroup->last_source_update, 
