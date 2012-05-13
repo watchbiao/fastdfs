@@ -116,7 +116,7 @@ static pthread_mutex_t mem_thread_lock;
 static pthread_mutex_t mem_file_lock;
 
 static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup);
-static void tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup, 
+static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup, 
 		const bool save);
 
 static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
@@ -4521,15 +4521,118 @@ static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup)
 	}
 }
 
-static void tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup, 
+static int _storage_get_trunk_binlog_size(
+	TrackerServerInfo *pStorageServer, int64_t *file_size)
+{
+	char out_buff[sizeof(TrackerHeader)];
+	char in_buff[8];
+	TrackerHeader *pHeader;
+	char *pInBuff;
+	int64_t in_bytes;
+	int result;
+
+	pHeader = (TrackerHeader *)out_buff;
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader->cmd = STORAGE_PROTO_CMD_TRUNK_GET_BINLOG_SIZE;
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
+			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"storage server %s:%d, send data fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, pStorageServer->ip_addr, \
+			pStorageServer->port, \
+			result, STRERROR(result));
+		return result;
+	}
+
+	pInBuff = in_buff;
+	if ((result=fdfs_recv_response(pStorageServer, \
+		&pInBuff, sizeof(in_buff), &in_bytes)) != 0)
+	{
+		return result;
+	}
+
+	if (in_bytes != sizeof(in_buff))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"storage server %s:%d, recv body length: " \
+			INT64_PRINTF_FORMAT" != %d",  \
+			__LINE__, pStorageServer->ip_addr, \
+			pStorageServer->port, in_bytes, (int)sizeof(in_buff));
+		return EINVAL;
+	}
+
+	*file_size = buff2long(in_buff);
+	return 0;
+}
+
+static int tracker_mem_get_trunk_binlog_size(
+	const char *storage_ip, const int port, int64_t *file_size)
+{
+	TrackerServerInfo storage_server;
+	int result;
+
+	*file_size = 0;
+	strcpy(storage_server.ip_addr, storage_ip);
+	storage_server.port = port;
+	storage_server.sock = -1;
+	if ((result=tracker_connect_server(&storage_server)) != 0)
+	{
+		return result;
+	}
+
+	result = _storage_get_trunk_binlog_size(&storage_server, file_size);
+	tracker_disconnect_server(&storage_server);
+
+
+	printf("storage %s:%d, trunk binlog file size: %lld\n", 
+		storage_server.ip_addr, storage_server.port, *file_size);
+	return result;
+}
+
+static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup, 
 		const bool save)
 {
 	FDFSStorageDetail *pStoreServer;
+	FDFSStorageDetail **ppServer;
+	FDFSStorageDetail **ppServerEnd;
+	int result;
+	int64_t file_size;
+	int64_t max_file_size;
 
 	pStoreServer = pGroup->pStoreServer;
 	if (pStoreServer == NULL)
 	{
-		return;
+		return ENOENT;
+	}
+
+	result = tracker_mem_get_trunk_binlog_size(pStoreServer->ip_addr, 
+		pGroup->storage_port, &max_file_size);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	ppServerEnd = pGroup->active_servers + pGroup->active_count;
+	for (ppServer=pGroup->active_servers; ppServer<ppServerEnd; ppServer++)
+	{
+		if (*ppServer == pStoreServer)
+		{
+			continue;
+		}
+
+		result = tracker_mem_get_trunk_binlog_size((*ppServer)->ip_addr, 
+			pGroup->storage_port, &file_size);
+		if (result != 0)
+		{
+			continue;
+		}
+
+		if (file_size > max_file_size)
+		{
+			pStoreServer = *ppServer;
+		}
 	}
 
 	pGroup->pTrunkServer = pStoreServer;
@@ -4542,8 +4645,10 @@ static void tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 		pGroup->storage_port);
 	if (save)
 	{
-		tracker_save_groups();
+		return tracker_save_groups();
 	}
+
+	return 0;
 }
 
 int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
