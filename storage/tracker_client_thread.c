@@ -2000,6 +2000,10 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_append_count);
 		long2buff(g_storage_stat.success_append_count, \
 			pStatBuff->sz_success_append_count);
+		long2buff(g_storage_stat.total_modify_count, \
+			pStatBuff->sz_total_modify_count);
+		long2buff(g_storage_stat.success_modify_count, \
+			pStatBuff->sz_success_modify_count);
 		long2buff(g_storage_stat.total_download_count, \
 			pStatBuff->sz_total_download_count);
 		long2buff(g_storage_stat.success_download_count, \
@@ -2032,6 +2036,10 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_append_bytes);
 		long2buff(g_storage_stat.success_append_bytes, \
 			pStatBuff->sz_success_append_bytes);
+		long2buff(g_storage_stat.total_modify_bytes, \
+			pStatBuff->sz_total_modify_bytes);
+		long2buff(g_storage_stat.success_modify_bytes, \
+			pStatBuff->sz_success_modify_bytes);
 		long2buff(g_storage_stat.total_download_bytes, \
 			pStatBuff->sz_total_download_bytes);
 		long2buff(g_storage_stat.success_download_bytes, \

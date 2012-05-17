@@ -1780,6 +1780,10 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 				pStatBuff->sz_total_append_count);
 		long2buff(pStorageStat->success_append_count, \
 				pStatBuff->sz_success_append_count);
+		long2buff(pStorageStat->total_modify_count, \
+				pStatBuff->sz_total_modify_count);
+		long2buff(pStorageStat->success_modify_count, \
+				pStatBuff->sz_success_modify_count);
 		long2buff(pStorageStat->total_set_meta_count, \
 				pStatBuff->sz_total_set_meta_count);
 		long2buff(pStorageStat->success_set_meta_count, \
@@ -1818,6 +1822,10 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 				pStatBuff->sz_total_append_bytes);
 		long2buff(pStorageStat->success_append_bytes, \
 				pStatBuff->sz_success_append_bytes);
+		long2buff(pStorageStat->total_modify_bytes, \
+				pStatBuff->sz_total_modify_bytes);
+		long2buff(pStorageStat->success_modify_bytes, \
+				pStatBuff->sz_success_modify_bytes);
 		long2buff(pStorageStat->total_download_bytes, \
 				pStatBuff->sz_total_download_bytes);
 		long2buff(pStorageStat->success_download_bytes, \
@@ -3038,6 +3046,10 @@ static int tracker_deal_storage_beat(struct fast_task_info *pTask)
 			buff2long(pStatBuff->sz_total_append_count);
 		pStat->success_append_count = \
 			buff2long(pStatBuff->sz_success_append_count);
+		pStat->total_modify_count = \
+			buff2long(pStatBuff->sz_total_modify_count);
+		pStat->success_modify_count = \
+			buff2long(pStatBuff->sz_success_modify_count);
 		pStat->total_download_count = \
 			buff2long(pStatBuff->sz_total_download_count);
 		pStat->success_download_count = \
@@ -3074,6 +3086,10 @@ static int tracker_deal_storage_beat(struct fast_task_info *pTask)
 			buff2long(pStatBuff->sz_total_append_bytes);
 		pStat->success_append_bytes = \
 			buff2long(pStatBuff->sz_success_append_bytes);
+		pStat->total_modify_bytes = \
+			buff2long(pStatBuff->sz_total_modify_bytes);
+		pStat->success_modify_bytes = \
+			buff2long(pStatBuff->sz_success_modify_bytes);
 		pStat->total_download_bytes = \
 			buff2long(pStatBuff->sz_total_download_bytes);
 		pStat->success_download_bytes = \
