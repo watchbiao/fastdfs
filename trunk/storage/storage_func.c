@@ -63,6 +63,8 @@
 #define STAT_ITEM_SUCCESS_UPLOAD	"success_upload_count"
 #define STAT_ITEM_TOTAL_APPEND		"total_append_count"
 #define STAT_ITEM_SUCCESS_APPEND	"success_append_count"
+#define STAT_ITEM_TOTAL_MODIFY		"total_modify_count"
+#define STAT_ITEM_SUCCESS_MODIFY	"success_modify_count"
 #define STAT_ITEM_TOTAL_DOWNLOAD	"total_download_count"
 #define STAT_ITEM_SUCCESS_DOWNLOAD	"success_download_count"
 #define STAT_ITEM_LAST_SOURCE_UPD	"last_source_update"
@@ -81,6 +83,8 @@
 #define STAT_ITEM_SUCCESS_UPLOAD_BYTES	"success_upload_bytes"
 #define STAT_ITEM_TOTAL_APPEND_BYTES	"total_append_bytes"
 #define STAT_ITEM_SUCCESS_APPEND_BYTES	"success_append_bytes"
+#define STAT_ITEM_TOTAL_MODIFY_BYTES	"total_modify_bytes"
+#define STAT_ITEM_SUCCESS_MODIFY_BYTES	"success_modify_bytes"
 #define STAT_ITEM_TOTAL_DOWNLOAD_BYTES	"total_download_bytes"
 #define STAT_ITEM_SUCCESS_DOWNLOAD_BYTES "success_download_bytes"
 #define STAT_ITEM_TOTAL_SYNC_IN_BYTES      "total_sync_in_bytes"
@@ -209,6 +213,10 @@ static int storage_open_stat_file()
 				STAT_ITEM_TOTAL_APPEND, &iniContext, 0);
 		g_storage_stat.success_append_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_APPEND, &iniContext, 0);
+		g_storage_stat.total_modify_count = iniGetInt64Value(NULL, \
+				STAT_ITEM_TOTAL_MODIFY, &iniContext, 0);
+		g_storage_stat.success_modify_count = iniGetInt64Value(NULL, \
+				STAT_ITEM_SUCCESS_MODIFY, &iniContext, 0);
 		g_storage_stat.total_download_count = iniGetInt64Value(NULL,  \
 				STAT_ITEM_TOTAL_DOWNLOAD, &iniContext, 0);
 		g_storage_stat.success_download_count = iniGetInt64Value(NULL, \
@@ -245,6 +253,10 @@ static int storage_open_stat_file()
 				STAT_ITEM_TOTAL_APPEND_BYTES, &iniContext, 0);
 		g_storage_stat.success_append_bytes = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_APPEND_BYTES, &iniContext, 0);
+		g_storage_stat.total_modify_bytes = iniGetInt64Value(NULL, \
+				STAT_ITEM_TOTAL_MODIFY_BYTES, &iniContext, 0);
+		g_storage_stat.success_modify_bytes = iniGetInt64Value(NULL, \
+				STAT_ITEM_SUCCESS_MODIFY_BYTES, &iniContext, 0);
 		g_storage_stat.total_download_bytes = iniGetInt64Value(NULL, \
 				STAT_ITEM_TOTAL_DOWNLOAD_BYTES, &iniContext, 0);
 		g_storage_stat.success_download_bytes = iniGetInt64Value(NULL, \
@@ -360,6 +372,10 @@ int storage_write_to_stat_file()
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
@@ -369,6 +385,8 @@ int storage_write_to_stat_file()
 		STAT_ITEM_SUCCESS_UPLOAD, g_storage_stat.success_upload_count, \
 		STAT_ITEM_TOTAL_APPEND, g_storage_stat.total_append_count, \
 		STAT_ITEM_SUCCESS_APPEND, g_storage_stat.success_append_count, \
+		STAT_ITEM_TOTAL_MODIFY, g_storage_stat.total_modify_count, \
+		STAT_ITEM_SUCCESS_MODIFY, g_storage_stat.success_modify_count, \
 		STAT_ITEM_TOTAL_DOWNLOAD, g_storage_stat.total_download_count, \
 		STAT_ITEM_SUCCESS_DOWNLOAD, \
 		g_storage_stat.success_download_count, \
@@ -396,6 +414,10 @@ int storage_write_to_stat_file()
 		g_storage_stat.total_append_bytes,
 		STAT_ITEM_SUCCESS_APPEND_BYTES, \
 		g_storage_stat.success_append_bytes, \
+		STAT_ITEM_TOTAL_MODIFY_BYTES, \
+		g_storage_stat.total_modify_bytes,
+		STAT_ITEM_SUCCESS_MODIFY_BYTES, \
+		g_storage_stat.success_modify_bytes, \
 		STAT_ITEM_TOTAL_DOWNLOAD_BYTES, \
 		g_storage_stat.total_download_bytes, \
 		STAT_ITEM_SUCCESS_DOWNLOAD_BYTES, \
