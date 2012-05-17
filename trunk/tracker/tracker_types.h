@@ -143,6 +143,8 @@ typedef struct
 	int64_t success_upload_count;
 	int64_t total_append_count;
 	int64_t success_append_count;
+	int64_t total_modify_count;
+	int64_t success_modify_count;
 	int64_t total_set_meta_count;
 	int64_t success_set_meta_count;
 	int64_t total_delete_count;
@@ -159,6 +161,8 @@ typedef struct
 	int64_t success_upload_bytes;
 	int64_t total_append_bytes;
 	int64_t success_append_bytes;
+	int64_t total_modify_bytes;
+	int64_t success_modify_bytes;
 	int64_t total_download_bytes;
 	int64_t success_download_bytes;
 	int64_t total_sync_in_bytes;
