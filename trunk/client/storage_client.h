@@ -442,6 +442,61 @@ int storage_append_by_filebuff(TrackerServerInfo *pTrackerServer, \
 		const char *appender_filename);
 
 
+/**
+* modify file to storage server (by local filename)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       local_filename: local filename to upload
+*       file_offset: the start offset to modify appender file
+*	group_name: the group name 
+*	appender_filename: the appender filename
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_modify_by_filename(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *local_filename,\
+		const int64_t file_offset, const char *group_name, \
+		const char *appender_filename);
+
+
+/**
+* modify file to storage server (by callback)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       callback: callback function to send file content to storage server
+*       arg: callback extra arguement
+*       file_offset: the start offset to modify appender file
+*       file_size: the file size
+*	group_name: the group name 
+*	appender_filename: the appender filename
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_modify_by_callback(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		UploadCallback callback, void *arg, \
+		const int64_t file_offset, const int64_t file_size, \
+		const char *group_name, const char *appender_filename);
+
+
+/**
+* modify file to storage server (by file buff)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       file_buff: file content/buff
+*       file_offset: the start offset to modify appender file
+*       file_size: file size (bytes)
+*	group_name: the group name
+*	appender_filename: the appender filename
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_modify_by_filebuff(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *file_buff, \
+		const int64_t file_offset, const int64_t file_size, \
+		const char *group_name, const char *appender_filename);
+
+
 #define storage_query_file_info(pTrackerServer, pStorageServer, \
 		group_name, filename, pFileInfo) \
 	storage_query_file_info_ex(pTrackerServer, pStorageServer, \
