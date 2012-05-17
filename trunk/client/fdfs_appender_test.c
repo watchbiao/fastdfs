@@ -71,11 +71,13 @@ int main(int argc, char *argv[])
 	char szPortPart[16];
 	int url_len;
 	time_t ts;
-	int64_t file_size;
+	int64_t file_offset;
+	int64_t file_size = 0;
 	int store_path_index;
 	FDFSFileInfo file_info;
 	int upload_type;
 	const char *file_ext_name;
+	struct stat stat_buf;
 
 	printf("This is FastDFS client test program v%d.%02d\n" \
 "\nCopyright (C) 2008, Happy Fish / YuQing\n" \
@@ -171,11 +173,20 @@ int main(int argc, char *argv[])
 
 	if (upload_type == FDFS_UPLOAD_BY_FILE)
 	{
-		result = storage_upload_appender_by_filename(pTrackerServer, \
-				&storageServer, store_path_index, \
-				local_filename, file_ext_name, \
-				meta_list, meta_count, \
+		if (stat(local_filename, &stat_buf) == 0 && \
+				S_ISREG(stat_buf.st_mode))
+		{
+			file_size = stat_buf.st_size;
+			result = storage_upload_appender_by_filename ( \
+				pTrackerServer, &storageServer, \
+				store_path_index, local_filename, \
+				file_ext_name, meta_list, meta_count, \
 				group_name, remote_filename);
+		}
+		else
+		{
+			result = errno != 0 ? errno : ENOENT;
+		}
 
 		printf("storage_upload_appender_by_filename\n");
 	}
@@ -198,8 +209,6 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		struct stat stat_buf;
-
 		if (stat(local_filename, &stat_buf) == 0 && \
 				S_ISREG(stat_buf.st_mode))
 		{
@@ -210,6 +219,10 @@ int main(int argc, char *argv[])
 					local_filename, file_size, \
 					file_ext_name, meta_list, meta_count, \
 					group_name, remote_filename);
+		}
+		else
+		{
+			result = errno != 0 ? errno : ENOENT;
 		}
 
 		printf("storage_upload_appender_by_callback\n");
@@ -284,8 +297,6 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		struct stat stat_buf;
-
 		if (stat(local_filename, &stat_buf) == 0 && \
 			S_ISREG(stat_buf.st_mode))
 		{
@@ -294,6 +305,10 @@ int main(int argc, char *argv[])
 					&storageServer, uploadFileCallback, \
 					local_filename, file_size, \
 					group_name, appender_filename);
+		}
+		else
+		{
+			result = errno != 0 ? errno : ENOENT;
 		}
 
 		printf("storage_append_by_callback\n");
@@ -316,6 +331,80 @@ int main(int argc, char *argv[])
 		file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
 		szDatetime, sizeof(szDatetime)));
 	printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
+	if (file_info.file_size != 2 * file_size)
+	{
+		fprintf(stderr, "file size: "INT64_PRINTF_FORMAT \
+			" != "INT64_PRINTF_FORMAT"!!!", file_info.file_size, \
+			2 * file_size);
+	}
+
+	file_offset = file_info.file_size;
+	if (upload_type == FDFS_UPLOAD_BY_FILE)
+	{
+		result = storage_modify_by_filename(pTrackerServer, \
+				&storageServer, local_filename, \
+				file_offset, group_name, \
+				appender_filename);
+
+		printf("storage_modify_by_filename\n");
+	}
+	else if (upload_type == FDFS_UPLOAD_BY_BUFF)
+	{
+		char *file_content;
+		if ((result=getFileContent(local_filename, \
+				&file_content, &file_size)) == 0)
+		{
+			result = storage_modify_by_filebuff(pTrackerServer, \
+				&storageServer, file_content, \
+				file_offset, file_size, group_name, \
+				appender_filename);
+			free(file_content);
+		}
+
+		printf("storage_modify_by_filebuff\n");
+	}
+	else
+	{
+		if (stat(local_filename, &stat_buf) == 0 && \
+			S_ISREG(stat_buf.st_mode))
+		{
+			file_size = stat_buf.st_size;
+			result = storage_modify_by_callback(pTrackerServer, \
+					&storageServer, uploadFileCallback, \
+					local_filename, file_offset, \
+					file_size, group_name, appender_filename);
+		}
+		else
+		{
+			result = errno != 0 ? errno : ENOENT;
+		}
+
+		printf("storage_modify_by_callback\n");
+	}
+
+	if (result != 0)
+	{
+		printf("modify file fail, " \
+			"error no: %d, error info: %s\n", \
+			result, STRERROR(result));
+		fdfs_quit(&storageServer);
+		tracker_disconnect_server(&storageServer);
+		fdfs_client_destroy();
+		return result;
+	}
+	printf("modify file successfully.\n");
+	fdfs_get_file_info(group_name, remote_filename, &file_info);
+	printf("source ip address: %s\n", file_info.source_ip_addr);
+	printf("file timestamp=%s\n", formatDatetime(
+		file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
+		szDatetime, sizeof(szDatetime)));
+	printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
+	if (file_info.file_size != 3 * file_size)
+	{
+		fprintf(stderr, "file size: "INT64_PRINTF_FORMAT \
+			" != "INT64_PRINTF_FORMAT"!!!", file_info.file_size, \
+			3 * file_size);
+	}
 
 	fdfs_quit(&storageServer);
 	tracker_disconnect_server(&storageServer);
