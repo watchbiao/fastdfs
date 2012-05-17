@@ -618,6 +618,29 @@ void dio_append_finish_clean_up(struct fast_task_info *pTask)
 	}
 }
 
+void dio_modify_finish_clean_up(struct fast_task_info *pTask)
+{
+	StorageFileContext *pFileContext;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+	if (pFileContext->fd > 0)
+	{
+		/* if file does not write to the end, log error info
+                */
+		if (pFileContext->offset >= pFileContext->start && \
+		    pFileContext->offset < pFileContext->end)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"client ip: %s, modify file: %s fail", \
+				__LINE__, pTask->client_ip, \
+				pFileContext->filename);
+		}
+
+		close(pFileContext->fd);
+		pFileContext->fd = -1;
+	}
+}
+
 void dio_trunk_write_finish_clean_up(struct fast_task_info *pTask)
 {
 	StorageFileContext *pFileContext;
