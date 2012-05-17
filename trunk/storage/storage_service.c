@@ -5331,7 +5331,7 @@ static int storage_sync_modify_file(struct fast_task_info *pTask)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, in request pkg, " \
-			"append bytes: "INT64_PRINTF_FORMAT" is invalid, "\
+			"modify file bytes: "INT64_PRINTF_FORMAT" is invalid, "\
 			"which < 0", __LINE__, pTask->client_ip, modify_bytes);
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
