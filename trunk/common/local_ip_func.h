@@ -18,7 +18,7 @@
 #include "common_define.h"
 
 #define FAST_IF_ALIAS_PREFIX_MAX_SIZE 32
-#define FAST_MAX_LOCAL_IP_ADDRS	  4
+#define FAST_MAX_LOCAL_IP_ADDRS	  16
 
 #ifdef __cplusplus
 extern "C" {
