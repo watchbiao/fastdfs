@@ -296,8 +296,9 @@ FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename bytes : filename
 file size bytes: file content
 **/
-static int storage_sync_append_file(TrackerServerInfo *pStorageServer, \
-	StorageBinLogReader *pReader, StorageBinLogRecord *pRecord)
+static int storage_sync_modify_file(TrackerServerInfo *pStorageServer, \
+	StorageBinLogReader *pReader, StorageBinLogRecord *pRecord, \
+	const char cmd)
 {
 #define FIELD_COUNT  3
 	TrackerHeader *pHeader;
@@ -311,7 +312,7 @@ static int storage_sync_append_file(TrackerServerInfo *pStorageServer, \
 	int64_t in_bytes;
 	int64_t total_send_bytes;
 	int64_t start_offset;
-	int64_t append_length;
+	int64_t modify_length;
 	int result;
 	int count;
 
@@ -325,7 +326,7 @@ static int storage_sync_append_file(TrackerServerInfo *pStorageServer, \
 	}
 
 	start_offset = strtoll((fields[1]), NULL, 10);
-	append_length = strtoll((fields[2]), NULL, 10);
+	modify_length = strtoll((fields[2]), NULL, 10);
 	
 	pRecord->filename_len = strlen(pRecord->filename);
 	pRecord->true_filename_len = pRecord->filename_len;
@@ -362,14 +363,14 @@ static int storage_sync_append_file(TrackerServerInfo *pStorageServer, \
 		}
 	}
 
-	if (stat_buf.st_size < start_offset + append_length)
+	if (stat_buf.st_size < start_offset + modify_length)
 	{
 		logWarning("file: "__FILE__", line: %d, " \
 			"appender file: %s 'size: "INT64_PRINTF_FORMAT \
 			" < "INT64_PRINTF_FORMAT", maybe some mistakes " \
 			"happened, skip sync this appender file", __LINE__, \
 			full_filename, stat_buf.st_size, \
-			start_offset + append_length);
+			start_offset + modify_length);
 
 		return 0;
 	}
@@ -385,10 +386,10 @@ static int storage_sync_append_file(TrackerServerInfo *pStorageServer, \
 
 		body_len = 3 * FDFS_PROTO_PKG_LEN_SIZE + \
 				4 + FDFS_GROUP_NAME_MAX_LEN + \
-				pRecord->filename_len + append_length;
+				pRecord->filename_len + modify_length;
 
 		long2buff(body_len, pHeader->pkg_len);
-		pHeader->cmd = STORAGE_PROTO_CMD_SYNC_APPEND_FILE;
+		pHeader->cmd = cmd;
 		pHeader->status = 0;
 
 		p = out_buff + sizeof(TrackerHeader);
@@ -399,7 +400,7 @@ static int storage_sync_append_file(TrackerServerInfo *pStorageServer, \
 		long2buff(start_offset, p);
 		p += FDFS_PROTO_PKG_LEN_SIZE;
 
-		long2buff(append_length, p);
+		long2buff(modify_length, p);
 		p += FDFS_PROTO_PKG_LEN_SIZE;
 
 		int2buff(pRecord->timestamp, p);
@@ -424,7 +425,7 @@ static int storage_sync_append_file(TrackerServerInfo *pStorageServer, \
 		}
 
 		if ((result=tcpsendfile_ex(pStorageServer->sock, \
-			full_filename, start_offset, append_length, \
+			full_filename, start_offset, modify_length, \
 			g_fdfs_network_timeout, &total_send_bytes)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -813,8 +814,20 @@ static int storage_sync_data(StorageBinLogReader *pReader, \
 					STORAGE_PROTO_CMD_SYNC_UPDATE_FILE);
 			break;
 		case STORAGE_OP_TYPE_SOURCE_APPEND_FILE:
-			result = storage_sync_append_file(pStorageServer, \
-					pReader, pRecord);
+			result = storage_sync_modify_file(pStorageServer, \
+					pReader, pRecord, \
+					STORAGE_PROTO_CMD_SYNC_APPEND_FILE);
+			if (result == ENOENT)  //resync appender file
+			{
+			result = storage_sync_copy_file(pStorageServer, \
+					pReader, pRecord, \
+					STORAGE_PROTO_CMD_SYNC_UPDATE_FILE);
+			}
+			break;
+		case STORAGE_OP_TYPE_SOURCE_MODIFY_FILE:
+			result = storage_sync_modify_file(pStorageServer, \
+					pReader, pRecord, \
+					STORAGE_PROTO_CMD_SYNC_MODIFY_FILE);
 			if (result == ENOENT)  //resync appender file
 			{
 			result = storage_sync_copy_file(pStorageServer, \
@@ -849,6 +862,8 @@ static int storage_sync_data(StorageBinLogReader *pReader, \
 					pRecord);
 			break;
 		case STORAGE_OP_TYPE_REPLICA_APPEND_FILE:
+			return 0;
+		case STORAGE_OP_TYPE_REPLICA_MODIFY_FILE:
 			return 0;
 		default:
 			logError("file: "__FILE__", line: %d, " \
