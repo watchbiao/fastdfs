@@ -415,6 +415,57 @@ int storage_append_by_callback1(TrackerServerInfo *pTrackerServer, \
 		UploadCallback callback, void *arg, \
 		const int64_t file_size, const char *appender_file_id);
 
+/**
+* modify file to storage server (by local filename)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       local_filename: local filename to upload
+*       file_offset: the start offset to modify appender file
+*	group_name: the group name 
+*       appender_file_id: the appender file id
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_modify_by_filename1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *local_filename,\
+		const int64_t file_offset, const char *appender_file_id);
+
+
+/**
+* modify file to storage server (by callback)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       callback: callback function to send file content to storage server
+*       arg: callback extra arguement
+*       file_offset: the start offset to modify appender file
+*       file_size: the file size
+*       appender_file_id: the appender file id
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_modify_by_callback1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, \
+		UploadCallback callback, void *arg, \
+		const int64_t file_offset, const int64_t file_size, \
+		const char *appender_file_id);
+
+
+/**
+* modify file to storage server (by file buff)
+* params:
+*       pTrackerServer: tracker server
+*       pStorageServer: storage server
+*       file_buff: file content/buff
+*       file_offset: the start offset to modify appender file
+*       file_size: file size (bytes)
+*       appender_file_id: the appender file id
+* return: 0 success, !=0 fail, return the error code
+**/
+int storage_modify_by_filebuff1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, const char *file_buff, \
+		const int64_t file_offset, const int64_t file_size, \
+		const char *appender_file_id);
+
 
 #define storage_query_file_info1(pTrackerServer, pStorageServer, file_id, \
 		pFileInfo) \
