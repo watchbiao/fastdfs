@@ -4623,6 +4623,7 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 	pFileContext =  &(pClientInfo->file_context);
 
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
+	pClientInfo->total_length = sizeof (TrackerHeader);
 
 	if (nInPackLen <= 2 * FDFS_PROTO_PKG_LEN_SIZE)
 	{
@@ -4633,7 +4634,6 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 			STORAGE_PROTO_CMD_TRUNCATE_FILE, \
 			pTask->client_ip,  \
 			nInPackLen, 2 * FDFS_PROTO_PKG_LEN_SIZE);
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -4651,7 +4651,6 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 			"client ip:%s, invalid appender_filename " \
 			"bytes: %d", __LINE__, \
 			pTask->client_ip, appender_filename_len);
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -4661,7 +4660,6 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 			"client ip: %s, pkg length is not correct, " \
 			"invalid file bytes: "INT64_PRINTF_FORMAT, \
 			__LINE__, pTask->client_ip, remain_bytes);
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
@@ -4673,12 +4671,10 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 	if ((result=storage_split_filename_ex(appender_filename, \
 		&filename_len, true_filename, &store_path_index)) != 0)
 	{
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 	if ((result=fdfs_check_data_filename(true_filename, filename_len)) != 0)
 	{
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
 
@@ -4693,13 +4689,11 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 				"is not a regular file", __LINE__, \
 				pTask->client_ip, pFileContext->filename);
 
-			pClientInfo->total_length = sizeof(TrackerHeader);
 			return EINVAL;
 		}
 	}
 	else
 	{
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		result = errno != 0 ? errno : ENOENT;
 		if (result == ENOENT)
 		{
@@ -4737,13 +4731,17 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 			__LINE__, pTask->client_ip, appender_filename, \
 			appender_file_size);
 
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
 	if (remain_bytes == stat_buf.st_size)
 	{
-		pClientInfo->total_length = sizeof(TrackerHeader);
+		logWarning("file: "__FILE__", line: %d, " \
+			"client ip: %s, truncated file size: " \
+			INT64_PRINTF_FORMAT" == appender file size: " \
+			OFF_PRINTF_FORMAT", skip truncate file", \
+			__LINE__, pTask->client_ip, \
+			remain_bytes, stat_buf.st_size);
 		return 0;
 	}
 	if (remain_bytes > stat_buf.st_size)
@@ -4755,7 +4753,6 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 			OFF_PRINTF_FORMAT, __LINE__, pTask->client_ip, \
 			remain_bytes, stat_buf.st_size);
 
-		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
 
