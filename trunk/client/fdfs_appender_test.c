@@ -271,7 +271,7 @@ int main(int argc, char *argv[])
 	printf("file crc32=%u\n", file_info.crc32);
 	printf("file url: %s\n", file_url);
 
-	//sleep(70);
+	sleep(90);
 	strcpy(appender_filename, remote_filename);
 	if (storage_truncate_file(pTrackerServer, &storageServer, \
 			file_size / 2, group_name, appender_filename) != 0)
@@ -299,6 +299,7 @@ int main(int argc, char *argv[])
 			" != "INT64_PRINTF_FORMAT"!!!", file_info.file_size, file_size / 2);
 	}
 
+	sleep(120);
 	if (upload_type == FDFS_UPLOAD_BY_FILE)
 	{
 		result = storage_append_by_filename(pTrackerServer, \
