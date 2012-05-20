@@ -65,6 +65,8 @@
 #define STAT_ITEM_SUCCESS_APPEND	"success_append_count"
 #define STAT_ITEM_TOTAL_MODIFY		"total_modify_count"
 #define STAT_ITEM_SUCCESS_MODIFY	"success_modify_count"
+#define STAT_ITEM_TOTAL_TRUNCATE	"total_truncate_count"
+#define STAT_ITEM_SUCCESS_TRUNCATE	"success_truncate_count"
 #define STAT_ITEM_TOTAL_DOWNLOAD	"total_download_count"
 #define STAT_ITEM_SUCCESS_DOWNLOAD	"success_download_count"
 #define STAT_ITEM_LAST_SOURCE_UPD	"last_source_update"
@@ -217,6 +219,10 @@ static int storage_open_stat_file()
 				STAT_ITEM_TOTAL_MODIFY, &iniContext, 0);
 		g_storage_stat.success_modify_count = iniGetInt64Value(NULL, \
 				STAT_ITEM_SUCCESS_MODIFY, &iniContext, 0);
+		g_storage_stat.total_truncate_count = iniGetInt64Value(NULL, \
+				STAT_ITEM_TOTAL_TRUNCATE, &iniContext, 0);
+		g_storage_stat.success_truncate_count = iniGetInt64Value(NULL, \
+				STAT_ITEM_SUCCESS_TRUNCATE, &iniContext, 0);
 		g_storage_stat.total_download_count = iniGetInt64Value(NULL,  \
 				STAT_ITEM_TOTAL_DOWNLOAD, &iniContext, 0);
 		g_storage_stat.success_download_count = iniGetInt64Value(NULL, \
@@ -376,6 +382,8 @@ int storage_write_to_stat_file()
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
+		"%s="INT64_PRINTF_FORMAT"\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
@@ -387,6 +395,8 @@ int storage_write_to_stat_file()
 		STAT_ITEM_SUCCESS_APPEND, g_storage_stat.success_append_count, \
 		STAT_ITEM_TOTAL_MODIFY, g_storage_stat.total_modify_count, \
 		STAT_ITEM_SUCCESS_MODIFY, g_storage_stat.success_modify_count, \
+		STAT_ITEM_TOTAL_TRUNCATE, g_storage_stat.total_truncate_count, \
+		STAT_ITEM_SUCCESS_TRUNCATE, g_storage_stat.success_truncate_count, \
 		STAT_ITEM_TOTAL_DOWNLOAD, g_storage_stat.total_download_count, \
 		STAT_ITEM_SUCCESS_DOWNLOAD, \
 		g_storage_stat.success_download_count, \

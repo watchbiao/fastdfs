@@ -2004,6 +2004,10 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_modify_count);
 		long2buff(g_storage_stat.success_modify_count, \
 			pStatBuff->sz_success_modify_count);
+		long2buff(g_storage_stat.total_truncate_count, \
+			pStatBuff->sz_total_truncate_count);
+		long2buff(g_storage_stat.success_truncate_count, \
+			pStatBuff->sz_success_truncate_count);
 		long2buff(g_storage_stat.total_download_count, \
 			pStatBuff->sz_total_download_count);
 		long2buff(g_storage_stat.success_download_count, \

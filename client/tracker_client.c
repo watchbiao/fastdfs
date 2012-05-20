@@ -336,6 +336,10 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 			pStatBuff->sz_total_modify_count);
 		pStorageStat->success_modify_count = buff2long( \
 			pStatBuff->sz_success_modify_count);
+		pStorageStat->total_truncate_count = buff2long( \
+			pStatBuff->sz_total_truncate_count);
+		pStorageStat->success_truncate_count = buff2long( \
+			pStatBuff->sz_success_truncate_count);
 		pStorageStat->total_set_meta_count = buff2long( \
 			pStatBuff->sz_total_set_meta_count);
 		pStorageStat->success_set_meta_count = buff2long( \

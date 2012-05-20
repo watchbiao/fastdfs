@@ -378,6 +378,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tsuccess_append_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\ttotal_modify_count = "INT64_PRINTF_FORMAT"\n"   \
 			"\t\tsuccess_modify_count = "INT64_PRINTF_FORMAT"\n" \
+			"\t\ttotal_truncate_count = "INT64_PRINTF_FORMAT"\n"   \
+			"\t\tsuccess_truncate_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\ttotal_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\tsuccess_set_meta_count = "INT64_PRINTF_FORMAT"\n" \
 			"\t\ttotal_delete_count = "INT64_PRINTF_FORMAT"\n" \
@@ -435,6 +437,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			pStorageStat->success_append_count, \
 			pStorageStat->total_modify_count, \
 			pStorageStat->success_modify_count, \
+			pStorageStat->total_truncate_count, \
+			pStorageStat->success_truncate_count, \
 			pStorageStat->total_set_meta_count, \
 			pStorageStat->success_set_meta_count, \
 			pStorageStat->total_delete_count, \

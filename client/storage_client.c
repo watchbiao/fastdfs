@@ -447,6 +447,18 @@ int storage_delete_file1(TrackerServerInfo *pTrackerServer, \
 			pStorageServer, group_name, filename);
 }
 
+int storage_truncate_file1(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, 
+		const int64_t truncated_file_size, \
+		const char *appender_file_id)
+{
+	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(appender_file_id)
+
+	return storage_truncate_file(pTrackerServer, \
+			pStorageServer, truncated_file_size, \
+			group_name, filename);
+}
+
 int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 			TrackerServerInfo *pStorageServer, \
 			const char *group_name, const char *filename)
@@ -2273,5 +2285,95 @@ int storage_file_exist1(TrackerServerInfo *pTrackerServer, \
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
 	return storage_file_exist(pTrackerServer, pStorageServer,  \
 			group_name, filename);
+}
+
+int storage_truncate_file(TrackerServerInfo *pTrackerServer, \
+		TrackerServerInfo *pStorageServer, 
+		const int64_t truncated_file_size, \
+		const char *group_name, const char *appender_filename)
+{
+	TrackerHeader *pHeader;
+	int result;
+	char out_buff[512];
+	char *p;
+	int64_t in_bytes;
+	TrackerServerInfo storageServer;
+	bool new_connection;
+	int appender_filename_len;
+
+	appender_filename_len = strlen(appender_filename);
+	if ((result=storage_get_update_connection(pTrackerServer, \
+			&pStorageServer, group_name, appender_filename, \
+			&storageServer, &new_connection)) != 0)
+	{
+		return result;
+	}
+
+	/*
+	//printf("upload to storage %s:%d\n", \
+		pStorageServer->ip_addr, pStorageServer->port);
+	*/
+
+	do
+	{
+	pHeader = (TrackerHeader *)out_buff;
+	p = out_buff + sizeof(TrackerHeader);
+	long2buff(appender_filename_len, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	long2buff(truncated_file_size, p);
+	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	memcpy(p, appender_filename, appender_filename_len);
+	p += appender_filename_len;
+
+	long2buff((p - out_buff) - sizeof(TrackerHeader), \
+		pHeader->pkg_len);
+	pHeader->cmd = STORAGE_PROTO_CMD_TRUNCATE_FILE;
+	pHeader->status = 0;
+
+	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
+		p - out_buff, g_fdfs_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"send data to storage server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pStorageServer->ip_addr, pStorageServer->port, \
+			result, STRERROR(result));
+		break;
+	}
+
+	if ((result=fdfs_recv_header(pStorageServer, &in_bytes)) != 0)
+	{
+		break;
+	}
+
+	if (in_bytes != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"storage server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid, " \
+			"should == 0", __LINE__, pStorageServer->ip_addr, \
+			pStorageServer->port, in_bytes);
+		result = EINVAL;
+		break;
+	}
+	} while (0);
+
+	if (new_connection)
+	{
+		fdfs_quit(pStorageServer);
+		tracker_disconnect_server(pStorageServer);
+	}
+	else
+	{
+		if (result >= ENETDOWN) //network error
+		{
+			close(pStorageServer->sock);
+			pStorageServer->sock = -1;
+		}
+	}
+
+	return result;
 }
 
