@@ -5806,7 +5806,7 @@ static int storage_sync_truncate_file(struct fast_task_info *pTask)
 			"client ip: %s, in request pkg, " \
 			"filename length: %d != %d", __LINE__, \
 			pTask->client_ip, filename_len, \
-			nInPackLen - (3 * FDFS_PROTO_PKG_LEN_SIZE + \
+			(int)nInPackLen - (3 * FDFS_PROTO_PKG_LEN_SIZE + \
 			4 + FDFS_GROUP_NAME_MAX_LEN));
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return EINVAL;
