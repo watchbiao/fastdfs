@@ -458,6 +458,148 @@ static int storage_sync_modify_file(TrackerServerInfo *pStorageServer, \
 }
 
 /**
+8 bytes: filename bytes
+8 bytes: old file size
+8 bytes: new file size
+4 bytes: source op timestamp
+FDFS_GROUP_NAME_MAX_LEN bytes: group_name
+filename bytes : filename
+**/
+static int storage_sync_truncate_file(TrackerServerInfo *pStorageServer, \
+	StorageBinLogReader *pReader, StorageBinLogRecord *pRecord)
+{
+#define FIELD_COUNT  3
+	TrackerHeader *pHeader;
+	char *p;
+	char *pBuff;
+	char *fields[FIELD_COUNT];
+	char full_filename[MAX_PATH_SIZE];
+	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+256];
+	char in_buff[1];
+	struct stat stat_buf;
+	int64_t in_bytes;
+	int64_t old_file_size;
+	int64_t new_file_size;
+	int result;
+	int count;
+
+	if ((count=splitEx(pRecord->filename, ' ', fields, FIELD_COUNT)) \
+			!= FIELD_COUNT)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"the format of binlog not correct, filename: %s", \
+			__LINE__, pRecord->filename);
+		return EINVAL;
+	}
+
+	old_file_size = strtoll((fields[1]), NULL, 10);
+	new_file_size = strtoll((fields[2]), NULL, 10);
+	
+	pRecord->filename_len = strlen(pRecord->filename);
+	pRecord->true_filename_len = pRecord->filename_len;
+	if ((result=storage_split_filename_ex(pRecord->filename, \
+			&pRecord->true_filename_len, pRecord->true_filename, \
+			&pRecord->store_path_index)) != 0)
+	{
+		return result;
+	}
+
+	snprintf(full_filename, sizeof(full_filename), \
+		"%s/data/%s", g_fdfs_store_paths[pRecord->store_path_index], \
+		pRecord->true_filename);
+	if (lstat(full_filename, &stat_buf) != 0)
+	{
+		if (errno == ENOENT)
+		{
+			logDebug("file: "__FILE__", line: %d, " \
+				"sync appender file, file: %s not exists, "\
+				"maybe deleted later?", \
+				__LINE__, full_filename);
+
+			return 0;
+		}
+		else
+		{
+			result = errno != 0 ? errno : EPERM;
+			logError("file: "__FILE__", line: %d, " \
+				"call stat fail, appender file: %s, "\
+				"error no: %d, error info: %s", \
+				__LINE__, full_filename, \
+				result, STRERROR(result));
+			return result;
+		}
+	}
+
+	if (stat_buf.st_size != old_file_size)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"appender file: %s 'size: "INT64_PRINTF_FORMAT \
+			" != "INT64_PRINTF_FORMAT", skip sync truncate " \
+			"operation of this appender file", __LINE__, \
+			full_filename, stat_buf.st_size, old_file_size);
+
+		return 0;
+	}
+
+	do
+	{
+		int64_t body_len;
+
+		pHeader = (TrackerHeader *)out_buff;
+		memset(pHeader, 0, sizeof(TrackerHeader));
+
+		body_len = 3 * FDFS_PROTO_PKG_LEN_SIZE + \
+				4 + FDFS_GROUP_NAME_MAX_LEN + \
+				pRecord->filename_len;
+
+		long2buff(body_len, pHeader->pkg_len);
+		pHeader->cmd = STORAGE_PROTO_CMD_SYNC_TRUNCATE_FILE;
+		pHeader->status = 0;
+
+		p = out_buff + sizeof(TrackerHeader);
+
+		long2buff(pRecord->filename_len, p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+
+		long2buff(old_file_size, p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+
+		long2buff(new_file_size, p);
+		p += FDFS_PROTO_PKG_LEN_SIZE;
+
+		int2buff(pRecord->timestamp, p);
+		p += 4;
+
+		sprintf(p, "%s", pStorageServer->group_name);
+		p += FDFS_GROUP_NAME_MAX_LEN;
+		memcpy(p, pRecord->filename, pRecord->filename_len);
+		p += pRecord->filename_len;
+
+		if((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
+			p - out_buff, g_fdfs_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"sync data to storage server %s:%d fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pStorageServer->ip_addr, \
+				pStorageServer->port, \
+				result, STRERROR(result));
+
+			break;
+		}
+
+		pBuff = in_buff;
+		if ((result=fdfs_recv_response(pStorageServer, \
+			&pBuff, 0, &in_bytes)) != 0)
+		{
+			break;
+		}
+	} while (0);
+
+	return result == EEXIST ? 0 : result;
+}
+
+/**
 send pkg format:
 4 bytes: source delete timestamp
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
@@ -835,6 +977,10 @@ static int storage_sync_data(StorageBinLogReader *pReader, \
 					STORAGE_PROTO_CMD_SYNC_UPDATE_FILE);
 			}
 			break;
+		case STORAGE_OP_TYPE_SOURCE_TRUNCATE_FILE:
+			result = storage_sync_truncate_file(pStorageServer, \
+					pReader, pRecord);
+			break;
 		case STORAGE_OP_TYPE_SOURCE_CREATE_LINK:
 			result = storage_sync_link_file(pStorageServer, \
 					pRecord);
@@ -864,6 +1010,8 @@ static int storage_sync_data(StorageBinLogReader *pReader, \
 		case STORAGE_OP_TYPE_REPLICA_APPEND_FILE:
 			return 0;
 		case STORAGE_OP_TYPE_REPLICA_MODIFY_FILE:
+			return 0;
+		case STORAGE_OP_TYPE_REPLICA_TRUNCATE_FILE:
 			return 0;
 		default:
 			logError("file: "__FILE__", line: %d, " \
