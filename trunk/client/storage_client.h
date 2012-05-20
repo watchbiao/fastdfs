@@ -502,15 +502,15 @@ int storage_modify_by_filebuff(TrackerServerInfo *pTrackerServer, \
 * params:
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
-*       truncated_file_size: truncated file size
 *	group_name: the group name
 *	appender_filename: the appender filename
+*       truncated_file_size: truncated file size
 * return: 0 success, !=0 fail, return the error code
 **/
 int storage_truncate_file(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, 
-		const int64_t truncated_file_size, \
-		const char *group_name, const char *appender_filename);
+		const char *group_name, const char *appender_filename, \
+		const int64_t truncated_file_size);
 
 
 #define storage_query_file_info(pTrackerServer, pStorageServer, \

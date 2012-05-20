@@ -80,6 +80,14 @@ ZEND_FUNCTION(fastdfs_storage_append_by_filebuff);
 ZEND_FUNCTION(fastdfs_storage_append_by_filebuff1);
 ZEND_FUNCTION(fastdfs_storage_append_by_callback);
 ZEND_FUNCTION(fastdfs_storage_append_by_callback1);
+ZEND_FUNCTION(fastdfs_storage_modify_by_filename);
+ZEND_FUNCTION(fastdfs_storage_modify_by_filename1);
+ZEND_FUNCTION(fastdfs_storage_modify_by_filebuff);
+ZEND_FUNCTION(fastdfs_storage_modify_by_filebuff1);
+ZEND_FUNCTION(fastdfs_storage_modify_by_callback);
+ZEND_FUNCTION(fastdfs_storage_modify_by_callback1);
+ZEND_FUNCTION(fastdfs_storage_truncate_file);
+ZEND_FUNCTION(fastdfs_storage_truncate_file1);
 
 PHP_FASTDFS_API zend_class_entry *php_fdfs_get_ce(void);
 PHP_FASTDFS_API zend_class_entry *php_fdfs_get_exception(void);

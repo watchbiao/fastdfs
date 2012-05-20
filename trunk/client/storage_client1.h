@@ -151,14 +151,14 @@ int storage_delete_file1(TrackerServerInfo *pTrackerServer, \
 * params:
 *       pTrackerServer: tracker server
 *       pStorageServer: storage server
-*	truncated_file_size: the truncated file size
 *       appender_file_id: the appender file id
+*	truncated_file_size: the truncated file size
 * return: 0 success, !=0 fail, return the error code
 **/
 int storage_truncate_file1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, 
-		const int64_t truncated_file_size, \
-		const char *appender_file_id);
+		const char *appender_file_id, \
+		const int64_t truncated_file_size);
 
 /**
 * set metadata items to storage server
