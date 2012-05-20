@@ -1784,6 +1784,10 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 				pStatBuff->sz_total_modify_count);
 		long2buff(pStorageStat->success_modify_count, \
 				pStatBuff->sz_success_modify_count);
+		long2buff(pStorageStat->total_truncate_count, \
+				pStatBuff->sz_total_truncate_count);
+		long2buff(pStorageStat->success_truncate_count, \
+				pStatBuff->sz_success_truncate_count);
 		long2buff(pStorageStat->total_set_meta_count, \
 				pStatBuff->sz_total_set_meta_count);
 		long2buff(pStorageStat->success_set_meta_count, \
@@ -3050,6 +3054,10 @@ static int tracker_deal_storage_beat(struct fast_task_info *pTask)
 			buff2long(pStatBuff->sz_total_modify_count);
 		pStat->success_modify_count = \
 			buff2long(pStatBuff->sz_success_modify_count);
+		pStat->total_truncate_count = \
+			buff2long(pStatBuff->sz_total_truncate_count);
+		pStat->success_truncate_count = \
+			buff2long(pStatBuff->sz_success_truncate_count);
 		pStat->total_download_count = \
 			buff2long(pStatBuff->sz_total_download_count);
 		pStat->success_download_count = \

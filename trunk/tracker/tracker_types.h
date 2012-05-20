@@ -145,6 +145,8 @@ typedef struct
 	int64_t success_append_count;
 	int64_t total_modify_count;
 	int64_t success_modify_count;
+	int64_t total_truncate_count;
+	int64_t success_truncate_count;
 	int64_t total_set_meta_count;
 	int64_t success_set_meta_count;
 	int64_t total_delete_count;
@@ -204,6 +206,8 @@ typedef struct
 	char sz_success_append_count[8];
 	char sz_total_modify_count[8];
 	char sz_success_modify_count[8];
+	char sz_total_truncate_count[8];
+	char sz_success_truncate_count[8];
 	char sz_total_set_meta_count[8];
 	char sz_success_set_meta_count[8];
 	char sz_total_delete_count[8];

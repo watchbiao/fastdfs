@@ -539,6 +539,75 @@ int dio_write_file(struct fast_task_info *pTask)
 	return result;
 }
 
+int dio_truncate_file(struct fast_task_info *pTask)
+{
+	StorageClientInfo *pClientInfo;
+	StorageFileContext *pFileContext;
+	int result;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext = &(pClientInfo->file_context);
+	result = 0;
+	do
+	{
+	if (pFileContext->fd < 0)
+	{
+		if (pFileContext->extra_info.upload.before_open_callback!=NULL)
+		{
+			result = pFileContext->extra_info.upload. \
+					before_open_callback(pTask);
+			if (result != 0)
+			{
+				break;
+			}
+		}
+
+		if ((result=dio_open_file(pFileContext)) != 0)
+		{
+			break;
+		}
+	}
+
+	if (ftruncate(pFileContext->fd, pFileContext->offset) != 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"truncate file: %s fail, fd=%d, " \
+			"remain_bytes="INT64_PRINTF_FORMAT", " \
+			"errno: %d, error info: %s", \
+			__LINE__, pFileContext->filename, \
+			pFileContext->fd, pFileContext->offset, \
+			result, STRERROR(result));
+		break;
+	}
+
+	if (pFileContext->extra_info.upload.before_close_callback != NULL)
+	{
+		result = pFileContext->extra_info.upload. \
+				before_close_callback(pTask);
+	}
+
+	/* file write done, close it */
+	close(pFileContext->fd);
+	pFileContext->fd = -1;
+
+	if (pFileContext->done_callback != NULL)
+	{
+		pFileContext->done_callback(pTask, result);
+	}
+
+	return 0;
+	} while (0);
+
+	pClientInfo->clean_func(pTask);
+
+	if (pFileContext->done_callback != NULL)
+	{
+		pFileContext->done_callback(pTask, result);
+	}
+	return result;
+}
+
 void dio_read_finish_clean_up(struct fast_task_info *pTask)
 {
 	StorageFileContext *pFileContext;

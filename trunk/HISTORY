@@ -1,7 +1,8 @@
 
-Version 3.08  2012-05-17
+Version 3.08  2012-05-20
  * FAST_MAX_LOCAL_IP_ADDRS change from 4 to 16
  * appender file support modify
+ * apperder file support truncate
 
 Version 3.07  2012-05-13
  * tracker/tracker_mem.c: check storage ip address is not empty

@@ -267,8 +267,35 @@ int main(int argc, char *argv[])
 	printf("file crc32=%u\n", file_info.crc32);
 	printf("file url: %s\n", file_url);
 
-	//sleep(70);
+
 	strcpy(appender_file_id, file_id);
+	if (storage_truncate_file1(pTrackerServer, &storageServer, \
+			0, appender_file_id) != 0)
+	{
+		printf("truncate file fail, " \
+			"error no: %d, error info: %s\n", \
+			result, STRERROR(result));
+		fdfs_quit(&storageServer);
+		tracker_disconnect_server(&storageServer);
+		fdfs_client_destroy();
+		return result;
+	}
+
+	fdfs_get_file_info1(file_id, &file_info);
+	printf("source ip address: %s\n", file_info.source_ip_addr);
+	printf("file timestamp=%s\n", formatDatetime(
+		file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
+		szDatetime, sizeof(szDatetime)));
+	printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
+	printf("file crc32=%u\n", file_info.crc32);
+	printf("file url: %s\n", file_url);
+	if (file_info.file_size != 0)
+	{
+		fprintf(stderr, "file size: "INT64_PRINTF_FORMAT \
+			" != 0!!!", file_info.file_size);
+	}
+
+	//sleep(70);
 	if (upload_type == FDFS_UPLOAD_BY_FILE)
 	{
 		result = storage_append_by_filename1(pTrackerServer, \
@@ -327,11 +354,11 @@ int main(int argc, char *argv[])
 		file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
 		szDatetime, sizeof(szDatetime)));
 	printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
-	if (file_info.file_size != 2 * file_size)
+	if (file_info.file_size != file_size)
 	{
 		fprintf(stderr, "file size: "INT64_PRINTF_FORMAT \
 			" != "INT64_PRINTF_FORMAT"!!!", file_info.file_size, \
-			2 * file_size);
+			file_size);
 	}
 
 	file_offset = file_size;
