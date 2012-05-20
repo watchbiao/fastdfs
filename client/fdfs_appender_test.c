@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
 	//sleep(90);
 	strcpy(appender_filename, remote_filename);
 	if (storage_truncate_file(pTrackerServer, &storageServer, \
-			file_size / 2, group_name, appender_filename) != 0)
+			group_name, appender_filename, file_size / 2) != 0)
 	{
 		printf("truncate file fail, " \
 			"error no: %d, error info: %s\n", \

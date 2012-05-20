@@ -449,14 +449,14 @@ int storage_delete_file1(TrackerServerInfo *pTrackerServer, \
 
 int storage_truncate_file1(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, 
-		const int64_t truncated_file_size, \
-		const char *appender_file_id)
+		const char *appender_file_id, \
+		const int64_t truncated_file_size)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(appender_file_id)
 
 	return storage_truncate_file(pTrackerServer, \
-			pStorageServer, truncated_file_size, \
-			group_name, filename);
+			pStorageServer, group_name, filename, \
+			truncated_file_size);
 }
 
 int storage_delete_file(TrackerServerInfo *pTrackerServer, \
@@ -2289,8 +2289,8 @@ int storage_file_exist1(TrackerServerInfo *pTrackerServer, \
 
 int storage_truncate_file(TrackerServerInfo *pTrackerServer, \
 		TrackerServerInfo *pStorageServer, 
-		const int64_t truncated_file_size, \
-		const char *group_name, const char *appender_filename)
+		const char *group_name, const char *appender_filename, \
+		const int64_t truncated_file_size)
 {
 	TrackerHeader *pHeader;
 	int result;
