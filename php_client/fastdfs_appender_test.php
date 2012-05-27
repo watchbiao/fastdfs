@@ -25,6 +25,23 @@
 
  var_dump(fastdfs_get_file_info($group_name, $appender_filename));
 
+ if (!fastdfs_storage_modify_by_filename("/usr/include/stdlib.h", 0, $group_name, $appender_filename))
+ {
+	echo "fastdfs_storage_modify_by_filename fail, errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info() . "\n";
+	exit;
+ }
+
+ var_dump(fastdfs_get_file_info($group_name, $appender_filename));
+
+ if (!fastdfs_storage_truncate_file($group_name, $appender_filename, 0))
+ {
+	echo "fastdfs_storage_truncate_file fail, errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info() . "\n";
+	exit;
+ }
+
+ var_dump(fastdfs_get_file_info($group_name, $appender_filename));
+
+ echo "function test done\n\n";
 
  $fdfs = new FastDFS();
  $file_info = $fdfs->storage_upload_appender_by_filename("/usr/include/stdio.h");
@@ -46,6 +63,22 @@
  if (!$fdfs->storage_append_by_filename("/usr/include/stdlib.h", $group_name, $appender_filename))
  {
 	echo "$fdfs->storage_append_by_filename fail, errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
+	exit;
+ }
+
+ var_dump($fdfs->get_file_info($group_name, $appender_filename));
+
+ if (!$fdfs->storage_modify_by_filename("/usr/include/stdlib.h", 0, $group_name, $appender_filename))
+ {
+	echo "$fdfs->storage_modify_by_filename fail, errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
+	exit;
+ }
+
+ var_dump($fdfs->get_file_info($group_name, $appender_filename));
+
+ if (!$fdfs->storage_truncate_file($group_name, $appender_filename))
+ {
+	echo "$fdfs->storage_truncate_file fail, errno: " . $fdfs->get_last_error_no() . ", error info: " . $fdfs->get_last_error_info() . "\n";
 	exit;
  }
 
