@@ -4677,7 +4677,7 @@ ZEND_FUNCTION(fastdfs_storage_append_by_filename)
 }
 
 /*
-boolean fastdfs_storage_modify_by_filename1(string local_filename, 
+boolean fastdfs_storage_append_by_filename1(string local_filename, 
 	string appender_file_id
 	[, array tracker_server, array storage_server])
 return true for success, false for error
@@ -4992,7 +4992,7 @@ ZEND_FUNCTION(fastdfs_storage_delete_file1)
 
 /*
 boolean fastdfs_storage_truncate_file(string group_name, 
-	string remote_filename [, long truncated_file_size = 0, 
+	string appender_filename [, long truncated_file_size = 0, 
 	array tracker_server, array storage_server])
 return true for success, false for error
 */
@@ -5003,7 +5003,7 @@ ZEND_FUNCTION(fastdfs_storage_truncate_file)
 }
 
 /*
-boolean fastdfs_storage_truncate_file1(string file_id
+boolean fastdfs_storage_truncate_file1(string appender_file_id
 	[, long truncated_file_size = 0, array tracker_server, 
 	array storage_server])
 return true for success, false for error
