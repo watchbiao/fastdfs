@@ -350,8 +350,8 @@ return file_id for success, false for error
 
 
 boolean fastdfs_storage_append_by_filename(string local_filename, 
-	string group_name, appender_filename, 
-	[array tracker_server, array storage_server])
+	string group_name, appender_filename
+	[, array tracker_server, array storage_server])
 append local file to the appender file of storage server
 parameters:
 	local_filename: the local filename
@@ -365,8 +365,8 @@ return true for success, false for error
 
 
 
-string fastdfs_storage_upload_by_filename1(string local_filename, 
-	[string appender_file_id, array tracker_server, array storage_server])
+string fastdfs_storage_append_by_filename1(string local_filename, 
+	string appender_file_id [, array tracker_server, array storage_server])
 append local file to the appender file of storage server
 parameters:
 	local_filename: the local filename
@@ -380,8 +380,8 @@ return true for success, false for error
 
 
 boolean fastdfs_storage_append_by_filebuff(string file_buff, 
-	[string group_name, string appender_filename,
-	array tracker_server, array storage_server])
+	string group_name, string appender_filename
+	[, array tracker_server, array storage_server])
 append file buff to the appender file of storage server
 parameters:
 	file_buff: the file content
@@ -396,7 +396,7 @@ return true for success, false for error
 
 
 boolean fastdfs_storage_append_by_filebuff1(string file_buff, 
-	[string appender_file_id, array tracker_server, array storage_server])
+	string appender_file_id [, array tracker_server, array storage_server])
 append file buff to the appender file of storage server
 parameters:
 	file_buff: the file content
@@ -410,8 +410,8 @@ return true for success, false for error
 
 
 boolean fastdfs_storage_append_by_callback(array callback_array,
-	[string group_name, string appender_filename,
-	array tracker_server, array storage_server])
+	string group_name, string appender_filename
+	[, array tracker_server, array storage_server])
 append file to the appender file of storage server by callback
 parameters:
 	callback_array: the callback assoc array, must have keys:
@@ -431,7 +431,7 @@ return true for success, false for error
 
 
 boolean fastdfs_storage_append_by_callback1(array callback_array,
-	[string appender_file_id, array tracker_server, array storage_server])
+	string appender_file_id [, array tracker_server, array storage_server])
 append file buff to the appender file of storage server
 parameters:
 	callback_array: the callback assoc array, must have keys:
@@ -447,6 +447,145 @@ parameters:
                         ip_addr, port and sock
 return true for success, false for error
 
+
+
+boolean fastdfs_storage_modify_by_filename(string local_filename, 
+	long file_offset, string group_name, appender_filename, 
+	[array tracker_server, array storage_server])
+modify appender file by local file
+parameters:
+	local_filename: the local filename
+        file_offset: offset of appender file
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean fastdfs_storage_modify_by_filename1(string local_filename, 
+	long file_offset, string appender_file_id
+        [, array tracker_server, array storage_server])
+modify appender file by local file
+parameters:
+	local_filename: the local filename
+        file_offset: offset of appender file
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean fastdfs_storage_modify_by_filebuff(string file_buff, 
+	long file_offset, string group_name, string appender_filename
+	[, array tracker_server, array storage_server])
+modify appender file by file buff
+parameters:
+	file_buff: the file content
+        file_offset: offset of appender file
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean fastdfs_storage_modify_by_filebuff1(string file_buff, 
+	long file_offset, string appender_file_id
+	[, array tracker_server, array storage_server])
+modify appender file by file buff
+parameters:
+	file_buff: the file content
+        file_offset: offset of appender file
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean fastdfs_storage_modify_by_callback(array callback_array, 
+	long file_offset, string group_name, string appender_filename
+	[, array tracker_server, array storage_server])
+modify appender file by callback
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+        file_offset: offset of appender file
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean fastdfs_storage_modify_by_callback1(array callback_array, 
+	long file_offset, string group_name, string appender_filename
+	[, array tracker_server, array storage_server])
+modify appender file by callback
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+        file_offset: offset of appender file
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean fastdfs_storage_truncate_file(string group_name, 
+	string appender_filename [, long truncated_file_size = 0, 
+	array tracker_server, array storage_server])
+truncate appender file to specify size
+parameters:
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+        truncated_file_size: truncate the file size to
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean fastdfs_storage_truncate_file1(string appender_file_id
+	[, long truncated_file_size = 0, array tracker_server, 
+	array storage_server])
+truncate appender file to specify size
+parameters:
+	appender_file_id: the appender file id
+        truncated_file_size: truncate the file size to
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
 
 
 string/array fastdfs_storage_upload_slave_by_filename(string local_filename, 
@@ -1247,8 +1386,8 @@ return file_id for success, false for error
 
 
 boolean FastDFS::storage_append_by_filename(string local_filename, 
-	string group_name, appender_filename, 
-	[array tracker_server, array storage_server])
+	string group_name, appender_filename
+	[, array tracker_server, array storage_server])
 append local file to the appender file of storage server
 parameters:
 	local_filename: the local filename
@@ -1277,8 +1416,8 @@ return true for success, false for error
 
 
 boolean FastDFS::storage_append_by_filebuff(string file_buff, 
-	[string group_name, string appender_filename,
-	array tracker_server, array storage_server])
+	string group_name, string appender_filename
+	[, array tracker_server, array storage_server])
 append file buff to the appender file of storage server
 parameters:
 	file_buff: the file content
@@ -1293,7 +1432,7 @@ return true for success, false for error
 
 
 boolean FastDFS::storage_append_by_filebuff1(string file_buff, 
-	[string appender_file_id, array tracker_server, array storage_server])
+	string appender_file_id [, array tracker_server, array storage_server])
 append file buff to the appender file of storage server
 parameters:
 	file_buff: the file content
@@ -1307,8 +1446,8 @@ return true for success, false for error
 
 
 boolean FastDFS::storage_append_by_callback(array callback_array,
-	[string group_name, string appender_filename,
-	array tracker_server, array storage_server])
+	string group_name, string appender_filename
+	[, array tracker_server, array storage_server])
 append file to the appender file of storage server by callback
 parameters:
 	callback_array: the callback assoc array, must have keys:
@@ -1328,7 +1467,7 @@ return true for success, false for error
 
 
 boolean FastDFS::storage_append_by_callback1(array callback_array,
-	[string appender_file_id, array tracker_server, array storage_server])
+	string appender_file_id [, array tracker_server, array storage_server])
 append file buff to the appender file of storage server
 parameters:
 	callback_array: the callback assoc array, must have keys:
@@ -1346,7 +1485,147 @@ return true for success, false for error
 
 
 
-string/array FastDFS::storage_upload_slave_by_filename(string local_filename, 
+boolean FastDFS::storage_modify_by_filename(string local_filename, 
+	long file_offset, string group_name, appender_filename, 
+	[array tracker_server, array storage_server])
+modify appender file by local file
+parameters:
+	local_filename: the local filename
+        file_offset: offset of appender file
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean FastDFS::storage_modify_by_filename1(string local_filename, 
+	long file_offset, string appender_file_id
+        [, array tracker_server, array storage_server])
+modify appender file by local file
+parameters:
+	local_filename: the local filename
+        file_offset: offset of appender file
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean FastDFS::storage_modify_by_filebuff(string file_buff, 
+	long file_offset, string group_name, string appender_filename
+	[, array tracker_server, array storage_server])
+modify appender file by file buff
+parameters:
+	file_buff: the file content
+        file_offset: offset of appender file
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean FastDFS::storage_modify_by_filebuff1(string file_buff, 
+	long file_offset, string appender_file_id
+	[, array tracker_server, array storage_server])
+modify appender file by file buff
+parameters:
+	file_buff: the file content
+        file_offset: offset of appender file
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean FastDFS::storage_modify_by_callback(array callback_array, 
+	long file_offset, string group_name, string appender_filename
+	[, array tracker_server, array storage_server])
+modify appender file by callback
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+        file_offset: offset of appender file
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean FastDFS::storage_modify_by_callback1(array callback_array, 
+	long file_offset, string group_name, string appender_filename
+	[, array tracker_server, array storage_server])
+modify appender file by callback
+parameters:
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+        file_offset: offset of appender file
+	appender_file_id: the appender file id
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean FastDFS::storage_truncate_file(string group_name, 
+	string appender_filename [, long truncated_file_size = 0, 
+	array tracker_server, array storage_server])
+truncate appender file to specify size
+parameters:
+	group_name: the the group name of appender file
+	appender_filename: the appender filename
+        truncated_file_size: truncate the file size to
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+boolean FastDFS::storage_truncate_file1(string appender_file_id
+	[, long truncated_file_size = 0, array tracker_server, 
+	array storage_server])
+truncate appender file to specify size
+parameters:
+	appender_file_id: the appender file id
+        truncated_file_size: truncate the file size to
+	tracker_server: the tracker server assoc array including elements: 
+                        ip_addr, port and sock
+	storage_server: the storage server assoc array including elements:
+                        ip_addr, port and sock
+return true for success, false for error
+
+
+
+array FastDFS::storage_upload_slave_by_filename(string local_filename, 
 	string group_name, string master_filename, string prefix_name 
 	[, string file_ext_name, array meta_list, 
 	array tracker_server, array storage_server])
