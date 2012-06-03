@@ -436,7 +436,6 @@ int storage_append_by_callback1(TrackerServerInfo *pTrackerServer, \
 *       pStorageServer: storage server
 *       local_filename: local filename to upload
 *       file_offset: the start offset to modify appender file
-*	group_name: the group name 
 *       appender_file_id: the appender file id
 * return: 0 success, !=0 fail, return the error code
 **/
