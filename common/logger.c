@@ -29,7 +29,7 @@
 
 #define LOG_BUFF_SIZE    64 * 1024
 
-LogContext g_log_context = {LOG_INFO, STDERR_FILENO};
+LogContext g_log_context = {LOG_INFO, STDERR_FILENO, NULL};
 
 static int log_fsync(LogContext *pContext, const bool bNeedLock);
 
@@ -50,6 +50,16 @@ static int check_and_mk_log_dir(const char *base_path)
 	}
 
 	return 0;
+}
+
+int log_init()
+{
+	if (g_log_context.log_buff != NULL)
+	{
+		return 0;
+	}
+
+	return log_init_ex(&g_log_context);
 }
 
 int log_init_ex(LogContext *pContext)
