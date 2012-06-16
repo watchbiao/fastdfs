@@ -1,4 +1,7 @@
 
+Version 3.09  2012-06-16
+ * make.sh avoid override config files of /etc/fdfs/
+
 Version 3.08  2012-05-27
  * FAST_MAX_LOCAL_IP_ADDRS change from 4 to 16
  * appender file support modify
