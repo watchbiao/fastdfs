@@ -42,8 +42,10 @@ typedef struct log_context
 
 extern LogContext g_log_context;
 
-/* following function macro use global log context: g_log_context */
-#define log_init()  log_init_ex(&g_log_context)
+/** init function using global log context
+ *  return: 0 for success, != 0 fail
+*/
+int log_init();
 
 #define log_set_prefix(base_path, filename_prefix) \
 	log_set_prefix_ex(&g_log_context, base_path, filename_prefix)
