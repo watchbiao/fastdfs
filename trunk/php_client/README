@@ -1106,6 +1106,7 @@ return assoc array for success, false for error.
 		create_timestamp: the file create timestamp (unix timestamp)
 		file_size: the file size (bytes)
 		source_ip_addr: the source storage server ip address
+		crc32: the crc32 signature of the file
 
 
 array FastDFS::get_file_info1(string file_id)
