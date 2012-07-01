@@ -7242,7 +7242,7 @@ static int load_config_files()
 		}
 	}
 
-	logInfo("base_path=%s, connect_timeout=%d, network_timeout=%d, " \
+	logDebug("base_path=%s, connect_timeout=%d, network_timeout=%d, " \
 		"anti_steal_secret_key length=%d, " \
 		"tracker_group_count=%d, first tracker group server_count=%d", \
 		g_fdfs_base_path, g_fdfs_connect_timeout, \
