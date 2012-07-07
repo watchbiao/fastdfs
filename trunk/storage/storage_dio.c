@@ -827,30 +827,33 @@ int dio_check_trunk_file(struct fast_task_info *pTask)
 	}
 
 	memset(expect_header, 0, sizeof(expect_header));
-	if (memcmp(old_header, expect_header, FDFS_TRUNK_FILE_HEADER_SIZE) != 0)
+	if (memcmp(old_header, expect_header, \
+		FDFS_TRUNK_FILE_HEADER_SIZE) != 0)
 	{
-		FDFSTrunkHeader oldTrunkHeader;
-		int old_file_size;
+		FDFSTrunkHeader srcOldTrunkHeader;
+		FDFSTrunkHeader newOldTrunkHeader;
 
-		trunk_unpack_header(old_header, &oldTrunkHeader);
-		old_file_size = oldTrunkHeader.file_size;
-		oldTrunkHeader.alloc_size = 0;
-		oldTrunkHeader.file_size = 0;
-		oldTrunkHeader.file_type = 0;
-		trunk_pack_header(&oldTrunkHeader, old_header);
+		trunk_unpack_header(old_header, &srcOldTrunkHeader);
+		memcpy(&newOldTrunkHeader, &srcOldTrunkHeader, \
+			sizeof(FDFSTrunkHeader));
+		newOldTrunkHeader.alloc_size = 0;
+		newOldTrunkHeader.file_size = 0;
+		newOldTrunkHeader.file_type = 0;
+		trunk_pack_header(&newOldTrunkHeader, old_header);
 		if (memcmp(old_header, expect_header, \
 			FDFS_TRUNK_FILE_HEADER_SIZE) != 0)
 		{
 			char buff[256];
-			trunk_header_dump(&oldTrunkHeader, buff, sizeof(buff));
+			trunk_header_dump(&srcOldTrunkHeader, \
+				buff, sizeof(buff));
 
 			logError("file: "__FILE__", line: %d, " \
-				"trunk file: %s, offset: "INT64_PRINTF_FORMAT \
-				", size: %d already occupied by other file, " \
-				"trunk header info: %s", __LINE__, \
-				pFileContext->filename, \
-				pFileContext->start-FDFS_TRUNK_FILE_HEADER_SIZE,
-				old_file_size, buff);
+				"trunk file: %s, offset: " \
+				INT64_PRINTF_FORMAT" already occupied" \
+				" by other file, trunk header info: %s"\
+				, __LINE__, pFileContext->filename, \
+				pFileContext->start - \
+				FDFS_TRUNK_FILE_HEADER_SIZE, buff);
 			return EEXIST;
 		}
 	}
