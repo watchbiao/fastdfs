@@ -33,6 +33,7 @@
 #include "storage_func.h"
 #include "storage_service.h"
 #include "trunk_sync.h"
+#include "storage_dio.h"
 #include "trunk_mem.h"
 
 #define STORAGE_TRUNK_DATA_FILENAME  "storage_trunk.dat"
@@ -51,6 +52,7 @@ TrackerServerInfo g_trunk_server = {-1, 0};
 bool g_if_use_trunk_file = false;
 bool g_if_trunker_self = false;
 bool g_trunk_create_file_advance = false;
+bool g_trunk_init_check_occupying = false;
 static bool if_trunk_inited = false;
 int64_t g_trunk_total_free_space = 0;
 int64_t g_trunk_create_file_space_threshold = 0;
@@ -163,7 +165,7 @@ int storage_trunk_init()
 	}
 
 	if_trunk_inited = true;
-	logInfo("tree node count: %d, trunk_total_free_space: " \
+	logInfo("tree by space size node count: %d, trunk_total_free_space: " \
 		INT64_PRINTF_FORMAT, avl_tree_count(&tree_info), \
 		g_trunk_total_free_space);
 
@@ -358,6 +360,69 @@ static int storage_trunk_save()
 	}
 
 	return result;
+}
+
+static bool storage_trunk_is_space_occupied(const FDFSTrunkFullInfo *pTrunkInfo)
+{
+	int result;
+	int fd;
+	char full_filename[MAX_PATH_SIZE+64];
+
+	trunk_get_full_filename(pTrunkInfo, full_filename, sizeof(full_filename));
+	fd = open(full_filename, O_RDONLY, 0644);
+	if (fd < 0)
+	{
+		result = errno != 0 ? errno : ENOENT;
+		logWarning("file: " __FILE__ ", line: %d, "
+			"open file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, full_filename, \
+			result, STRERROR(result));
+		return false;
+	}
+
+	if (pTrunkInfo->file.offset > 0 && lseek(fd, pTrunkInfo->file.offset, \
+			SEEK_SET) < 0)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"lseek file: %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, full_filename, \
+			result, STRERROR(result));
+		close(fd);
+		return false;
+	}
+
+	/*
+	logInfo("fd: %d, trunk filename: %s, offset: %d", fd, full_filename, \
+			pTrunkInfo->file.offset);
+	*/
+	result = dio_check_trunk_file_ex(fd, full_filename, \
+			pTrunkInfo->file.offset);
+	close(fd);
+	return (result == EEXIST);
+}
+
+static int storage_trunk_do_add_space(const FDFSTrunkFullInfo *pTrunkInfo)
+{
+	if (g_trunk_init_check_occupying)
+	{
+		if (storage_trunk_is_space_occupied(pTrunkInfo))
+		{
+			return 0;
+		}
+	}
+
+	/*	
+	{
+	char buff[256];
+	trunk_info_dump(pTrunkInfo, buff, sizeof(buff));
+	logInfo("add trunk info: %s", buff);
+	}
+	*/
+
+	return trunk_add_space(pTrunkInfo, false);
 }
 
 static int storage_trunk_restore(const int64_t restore_offset)
@@ -596,7 +661,7 @@ static int storage_trunk_load()
 		trunkInfo.file.id = atoi(cols[3]);
 		trunkInfo.file.offset = atoi(cols[4]);
 		trunkInfo.file.size = atoi(cols[5]);
-		if ((result=trunk_add_space(&trunkInfo, false)) != 0)
+		if ((result=storage_trunk_do_add_space(&trunkInfo)) != 0)
 		{
 			close(fd);
 			return result;

@@ -789,8 +789,6 @@ int dio_check_trunk_file(struct fast_task_info *pTask)
 {
 	int result;
 	StorageFileContext *pFileContext;
-	char old_header[FDFS_TRUNK_FILE_HEADER_SIZE];
-	char expect_header[FDFS_TRUNK_FILE_HEADER_SIZE];
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 	if ((result=trunk_check_and_init_file(pFileContext->filename)) != 0)
@@ -814,14 +812,24 @@ int dio_check_trunk_file(struct fast_task_info *pTask)
 		return result;
 	}
 
-	if (read(pFileContext->fd, old_header, FDFS_TRUNK_FILE_HEADER_SIZE) != 
+	return dio_check_trunk_file_ex(pFileContext->fd, pFileContext->filename,
+		 pFileContext->start - FDFS_TRUNK_FILE_HEADER_SIZE);
+}
+
+int dio_check_trunk_file_ex(int fd, const char *filename, const int64_t offset)
+{
+	int result;
+	char old_header[FDFS_TRUNK_FILE_HEADER_SIZE];
+	char expect_header[FDFS_TRUNK_FILE_HEADER_SIZE];
+
+	if (read(fd, old_header, FDFS_TRUNK_FILE_HEADER_SIZE) != 
 		FDFS_TRUNK_FILE_HEADER_SIZE)
 	{
 		result = errno != 0 ? errno : EIO;
 		logError("file: "__FILE__", line: %d, " \
 			"read trunk header of file: %s fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, pFileContext->filename, \
+			__LINE__, filename, \
 			result, STRERROR(result));
 		return result;
 	}
@@ -851,9 +859,7 @@ int dio_check_trunk_file(struct fast_task_info *pTask)
 				"trunk file: %s, offset: " \
 				INT64_PRINTF_FORMAT" already occupied" \
 				" by other file, trunk header info: %s"\
-				, __LINE__, pFileContext->filename, \
-				pFileContext->start - \
-				FDFS_TRUNK_FILE_HEADER_SIZE, buff);
+				, __LINE__, filename, offset, buff);
 			return EEXIST;
 		}
 	}

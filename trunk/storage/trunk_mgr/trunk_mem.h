@@ -38,6 +38,7 @@ extern int g_trunk_create_file_interval;
 extern TrackerServerInfo g_trunk_server;  //the trunk server
 extern bool g_if_use_trunk_file;   //if use trunk file
 extern bool g_trunk_create_file_advance;
+extern bool g_trunk_init_check_occupying;
 extern bool g_if_trunker_self;   //if am i trunk server
 extern int64_t g_trunk_create_file_space_threshold;
 extern int64_t g_trunk_total_free_space;  //trunk total free space in bytes
