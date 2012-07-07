@@ -64,6 +64,7 @@ void dio_modify_finish_clean_up(struct fast_task_info *pTask);
 
 #define dio_truncate_finish_clean_up  dio_read_finish_clean_up
 
+int dio_check_trunk_file_ex(int fd, const char *filename, const int64_t offset);
 int dio_check_trunk_file(struct fast_task_info *pTask);
 int dio_write_chunk_header(struct fast_task_info *pTask);
 

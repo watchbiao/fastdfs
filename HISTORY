@@ -6,6 +6,8 @@ Version 3.09  2012-07-07
  * c client logInfo change to logDebug
  * storage_dio.c log info more properly
  * delete the trunk space which be occupied
+ * tracker.conf add parameter: trunk_init_check_occupying, when this flag 
+   is set to true, do not add the trunk nodes which be occupied
 
 Version 3.08  2012-05-27
  * FAST_MAX_LOCAL_IP_ADDRS change from 4 to 16
