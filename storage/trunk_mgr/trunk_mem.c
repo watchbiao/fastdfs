@@ -1057,6 +1057,17 @@ int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status)
 	{
 		return trunk_delete_space(pTrunkInfo, true);
 	}
+	else if (status == EEXIST)
+	{
+		char buff[256];
+		trunk_info_dump(pTrunkInfo, buff, sizeof(buff));
+
+		logWarning("file: "__FILE__", line: %d, " \
+			"trunk space already be occupied, " \
+			"delete this trunk space, trunk info: %s", \
+			__LINE__, buff);
+		return trunk_delete_space(pTrunkInfo, true);
+	}
 	else
 	{
 		return trunk_restore_node(pTrunkInfo);
