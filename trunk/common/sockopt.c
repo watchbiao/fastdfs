@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <ifaddrs.h>
 #include <sys/poll.h>
 #include <sys/select.h>
 #include "shared_func.h"
@@ -1573,6 +1574,59 @@ int getlocaladdrs(char ip_addrs[][IP_ADDRESS_SIZE], \
 	return *count > 0 ? 0 : ENOENT;
 }
 
+int getlocaladdrs1(char ip_addrs[][IP_ADDRESS_SIZE], \
+	const int max_count, int *count)
+{
+	struct ifaddrs *ifc;
+	struct ifaddrs *ifc1;
+
+	*count = 0;
+	if (0 != getifaddrs(&ifc))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call getifaddrs fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, errno, STRERROR(errno));
+		return errno != 0 ? errno : EMFILE;
+	}
+
+	ifc1 = ifc;
+	while (NULL != ifc)
+	{
+		struct sockaddr *s;
+		s = ifc->ifa_addr;
+		if (NULL != s && AF_INET == s->sa_family)
+		{
+			if (max_count <= *count)
+			{
+				logError("file: "__FILE__", line: %d, "\
+				"max_count: %d < iterface count: %d", \
+				__LINE__, max_count, *count);
+				freeifaddrs(ifc1);
+				return ENOSPC;
+			}
+
+			if (inet_ntop(AF_INET, &((struct sockaddr_in *)s)-> \
+			sin_addr, ip_addrs[*count], IP_ADDRESS_SIZE) != NULL)
+			{
+				(*count)++;
+			}
+			else
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"call inet_ntop fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, errno, STRERROR(errno));
+			}
+		}
+
+		ifc = ifc->ifa_next;
+	}
+
+	freeifaddrs(ifc1);
+	return *count > 0 ? 0 : ENOENT;
+}
+
 int gethostaddrs(char **if_alias_prefixes, const int prefix_count, \
 	char ip_addrs[][IP_ADDRESS_SIZE], const int max_count, int *count)
 {
@@ -1591,7 +1645,7 @@ int gethostaddrs(char **if_alias_prefixes, const int prefix_count, \
 	*count = 0;
 	if (prefix_count <= 0)
 	{
-		if (getlocaladdrs(ip_addrs, max_count, count) == 0)
+		if (getlocaladdrs1(ip_addrs, max_count, count) == 0)
 		{
 			return 0;
 		}
