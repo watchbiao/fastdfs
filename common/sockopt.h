@@ -305,6 +305,16 @@ int tcpdiscard(int sock, const int bytes, const int timeout, \
 int getlocaladdrs(char ip_addrs[][IP_ADDRESS_SIZE], \
 	const int max_count, int *count);
 
+/** get local host ip addresses
+ *  parameters:
+ *          ip_addrs: store the ip addresses
+ *          max_count: max ip address (max ip_addrs elements)
+ *          count: store the ip address count
+ *  return: error no, 0 success, != 0 fail
+*/
+int getlocaladdrs1(char ip_addrs[][IP_ADDRESS_SIZE], \
+	const int max_count, int *count);
+
 /** get local host ip addresses by if alias prefix
  *  parameters:
  *          if_alias_prefixes: if alias prefixes, such as eth, bond etc.
