@@ -1231,6 +1231,60 @@ static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo)
 	return 0;
 }
 
+static int trunk_wait_file_ready(const char *filename, const int64_t file_size, 
+		const bool log_when_no_ent)
+{
+	struct stat file_stat;
+	time_t file_mtime;
+	int result;
+
+	if (stat(filename, &file_stat) != 0)
+	{
+		result = errno != 0 ? errno : ENOENT;
+		if (log_when_no_ent || result != ENOENT)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"stat file %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, filename, \
+				result, STRERROR(result));
+		}
+		return result;
+	}
+
+	file_mtime = file_stat.st_mtime;
+	while (1)
+	{
+		if (file_stat.st_size >= file_size)
+		{
+			return 0;
+		}
+
+		if (abs(time(NULL) - file_mtime) > 10)
+		{
+			return ETIME;
+		}
+
+		usleep(5 * 1000);
+
+		if (stat(filename, &file_stat) != 0)
+		{
+			result = errno != 0 ? errno : ENOENT;
+			if (log_when_no_ent || result != ENOENT)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"stat file %s fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, filename, \
+					result, STRERROR(result));
+			}
+			return result;
+		}
+	}
+
+	return 0;
+}
+
 int trunk_init_file_ex(const char *filename, const int64_t file_size)
 {
 	int fd;
@@ -1239,7 +1293,27 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size)
 	fd = open(filename, O_WRONLY | O_CREAT | O_EXCL, 0644);
 	if (fd < 0)
 	{
-		result = errno != 0 ? errno : EIO;
+		result = errno != 0 ? errno : EEXIST;
+		if (result == EEXIST) //already created by another dio thread
+		{
+			logDebug("file: "__FILE__", line: %d, " \
+				"waiting for trunk file: %s " \
+				"ready ...", __LINE__, filename);
+
+			result = trunk_wait_file_ready(filename, file_size, true);
+			if (result == ETIME)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"waiting for trunk file: %s " \
+					"ready timeout!", __LINE__, filename);
+			}
+
+			logDebug("file: "__FILE__", line: %d, " \
+				"waiting for trunk file: %s " \
+				"done.", __LINE__, filename);
+			return result;
+		}
+
 		logError("file: "__FILE__", line: %d, " \
 			"open file %s fail, " \
 			"errno: %d, error info: %s", \
@@ -1271,26 +1345,30 @@ int trunk_check_and_init_file_ex(const char *filename, const int64_t file_size)
 	struct stat file_stat;
 	int fd;
 	int result;
+	
+	result = trunk_wait_file_ready(filename, file_size, false);
+	if (result == 0)
+	{
+		return 0;
+	}
+	if (result == ENOENT)
+	{
+		return trunk_init_file_ex(filename, file_size);
+	}
+	if (result != ETIME)
+	{
+		return result;
+	}
 
 	if (stat(filename, &file_stat) != 0)
 	{
 		result = errno != 0 ? errno : ENOENT;
-		if (result != ENOENT)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"stat file %s fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, filename, \
-				result, STRERROR(result));
-			return result;
-		}
-
-		return trunk_init_file_ex(filename, file_size);
-	}
-
-	if (file_stat.st_size >= file_size)
-	{
-		return 0;
+		logError("file: "__FILE__", line: %d, " \
+			"stat file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, filename, \
+			result, STRERROR(result));
+		return result;
 	}
 
 	logWarning("file: "__FILE__", line: %d, " \
