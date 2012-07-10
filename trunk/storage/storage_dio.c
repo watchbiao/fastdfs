@@ -189,14 +189,12 @@ int storage_dio_get_thread_index(struct fast_task_info *pTask, \
 		const int store_path_index, const char file_op)
 {
 	StorageClientInfo *pClientInfo;
-	StorageFileContext *pFileContext;
 	struct storage_dio_thread_data *pThreadData;
 	struct storage_dio_context *contexts;
 	struct storage_dio_context *pContext;
 	int count;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
-	pFileContext = &(pClientInfo->file_context);
 
 	pThreadData = g_dio_thread_data + store_path_index;
 	if (g_disk_rw_separated)

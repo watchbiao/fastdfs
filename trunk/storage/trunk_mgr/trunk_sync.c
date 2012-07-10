@@ -445,10 +445,8 @@ int trunk_binlog_write_buffer(const char *buff, const int length)
 static char *get_binlog_readable_filename(const void *pArg, \
 		char *full_filename)
 {
-	const TrunkBinLogReader *pReader;
 	static char buff[MAX_PATH_SIZE];
 
-	pReader = (const TrunkBinLogReader *)pArg;
 	if (full_filename == NULL)
 	{
 		full_filename = buff;

@@ -1,6 +1,7 @@
 
-Version 3.10  2012-07-09
+Version 3.10  2012-07-10
  * check and init trunk file more gracefully
+ * remove unused-but-set-variable
 
 Version 3.09  2012-07-08
  * make.sh avoid override config files of /etc/fdfs/
