@@ -764,13 +764,11 @@ static int tracker_deal_report_trunk_free_space(struct fast_task_info *pTask)
 
 static int tracker_deal_notify_next_leader(struct fast_task_info *pTask)
 {
-	TrackerClientInfo *pClientInfo;
 	char *pIpAndPort;
 	char *ipAndPort[2];
 	TrackerServerInfo leader;
 	int server_index;
 	
-	pClientInfo = (TrackerClientInfo *)pTask->arg;
 	if (pTask->length - sizeof(TrackerHeader) != FDFS_PROTO_IP_PORT_SIZE)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -830,13 +828,11 @@ static int tracker_deal_notify_next_leader(struct fast_task_info *pTask)
 
 static int tracker_deal_commit_next_leader(struct fast_task_info *pTask)
 {
-	TrackerClientInfo *pClientInfo;
 	char *pIpAndPort;
 	char *ipAndPort[2];
 	TrackerServerInfo leader;
 	int server_index;
 	
-	pClientInfo = (TrackerClientInfo *)pTask->arg;
 	if (pTask->length - sizeof(TrackerHeader) != FDFS_PROTO_IP_PORT_SIZE)
 	{
 		logError("file: "__FILE__", line: %d, " \
