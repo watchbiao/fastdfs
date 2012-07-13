@@ -61,6 +61,7 @@ typedef struct
 	char file_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 1];
 	char formatted_ext_name[FDFS_FILE_EXT_NAME_MAX_LEN + 2];
 	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];  	//the upload group name
 	int start_time;		//upload start timestamp
 	FDFSTrunkFullInfo trunk_info;
 	FileBeforeOpenCallback before_open_callback;
@@ -77,7 +78,10 @@ typedef struct
 typedef struct
 {
 	char filename[MAX_PATH_SIZE + 128];  	//full filename
-	char fname2log[128+sizeof(FDFS_STORAGE_META_FILE_EXT)];  //filename to log
+
+	/* FDFS logic filename to log not including group name */
+	char fname2log[128+sizeof(FDFS_STORAGE_META_FILE_EXT)];
+
 	char op;            //w for writing, r for reading, d for deleting etc.
 	char sync_flag;     //sync flag log to binlog
 	bool calc_crc32;    //if calculate file content hash code

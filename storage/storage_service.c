@@ -1098,7 +1098,8 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 		pClientInfo->total_length = sizeof(TrackerHeader) + \
 					FDFS_GROUP_NAME_MAX_LEN + filename_len;
 		p = pTask->data + sizeof(TrackerHeader);
-		memcpy(p, g_group_name, FDFS_GROUP_NAME_MAX_LEN);
+		memcpy(p, pFileContext->extra_info.upload.group_name, \
+			FDFS_GROUP_NAME_MAX_LEN);
 		p += FDFS_GROUP_NAME_MAX_LEN;
 		memcpy(p, pFileContext->fname2log, filename_len);
 	}
@@ -1188,7 +1189,8 @@ static void storage_trunk_create_link_file_done_callback( \
 		pClientInfo->total_length = sizeof(TrackerHeader) + \
 					FDFS_GROUP_NAME_MAX_LEN + filename_len;
 		p = pTask->data + sizeof(TrackerHeader);
-		memcpy(p, g_group_name, FDFS_GROUP_NAME_MAX_LEN);
+		memcpy(p, pFileContext->extra_info.upload.group_name, \
+			FDFS_GROUP_NAME_MAX_LEN);
 		p += FDFS_GROUP_NAME_MAX_LEN;
 		memcpy(p, pFileContext->fname2log, filename_len);
 	}
@@ -2166,6 +2168,8 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		return result;
 	}
 
+	memcpy(pFileContext->extra_info.upload.group_name, g_group_name, \
+		FDFS_GROUP_NAME_MAX_LEN + 1);
 	sprintf(new_fname2log, "%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
 		FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
 		pFileContext->extra_info.upload.trunk_info.path. \
@@ -2347,6 +2351,10 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 				return result;
 			}
 
+			memset(pFileContext->extra_info.upload.group_name, \
+				0, FDFS_GROUP_NAME_MAX_LEN + 1);
+			snprintf(pFileContext->extra_info.upload.group_name, \
+				FDFS_GROUP_NAME_MAX_LEN + 1, pGroupName);
 			result = storage_client_create_link_wrapper(pTask, \
 				pFileContext->extra_info.upload.master_filename, \
 				pSrcFilename, value_len-(pSrcFilename-value),\
