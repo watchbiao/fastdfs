@@ -4666,7 +4666,7 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 	pGroup->pTrunkServer = pStoreServer;
 	pGroup->trunk_chg_count++;
 	g_trunk_server_chg_count++;
-	strcpy (pGroup->last_trunk_server_ip, pStoreServer->ip_addr);
+	strcpy(pGroup->last_trunk_server_ip, pStoreServer->ip_addr);
 
 	logInfo("file: "__FILE__", line: %d, " \
 		"group: %s, trunk server set to %s:%d", __LINE__, \
