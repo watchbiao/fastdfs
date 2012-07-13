@@ -2793,7 +2793,7 @@ static int php_fdfs_upload_callback(void *arg, const int64_t file_size, int sock
 
 	if (call_user_function(EG(function_table), NULL, \
 		pUploadCallback->callback.func_name, 
-		&ret, 2, args TSRMLS_CC) == FAILURE)
+		&ret, 2, args TSRMLS_DC) == FAILURE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call callback function: %s fail", __LINE__, \
@@ -2842,7 +2842,7 @@ static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 	args[2] = &zdata;
 	if (call_user_function(EG(function_table), NULL, \
 		pCallback->func_name, 
-		&ret, 3, args TSRMLS_CC) == FAILURE)
+		&ret, 3, args TSRMLS_DC) == FAILURE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call callback function: %s fail", __LINE__, \
