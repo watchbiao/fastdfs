@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <time.h>
 #include "fdfs_define.h"
-#include "chain.h"
 #include "logger.h"
 #include "sockopt.h"
 #include "shared_func.h"
@@ -34,6 +33,7 @@
 #include "storage_service.h"
 #include "trunk_sync.h"
 #include "storage_dio.h"
+#include "trunk_free_block_checker.h"
 #include "trunk_mem.h"
 
 #define STORAGE_TRUNK_DATA_FILENAME  "storage_trunk.dat"
@@ -62,8 +62,7 @@ static pthread_mutex_t trunk_mem_lock;
 static struct fast_mblock_man free_blocks_man;
 static struct fast_mblock_man tree_nodes_man;
 
-static AVLTreeInfo size_tree_info = {NULL, NULL, NULL}; //for block alloc
-static AVLTreeInfo node_tree_info = {NULL, NULL, NULL}; //for unique block nodes
+static AVLTreeInfo tree_info_by_size = {NULL, NULL, NULL}; //for block alloc
 
 static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo);
 static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog);
@@ -95,26 +94,6 @@ static int trunk_mem_binlog_write(const int timestamp, const char op_type, \
 static int storage_trunk_node_compare_size(void *p1, void *p2)
 {
 	return ((FDFSTrunkSlot *)p1)->size - ((FDFSTrunkSlot *)p2)->size;
-}
-
-static int storage_trunk_node_compare_entry(void *p1, void *p2)
-{
-	FDFSTrunkFullInfo *pTrunkInfo1;
-	FDFSTrunkFullInfo *pTrunkInfo2;
-	int result;
-
-	pTrunkInfo1 = (FDFSTrunkFullInfo *)p1;
-	pTrunkInfo2 = (FDFSTrunkFullInfo *)p2;
-
-	result = memcmp(&(pTrunkInfo1->path), &(pTrunkInfo2->path), \
-			sizeof(FDFSTrunkPathInfo));
-	if (result != 0)
-	{
-		return result;
-	}
-
-	return memcmp(&(pTrunkInfo1->file), &(pTrunkInfo2->file), \
-			sizeof(FDFSTrunkFileInfo));
 }
 
 int storage_trunk_init()
@@ -171,18 +150,8 @@ int storage_trunk_init()
 		return result;
 	}
 
-	if ((result=avl_tree_init(&size_tree_info, NULL, \
+	if ((result=avl_tree_init(&tree_info_by_size, NULL, \
 			storage_trunk_node_compare_size)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"avl_tree_init fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, STRERROR(result));
-		return result;
-	}
-
-	if ((result=avl_tree_init(&node_tree_info, NULL, \
-			storage_trunk_node_compare_entry)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"avl_tree_init fail, " \
@@ -197,10 +166,12 @@ int storage_trunk_init()
 	}
 
 	logInfo("file: "__FILE__", line: %d, " \
-		"tree by space size node count: %d, free block count: %d, " \
+		"tree by space size node count: %d, tree by trunk file id " \
+		"node count: %d, free block count: %d, " \
 		"trunk_total_free_space: "INT64_PRINTF_FORMAT, __LINE__, \
-		avl_tree_count(&size_tree_info), \
-		avl_tree_count(&node_tree_info), \
+		avl_tree_count(&tree_info_by_size), \
+		trunk_free_block_tree_node_count(), \
+		trunk_free_block_total_count(), \
 		g_trunk_total_free_space);
 
 	if_trunk_inited = true;
@@ -224,8 +195,7 @@ int storage_trunk_destroy()
 		result = 0;
 	}
 
-	avl_tree_destroy(&size_tree_info);
-	avl_tree_destroy(&node_tree_info);
+	avl_tree_destroy(&tree_info_by_size);
 
 	fast_mblock_destroy(&free_blocks_man);
 	fast_mblock_destroy(&tree_nodes_man);
@@ -350,7 +320,7 @@ static int storage_trunk_save()
 	callback_args.pCurrent += len;
 
 	pthread_mutex_lock(&trunk_mem_lock);
-	result = avl_tree_walk(&size_tree_info, tree_walk_callback, &callback_args);
+	result = avl_tree_walk(&tree_info_by_size, tree_walk_callback, &callback_args);
 
 	len = callback_args.pCurrent - callback_args.buff;
 	if (len > 0 && result == 0)
@@ -820,20 +790,16 @@ static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	FDFSTrunkSlot target_slot;
 	FDFSTrunkSlot *chain;
 
-	if (avl_tree_find(&node_tree_info, &(pNode->trunk)) != NULL)
+	if ((result=trunk_free_block_check_duplicate(&(pNode->trunk))) != 0)
 	{
-		char buff[256];
-		logWarning("file: "__FILE__", line: %d, " \
-			"node already exist, trunk entry: %s", __LINE__, \
-			trunk_info_dump(&(pNode->trunk), buff, sizeof(buff)));
-		return EEXIST;
+		return result;
 	}
 
 	target_slot.size = pNode->trunk.file.size;
 	target_slot.head = NULL;
 
 	pthread_mutex_lock(&trunk_mem_lock);
-	chain = (FDFSTrunkSlot *)avl_tree_find(&size_tree_info, &target_slot);
+	chain = (FDFSTrunkSlot *)avl_tree_find(&tree_info_by_size, &target_slot);
 	if (chain == NULL)
 	{
 		pMblockNode = fast_mblock_alloc(&tree_nodes_man);
@@ -855,7 +821,7 @@ static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 		pNode->next = NULL;
 		chain->head = pNode;
 
-		if (avl_tree_insert(&size_tree_info, chain) != 1)
+		if (avl_tree_insert(&tree_info_by_size, chain) != 1)
 		{
 			result = errno != 0 ? errno : ENOMEM;
 			logError("file: "__FILE__", line: %d, " \
@@ -885,14 +851,11 @@ static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 		result = 0;
 	}
 
-	if (avl_tree_insert(&node_tree_info, &(pNode->trunk)) != 1)
+	if (result == 0)
 	{
-		result = errno != 0 ? errno : ENOMEM;
-		logError("file: "__FILE__", line: %d, " \
-			"avl_tree_insert fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, STRERROR(result));
+		result = trunk_free_block_insert(&(pNode->trunk));
 	}
+
 	pthread_mutex_unlock(&trunk_mem_lock);
 
 	return result;
@@ -900,7 +863,7 @@ static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 
 static void trunk_delete_size_tree_entry(FDFSTrunkSlot *pSlot)
 {
-	if (avl_tree_delete(&size_tree_info, pSlot) == 1)
+	if (avl_tree_delete(&tree_info_by_size, pSlot) == 1)
 	{
 		fast_mblock_free(&tree_nodes_man, \
 				pSlot->pMblockNode);
@@ -910,18 +873,6 @@ static void trunk_delete_size_tree_entry(FDFSTrunkSlot *pSlot)
 		logWarning("file: "__FILE__", line: %d, " \
 			"can't delete slot entry, size: %d", \
 			__LINE__, pSlot->size);
-	}
-}
-
-static void trunk_delete_node_tree_entry(FDFSTrunkFullInfo *pTrunkInfo)
-{
-	if (avl_tree_delete(&node_tree_info, pTrunkInfo) != 1)
-	{
-		char buff[256];
-		logWarning("file: "__FILE__", line: %d, " \
-			"can't delete block entry, trunk info: %s", \
-			__LINE__, trunk_info_dump(pTrunkInfo, buff, \
-			sizeof(buff)));
 	}
 }
 
@@ -939,7 +890,7 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 	target_slot.head = NULL;
 
 	pthread_mutex_lock(&trunk_mem_lock);
-	pSlot = (FDFSTrunkSlot *)avl_tree_find(&size_tree_info, &target_slot);
+	pSlot = (FDFSTrunkSlot *)avl_tree_find(&tree_info_by_size, &target_slot);
 	if (pSlot == NULL)
 	{
 		pthread_mutex_unlock(&trunk_mem_lock);
@@ -980,7 +931,7 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 		pPrevious->next = pCurrent->next;
 	}
 
-	trunk_delete_node_tree_entry(&(pCurrent->trunk));
+	trunk_free_block_delete(&(pCurrent->trunk));
 	pthread_mutex_unlock(&trunk_mem_lock);
 
 	if (bWriteBinLog)
@@ -1011,7 +962,7 @@ static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
 	target_slot.head = NULL;
 
 	pthread_mutex_lock(&trunk_mem_lock);
-	pSlot = (FDFSTrunkSlot *)avl_tree_find(&size_tree_info, &target_slot);
+	pSlot = (FDFSTrunkSlot *)avl_tree_find(&tree_info_by_size, &target_slot);
 	if (pSlot == NULL)
 	{
 		pthread_mutex_unlock(&trunk_mem_lock);
@@ -1153,7 +1104,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	pthread_mutex_lock(&trunk_mem_lock);
 	while (1)
 	{
-		pSlot = (FDFSTrunkSlot *)avl_tree_find_ge(&size_tree_info, \
+		pSlot = (FDFSTrunkSlot *)avl_tree_find_ge(&tree_info_by_size, \
 						&target_slot);
 		if (pSlot == NULL)
 		{
@@ -1192,7 +1143,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 			pPreviousNode->next = pTrunkNode->next;
 		}
 
-		trunk_delete_node_tree_entry(&(pTrunkNode->trunk));
+		trunk_free_block_delete(&(pTrunkNode->trunk));
 	}
 	else
 	{
