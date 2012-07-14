@@ -74,13 +74,13 @@
 #define STORAGE_PROTO_CMD_RESP			TRACKER_PROTO_CMD_RESP
 #define STORAGE_PROTO_CMD_UPLOAD_MASTER_FILE	STORAGE_PROTO_CMD_UPLOAD_FILE
 
-#define STORAGE_PROTO_CMD_TRUNK_ALLOC_SPACE   	     27  //since V3.00
-#define STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM	     28  //since V3.00
-#define STORAGE_PROTO_CMD_TRUNK_FREE_SPACE	     29  //since V3.00
-#define STORAGE_PROTO_CMD_TRUNK_SYNC_BINLOG	     30  //since V3.00
-#define STORAGE_PROTO_CMD_TRUNK_GET_BINLOG_SIZE	     31  //since V3.07
-#define STORAGE_PROTO_CMD_TRUNK_DELETE_BINLOG_MARKS  32  //since V3.07
-#define STORAGE_PROTO_CMD_TRUNK_TRUNCATE_BINLOG_FILE 33  //since V3.07
+#define STORAGE_PROTO_CMD_TRUNK_ALLOC_SPACE   	     27  //since V3.00, storage to trunk server
+#define STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM	     28  //since V3.00, storage to trunk server
+#define STORAGE_PROTO_CMD_TRUNK_FREE_SPACE	     29  //since V3.00, storage to trunk server
+#define STORAGE_PROTO_CMD_TRUNK_SYNC_BINLOG	     30  //since V3.00, trunk storage to storage
+#define STORAGE_PROTO_CMD_TRUNK_GET_BINLOG_SIZE	     31  //since V3.07, tracker to storage
+#define STORAGE_PROTO_CMD_TRUNK_DELETE_BINLOG_MARKS  32  //since V3.07, tracker to storage
+#define STORAGE_PROTO_CMD_TRUNK_TRUNCATE_BINLOG_FILE 33  //since V3.07, trunk storage to storage
 
 #define STORAGE_PROTO_CMD_MODIFY_FILE		     34  //since V3.08
 #define STORAGE_PROTO_CMD_SYNC_MODIFY_FILE	     35  //since V3.08

@@ -4602,8 +4602,10 @@ static int tracker_mem_get_trunk_binlog_size(
 	tracker_disconnect_server(&storage_server);
 
 
-	logDebug("storage %s:%d, trunk binlog file size: %lld", 
-		storage_server.ip_addr, storage_server.port, *file_size);
+	logDebug("file: "__FILE__", line: %d, " \
+		"storage %s:%d, trunk binlog file size: "INT64_PRINTF_FORMAT, \
+		__LINE__, storage_server.ip_addr, storage_server.port, \
+		*file_size);
 	return result;
 }
 
