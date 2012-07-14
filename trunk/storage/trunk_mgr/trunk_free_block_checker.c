@@ -87,19 +87,147 @@ int trunk_free_block_total_count()
 int trunk_free_block_check_duplicate(FDFSTrunkFullInfo *pTrunkInfo)
 {
 	FDFSTrunkFileIdentifier target;
+	FDFSTrunksById *pFound;
+	FDFSTrunkFullInfo **blocks;
+	int end_offset;
+	int left;
+	int right;
+	int mid;
+	int result;
+
 	FILL_FILE_IDENTIFIER(target, pTrunkInfo);
-	if (avl_tree_find(&tree_info_by_id, &target) == NULL)
+
+	pFound = (FDFSTrunksById *)avl_tree_find(&tree_info_by_id, &target);
+	if (pFound == NULL)
 	{
 		return 0;
 	}
 
-	//TODO
+	if (pFound->block_array.count == 0)
 	{
-		char buff[256];
+		return 0;
+	}
+
+	blocks = pFound->block_array.blocks;
+	end_offset = pTrunkInfo->file.offset + pTrunkInfo->file.size;
+	if (end_offset <= blocks[0]->file.offset)
+	{
+		return 0;
+	}
+
+	right = pFound->block_array.count - 1;
+	if (pTrunkInfo->file.offset >= blocks[right]->file.offset + \
+				blocks[right]->file.size)
+	{
+		return 0;
+	}
+
+	result = 0;
+	mid = 0;
+	left = 0;
+	while (left <= right)
+	{
+		mid = (left + right) / 2;
+		if (pTrunkInfo->file.offset < blocks[mid]->file.offset)
+		{
+			if (blocks[mid]->file.offset < end_offset)
+			{
+				result = EEXIST;
+				break;
+			}
+
+			right = mid;
+		}
+		else if (pTrunkInfo->file.offset == blocks[mid]->file.offset)
+		{
+			if (pTrunkInfo->file.size == blocks[mid]->file.size)
+			{
+				char buff[256];
+				logWarning("file: "__FILE__", line: %d, " \
+					"node already exist, trunk entry: %s", \
+					__LINE__, trunk_info_dump(pTrunkInfo, \
+					buff, sizeof(buff)));
+				return EEXIST;
+			}
+
+			result = EEXIST;
+			break;
+		}
+		else
+		{
+			if (pTrunkInfo->file.offset < (blocks[mid]->file.offset + \
+						blocks[mid]->file.size))
+			{
+				result = EEXIST;
+				break;
+			}
+
+			left = mid;
+		}
+	}
+
+	if (result != 0)
+	{
+		char buff1[256];
+		char buff2[256];
+
 		logWarning("file: "__FILE__", line: %d, " \
-			"node already exist, trunk entry: %s", __LINE__, \
-			trunk_info_dump(pTrunkInfo, buff, sizeof(buff)));
-		return EEXIST;
+			"node overlap, current trunk entry: %s, " \
+			"existed trunk entry: %s", __LINE__, \
+			trunk_info_dump(pTrunkInfo, buff1, sizeof(buff1)), \
+			trunk_info_dump(blocks[mid], buff2, sizeof(buff2)));
+	}
+
+	return result;
+}
+
+static int trunk_free_block_do_insert(FDFSTrunkFullInfo *pTrunkInfo, \
+		FDFSBlockArray *pArray)
+{
+	int left;
+	int right;
+	int mid;
+	int result;
+
+	if (pArray->count >= pArray->alloc)
+	{
+		FDFSTrunkFullInfo **blocks;
+		if (pArray->alloc == 0)
+		{
+			pArray->alloc = 32;
+		}
+		else
+		{
+			pArray->alloc *= 2;
+		}
+		blocks = (FDFSTrunkFullInfo **)realloc(pArray->blocks, \
+			pArray->alloc * sizeof(FDFSTrunkFullInfo *));
+		if (blocks == NULL)
+		{
+			result = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				(int)(pArray->alloc * sizeof(FDFSTrunkFullInfo *)),
+				result, STRERROR(result));
+			return result;
+		}
+
+		pArray->blocks = blocks;
+	}
+
+	if (pArray->count == 0)
+	{
+		pArray->blocks[pArray->count++] = pTrunkInfo;
+		return 0;
+	}
+
+	left = 0;
+	right = 0;
+	while (left <= right)
+	{
+		mid = (left + right) / 2;
+		//TODO!!!
 	}
 
 	return 0;
@@ -109,20 +237,41 @@ int trunk_free_block_insert(FDFSTrunkFullInfo *pTrunkInfo)
 {
 	int result;
 	FDFSTrunkFileIdentifier target;
+	FDFSTrunksById *pTrunksById;
+
 	FILL_FILE_IDENTIFIER(target, pTrunkInfo);
-	if (avl_tree_insert(&tree_info_by_id, pTrunkInfo) != 1)
+
+	pTrunksById = (FDFSTrunksById *)avl_tree_find(&tree_info_by_id, &target);
+	if (pTrunksById == NULL)
 	{
-		result = errno != 0 ? errno : ENOMEM;
-		logError("file: "__FILE__", line: %d, " \
-			"avl_tree_insert fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, STRERROR(result));
-		return result;
+		pTrunksById = (FDFSTrunksById *)malloc(sizeof(FDFSTrunksById));
+		if (pTrunksById == NULL)
+		{
+			result = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, (int)sizeof(FDFSTrunksById), \
+				result, STRERROR(result));
+			return result;
+		}
+
+		memset(pTrunksById, 0, sizeof(FDFSTrunksById));
+		memcpy(&(pTrunksById->trunk_file_id), &target, \
+			sizeof(FDFSTrunkFileIdentifier));
+		if (avl_tree_insert(&tree_info_by_id, pTrunksById) != 1)
+		{
+			result = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"avl_tree_insert fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
+			return result;
+		}
 	}
-	else
-	{
-		return 0;
-	}
+
+	return trunk_free_block_do_insert(pTrunkInfo, \
+				&(pTrunksById->block_array));
 }
 
 int trunk_free_block_delete(FDFSTrunkFullInfo *pTrunkInfo)
