@@ -160,6 +160,11 @@ int storage_trunk_init()
 		return result;
 	}
 
+	if ((result=trunk_free_block_checker_init()) != 0)
+	{
+		return result;
+	}
+
 	if ((result=storage_trunk_load()) != 0)
 	{
 		return result;
@@ -196,6 +201,7 @@ int storage_trunk_destroy()
 	}
 
 	avl_tree_destroy(&tree_info_by_size);
+	trunk_free_block_checker_destroy();
 
 	fast_mblock_destroy(&free_blocks_man);
 	fast_mblock_destroy(&tree_nodes_man);
