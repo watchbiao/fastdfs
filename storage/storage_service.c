@@ -3549,6 +3549,15 @@ static int storage_server_trunk_truncate_binlog_file(struct fast_task_info *pTas
 		return EINVAL;
 	}
 
+	if (g_if_trunker_self)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid command: %d, " \
+			"because i am the TRUNK server!", \
+			__LINE__, pTask->client_ip, pHeader->cmd);
+		return EINVAL;
+	}
+
 	return trunk_binlog_truncate();
 }
 
@@ -3583,6 +3592,21 @@ static int storage_server_trunk_delete_binlog_marks(struct fast_task_info *pTask
 			"client ip: %s, i don't support trunked file!", \
 			__LINE__, pTask->client_ip);
 		return EINVAL;
+	}
+
+	if (g_if_trunker_self)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid command: %d, " \
+			"because i am the TRUNK server!", \
+			__LINE__, pTask->client_ip, pHeader->cmd);
+		return EINVAL;
+	}
+
+	result = storage_delete_trunk_data_file();
+	if (!(result == 0 || result == ENOENT))
+	{
+		return result;
 	}
 
 	pServerEnd = g_storage_servers + g_storage_count;

@@ -84,6 +84,8 @@ int trunk_file_delete(const char *trunk_filename, \
 
 int trunk_create_trunk_file_advance(void *args);
 
+int storage_delete_trunk_data_file();
+
 #ifdef __cplusplus
 }
 #endif
