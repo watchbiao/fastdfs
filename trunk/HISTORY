@@ -7,6 +7,7 @@ Version 3.10  2012-07-14
  * large tracker re-select trunk server interval
  * trunk free block check duplicate using avl tree
  * trunk file sync overwrite the dest file anyway
+ * common/avl_tree.c: free data when delete
 
 Version 3.09  2012-07-08
  * make.sh avoid override config files of /etc/fdfs/
