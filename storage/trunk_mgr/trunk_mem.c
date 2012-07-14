@@ -441,6 +441,21 @@ static bool storage_trunk_is_space_occupied(const FDFSTrunkFullInfo *pTrunkInfo)
 	return (result == EEXIST);
 }
 
+static int trunk_add_space(const FDFSTrunkFullInfo *pTrunkInfo)
+{
+	int result;
+
+	result = trunk_free_space(pTrunkInfo, false);
+	if (result == 0 || result == EEXIST)
+	{
+		return 0;
+	}
+	else
+	{
+		return result;
+	}
+}
+
 static int storage_trunk_do_add_space(const FDFSTrunkFullInfo *pTrunkInfo)
 {
 	if (g_trunk_init_check_occupying)
@@ -459,7 +474,7 @@ static int storage_trunk_do_add_space(const FDFSTrunkFullInfo *pTrunkInfo)
 	}
 	*/
 
-	return trunk_add_space(pTrunkInfo, false);
+	return trunk_add_space(pTrunkInfo);
 }
 
 static int storage_trunk_restore(const int64_t restore_offset)
@@ -523,7 +538,7 @@ static int storage_trunk_restore(const int64_t restore_offset)
 		if (record.op_type == TRUNK_OP_TYPE_ADD_SPACE)
 		{
 			record.trunk.status = FDFS_TRUNK_STATUS_FREE;
-			if ((result=trunk_add_space(&record.trunk, false))!=0)
+			if ((result=trunk_add_space(&record.trunk))!=0)
 			{
 				break;
 			}

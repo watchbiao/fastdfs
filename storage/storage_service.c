@@ -2462,6 +2462,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 
 static int storage_trunk_do_create_link(struct fast_task_info *pTask, \
 		const int64_t file_bytes, const int buff_offset, \
+		FileBeforeOpenCallback before_open_callback,
 		FileDealDoneCallback done_callback)
 {
 	StorageClientInfo *pClientInfo;
@@ -2476,7 +2477,7 @@ static int storage_trunk_do_create_link(struct fast_task_info *pTask, \
 	trunk_get_full_filename(&(pFileContext->extra_info.upload.trunk_info), 
 			pFileContext->filename, sizeof(pFileContext->filename));
 	pFileContext->extra_info.upload.before_open_callback = \
-				dio_check_trunk_file;
+				before_open_callback;
 	pFileContext->extra_info.upload.before_close_callback = \
 				dio_write_chunk_header;
 	pFileContext->open_flags = O_RDWR | g_extra_open_file_flags;
@@ -2542,6 +2543,7 @@ static int storage_trunk_create_link(struct fast_task_info *pTask, \
 	memcpy(p, src_filename, file_bytes);
 
 	storage_trunk_do_create_link(pTask, file_bytes, p - pTask->data, \
+			dio_check_trunk_file_when_upload, \
 			storage_trunk_create_link_file_done_callback);
 	return STORAGE_STATUE_DEAL_FILE;
 }
@@ -4175,7 +4177,7 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 		trunk_get_full_filename(pTrunkInfo, pFileContext->filename, \
 				sizeof(pFileContext->filename));
 		pFileContext->extra_info.upload.before_open_callback = \
-					dio_check_trunk_file;
+					dio_check_trunk_file_when_upload;
 		pFileContext->extra_info.upload.before_close_callback = \
 					dio_write_chunk_header;
 		pFileContext->open_flags = O_RDWR | g_extra_open_file_flags;
@@ -5242,7 +5244,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			extra_info.upload.trunk_info, pFileContext->filename, \
 			sizeof(pFileContext->filename));
 		pFileContext->extra_info.upload.before_open_callback = \
-					dio_check_trunk_file;
+					dio_check_trunk_file_when_sync;
 		pFileContext->extra_info.upload.before_close_callback = \
 					dio_write_chunk_header;
 		pFileContext->open_flags = O_RDWR | g_extra_open_file_flags;
@@ -6136,7 +6138,8 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 
 			memcpy(p, src_filename, src_filename_len);
 			result = storage_trunk_do_create_link(pTask, \
-					src_filename_len, p - pTask->data, NULL);
+					src_filename_len, p - pTask->data, \
+					dio_check_trunk_file_when_sync, NULL);
 			if (result != 0)
 			{
 				break;
