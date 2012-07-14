@@ -5317,8 +5317,10 @@ int tracker_mem_check_alive(void *arg)
 	{
 		(*ppServer)->status = FDFS_STORAGE_STATUS_OFFLINE;
 		tracker_mem_deactive_store_server(*ppGroup, *ppServer);
-		logInfo("ip=%s idle too long, status change to offline!", \
-			(*ppServer)->ip_addr);
+		logInfo("file: "__FILE__", line: %d, " \
+			"storage server %s:%d idle too long, " \
+			"status change to offline!", __LINE__, \
+			(*ppServer)->ip_addr, (*ppGroup)->storage_port);
 	}
 	}
 
@@ -5329,24 +5331,53 @@ int tracker_mem_check_alive(void *arg)
 
 	for (ppGroup=g_groups.groups; ppGroup<ppGroupEnd; ppGroup++)
 	{
-	if ((*ppGroup)->pTrunkServer != NULL && 
-	    current_time - (*ppGroup)->pTrunkServer->stat.last_heart_beat_time 
-			> g_check_active_interval)
+	if ((*ppGroup)->pTrunkServer != NULL)
 	{
-		logInfo("trunk server=%s:%d offline, " \
-			"should re-select trunk server", \
-			(*ppGroup)->pTrunkServer->ip_addr, \
-			(*ppGroup)->storage_port);
+		int check_trunk_times;
+		int check_trunk_interval;
+		int last_beat_interval;
 
-		(*ppGroup)->pTrunkServer = NULL;
-		tracker_mem_find_trunk_server(*ppGroup, false);
+		if (current_time - (*ppGroup)->pTrunkServer->up_time <= \
+			3 * g_check_active_interval)
+		{
+			if (g_trunk_init_check_occupying)
+			{
+				check_trunk_times = 5;
+			}
+			else
+			{
+				check_trunk_times = 3;
+			}
+		}
+		else
+		{
+			check_trunk_times = 2;
+		}
 
-		(*ppGroup)->trunk_chg_count++;
-		g_trunk_server_chg_count++;
+		last_beat_interval = current_time - (*ppGroup)-> \
+				pTrunkServer->stat.last_heart_beat_time;
+		check_trunk_interval = check_trunk_times * \
+					g_check_active_interval;
+	    	if (last_beat_interval > check_trunk_interval)
+		{
+			logInfo("file: "__FILE__", line: %d, " \
+				"trunk server %s:%d offline because idle " \
+				"time: %d s > threshold: %d s, should " \
+				"re-select trunk server", __LINE__, \
+				(*ppGroup)->pTrunkServer->ip_addr, \
+				(*ppGroup)->storage_port, last_beat_interval, \
+				check_trunk_interval);
 
-		tracker_save_groups();
+			(*ppGroup)->pTrunkServer = NULL;
+			tracker_mem_find_trunk_server(*ppGroup, false);
+
+			(*ppGroup)->trunk_chg_count++;
+			g_trunk_server_chg_count++;
+
+			tracker_save_groups();
+		}
 	}
-	else if ((*ppGroup)->pTrunkServer == NULL)
+	else
 	{
 		tracker_mem_find_trunk_server(*ppGroup, true);
 	}
