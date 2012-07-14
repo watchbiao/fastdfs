@@ -80,9 +80,20 @@ int trunk_free_block_total_count()
 	return count;
 }
 
+#define FILL_FILE_IDENTIFIER(target, pTrunkInfo) \
+	memcpy(&(target.path), &(pTrunkInfo->path), sizeof(FDFSTrunkPathInfo));\
+	target.id = pTrunkInfo->file.id;
+	
 int trunk_free_block_check_duplicate(FDFSTrunkFullInfo *pTrunkInfo)
 {
-	if (avl_tree_find(&tree_info_by_id, pTrunkInfo) != NULL)
+	FDFSTrunkFileIdentifier target;
+	FILL_FILE_IDENTIFIER(target, pTrunkInfo);
+	if (avl_tree_find(&tree_info_by_id, &target) == NULL)
+	{
+		return 0;
+	}
+
+	//TODO
 	{
 		char buff[256];
 		logWarning("file: "__FILE__", line: %d, " \
@@ -97,6 +108,8 @@ int trunk_free_block_check_duplicate(FDFSTrunkFullInfo *pTrunkInfo)
 int trunk_free_block_insert(FDFSTrunkFullInfo *pTrunkInfo)
 {
 	int result;
+	FDFSTrunkFileIdentifier target;
+	FILL_FILE_IDENTIFIER(target, pTrunkInfo);
 	if (avl_tree_insert(&tree_info_by_id, pTrunkInfo) != 1)
 	{
 		result = errno != 0 ? errno : ENOMEM;
@@ -114,6 +127,8 @@ int trunk_free_block_insert(FDFSTrunkFullInfo *pTrunkInfo)
 
 int trunk_free_block_delete(FDFSTrunkFullInfo *pTrunkInfo)
 {
+	FDFSTrunkFileIdentifier target;
+	FILL_FILE_IDENTIFIER(target, pTrunkInfo);
 	if (avl_tree_delete(&tree_info_by_id, pTrunkInfo) != 1)
 	{
 		char buff[256];
