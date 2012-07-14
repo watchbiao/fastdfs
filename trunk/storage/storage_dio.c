@@ -783,7 +783,7 @@ static void *dio_thread_entrance(void* arg)
 	return NULL;
 }
 
-int dio_check_trunk_file(struct fast_task_info *pTask)
+int dio_check_trunk_file_when_upload(struct fast_task_info *pTask)
 {
 	int result;
 	StorageFileContext *pFileContext;
@@ -812,6 +812,14 @@ int dio_check_trunk_file(struct fast_task_info *pTask)
 
 	return dio_check_trunk_file_ex(pFileContext->fd, pFileContext->filename,
 		 pFileContext->start - FDFS_TRUNK_FILE_HEADER_SIZE);
+}
+
+int dio_check_trunk_file_when_sync(struct fast_task_info *pTask)
+{
+	StorageFileContext *pFileContext;
+
+	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+	return trunk_check_and_init_file(pFileContext->filename);
 }
 
 int dio_check_trunk_file_ex(int fd, const char *filename, const int64_t offset)
