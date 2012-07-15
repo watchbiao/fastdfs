@@ -53,6 +53,7 @@ bool g_if_use_trunk_file = false;
 bool g_if_trunker_self = false;
 bool g_trunk_create_file_advance = false;
 bool g_trunk_init_check_occupying = false;
+bool g_trunk_init_reload_from_binlog = false;
 static bool if_trunk_inited = false;
 int64_t g_trunk_total_free_space = 0;
 int64_t g_trunk_create_file_space_threshold = 0;

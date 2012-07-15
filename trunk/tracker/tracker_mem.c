@@ -5340,7 +5340,7 @@ int tracker_mem_check_alive(void *arg)
 		int last_beat_interval;
 
 		if (current_time - (*ppGroup)->pTrunkServer->up_time <= \
-			3 * g_check_active_interval)
+			10 * g_check_active_interval)
 		{
 			if (g_trunk_init_check_occupying)
 			{
@@ -5349,6 +5349,11 @@ int tracker_mem_check_alive(void *arg)
 			else
 			{
 				check_trunk_times = 3;
+			}
+
+			if (g_trunk_init_reload_from_binlog)
+			{
+				check_trunk_times *= 2;
 			}
 		}
 		else
