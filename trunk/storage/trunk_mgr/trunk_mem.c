@@ -221,18 +221,14 @@ int storage_trunk_destroy()
 {
 	int result;
 
+	if (!if_trunk_inited)
+	{
+		return 0;
+	}
+
 	logDebug("file: "__FILE__", line: %d, " \
 		"storage trunk destroy", __LINE__);
-
-	if (if_trunk_inited)
-	{
-		result = storage_trunk_save();
-		if_trunk_inited = false;
-	}
-	else
-	{
-		result = 0;
-	}
+	result = storage_trunk_save();
 
 	avl_tree_destroy(&tree_info_by_size);
 	trunk_free_block_checker_destroy();
@@ -242,6 +238,7 @@ int storage_trunk_destroy()
 	pthread_mutex_destroy(&trunk_file_lock);
 	pthread_mutex_destroy(&trunk_mem_lock);
 
+	if_trunk_inited = false;
 	return result;
 }
 
