@@ -796,15 +796,16 @@ static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	FDFSTrunkSlot target_slot;
 	FDFSTrunkSlot *chain;
 
+	pthread_mutex_lock(&trunk_mem_lock);
+
 	if ((result=trunk_free_block_check_duplicate(&(pNode->trunk))) != 0)
 	{
+		pthread_mutex_unlock(&trunk_mem_lock);
 		return result;
 	}
 
 	target_slot.size = pNode->trunk.file.size;
 	target_slot.head = NULL;
-
-	pthread_mutex_lock(&trunk_mem_lock);
 	chain = (FDFSTrunkSlot *)avl_tree_find(&tree_info_by_size, &target_slot);
 	if (chain == NULL)
 	{
@@ -860,6 +861,10 @@ static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	if (result == 0)
 	{
 		result = trunk_free_block_insert(&(pNode->trunk));
+	}
+	else
+	{
+		trunk_free_block_insert(&(pNode->trunk));
 	}
 
 	pthread_mutex_unlock(&trunk_mem_lock);
