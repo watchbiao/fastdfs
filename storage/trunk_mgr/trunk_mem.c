@@ -205,13 +205,11 @@ int storage_trunk_init()
 		trunk_free_block_total_count(), \
 		g_trunk_total_free_space);
 
-	/*
 	{
-	char filename[PATH_MAX];
+	char filename[MAX_PATH_SIZE];
 	sprintf(filename, "%s/logs/tttt.dat", g_fdfs_base_path);
 	trunk_free_block_tree_print(filename);
 	}
-	*/
 
 	if_trunk_inited = true;
 	return 0;
