@@ -50,6 +50,8 @@ int trunk_free_block_check_duplicate(FDFSTrunkFullInfo *pTrunkInfo);
 int trunk_free_block_insert(FDFSTrunkFullInfo *pTrunkInfo);
 int trunk_free_block_delete(FDFSTrunkFullInfo *pTrunkInfo);
 
+int trunk_free_block_tree_print(const char *filename);
+
 #ifdef __cplusplus
 }
 #endif
