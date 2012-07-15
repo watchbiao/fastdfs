@@ -618,6 +618,26 @@ static int storage_trunk_load()
 
 	snprintf(trunk_data_filename, sizeof(trunk_data_filename), \
 		"%s/data/%s", g_fdfs_base_path, STORAGE_TRUNK_DATA_FILENAME);
+	if (g_trunk_init_reload_from_binlog)
+	{
+		if (unlink(trunk_data_filename) != 0)
+		{
+			result = errno != 0 ? errno : ENOENT;
+			if (result != ENOENT)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"unlink file %s fail, " \
+					"errno: %d, error info: %s", __LINE__, \
+					trunk_data_filename, result, \
+					STRERROR(result));
+				return result;
+			}
+		}
+
+		restore_offset = 0;
+		return storage_trunk_restore(restore_offset);
+	}
+
 	fd = open(trunk_data_filename, O_RDONLY);
 	if (fd < 0)
 	{
