@@ -28,6 +28,8 @@
 #include "storage_global.h"
 #include "trunk_free_block_checker.h"
 
+#define TRUNK_FREE_BLOCK_ARRAY_INIT_SIZE  32
+
 static AVLTreeInfo tree_info_by_id = {NULL, NULL, NULL}; //for unique block nodes
 
 static int storage_trunk_node_compare_entry(void *p1, void *p2)
@@ -136,7 +138,7 @@ int trunk_free_block_check_duplicate(FDFSTrunkFullInfo *pTrunkInfo)
 				break;
 			}
 
-			right = mid;
+			right = mid - 1;
 		}
 		else if (pTrunkInfo->file.offset == blocks[mid]->file.offset)
 		{
@@ -162,7 +164,7 @@ int trunk_free_block_check_duplicate(FDFSTrunkFullInfo *pTrunkInfo)
 				break;
 			}
 
-			left = mid;
+			left = mid + 1;
 		}
 	}
 
@@ -181,39 +183,46 @@ int trunk_free_block_check_duplicate(FDFSTrunkFullInfo *pTrunkInfo)
 	return result;
 }
 
+static int trunk_free_block_realloc(FDFSBlockArray *pArray, const int new_alloc)
+{
+	FDFSTrunkFullInfo **blocks;
+	int result;
+
+	blocks = (FDFSTrunkFullInfo **)realloc(pArray->blocks, \
+			new_alloc * sizeof(FDFSTrunkFullInfo *));
+	if (blocks == NULL)
+	{
+		result = errno != 0 ? errno : ENOMEM;
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			(int)(new_alloc * sizeof(FDFSTrunkFullInfo *)),
+			result, STRERROR(result));
+		return result;
+	}
+
+	pArray->alloc = new_alloc;
+	pArray->blocks = blocks;
+	return 0;
+}
+
 static int trunk_free_block_do_insert(FDFSTrunkFullInfo *pTrunkInfo, \
 		FDFSBlockArray *pArray)
 {
 	int left;
 	int right;
 	int mid;
+	int pos;
 	int result;
 
 	if (pArray->count >= pArray->alloc)
 	{
-		FDFSTrunkFullInfo **blocks;
-		if (pArray->alloc == 0)
+		if ((result=trunk_free_block_realloc(pArray, \
+			pArray->alloc == 0 ? TRUNK_FREE_BLOCK_ARRAY_INIT_SIZE \
+						 : 2 * pArray->alloc)) != 0)
 		{
-			pArray->alloc = 32;
-		}
-		else
-		{
-			pArray->alloc *= 2;
-		}
-		blocks = (FDFSTrunkFullInfo **)realloc(pArray->blocks, \
-			pArray->alloc * sizeof(FDFSTrunkFullInfo *));
-		if (blocks == NULL)
-		{
-			result = errno != 0 ? errno : ENOMEM;
-			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail, " \
-				"errno: %d, error info: %s", __LINE__, \
-				(int)(pArray->alloc * sizeof(FDFSTrunkFullInfo *)),
-				result, STRERROR(result));
 			return result;
 		}
-
-		pArray->blocks = blocks;
 	}
 
 	if (pArray->count == 0)
@@ -222,14 +231,59 @@ static int trunk_free_block_do_insert(FDFSTrunkFullInfo *pTrunkInfo, \
 		return 0;
 	}
 
+	if (pTrunkInfo->file.offset < pArray->blocks[0]->file.offset)
+	{
+		memmove(&(pArray->blocks[1]), &(pArray->blocks[0]), \
+			pArray->count * sizeof(FDFSTrunkFullInfo *));
+		pArray->blocks[0] = pTrunkInfo;
+		pArray->count++;
+		return 0;
+	}
+
+	right = pArray->count - 1;
+	if (pTrunkInfo->file.offset > pArray->blocks[right]->file.offset)
+	{
+		pArray->blocks[pArray->count++] = pTrunkInfo;
+		return 0;
+	}
+
 	left = 0;
-	right = 0;
+	mid = 0;
 	while (left <= right)
 	{
 		mid = (left + right) / 2;
-		//TODO!!!
+		if (pArray->blocks[mid]->file.offset > pTrunkInfo->file.offset)
+		{
+			right = mid - 1;
+		}
+		else if (pArray->blocks[mid]->file.offset == pTrunkInfo->file.offset)
+		{
+			char buff[256];
+			logWarning("file: "__FILE__", line: %d, " \
+				"node already exist, trunk entry: %s", \
+				__LINE__, trunk_info_dump(pTrunkInfo, \
+				buff, sizeof(buff)));
+			return EEXIST;
+		}
+		else
+		{
+			left = mid + 1;
+		}
 	}
 
+	if (pTrunkInfo->file.offset < pArray->blocks[mid]->file.offset)
+	{
+		pos = mid;
+	}
+	else
+	{
+		pos = mid + 1;
+	}
+
+	memmove(&(pArray->blocks[pos + 1]), &(pArray->blocks[pos]), \
+			(pArray->count - pos) * sizeof(FDFSTrunkFullInfo *));
+	pArray->blocks[pos] = pTrunkInfo;
+	pArray->count++;
 	return 0;
 }
 
@@ -276,16 +330,95 @@ int trunk_free_block_insert(FDFSTrunkFullInfo *pTrunkInfo)
 
 int trunk_free_block_delete(FDFSTrunkFullInfo *pTrunkInfo)
 {
+	int result;
+	int left;
+	int right;
+	int mid;
+	int move_count;
 	FDFSTrunkFileIdentifier target;
+	FDFSTrunksById *pTrunksById;
+	char buff[256];
+
 	FILL_FILE_IDENTIFIER(target, pTrunkInfo);
-	if (avl_tree_delete(&tree_info_by_id, pTrunkInfo) != 1)
+
+	pTrunksById = (FDFSTrunksById *)avl_tree_find(&tree_info_by_id, &target);
+	if (pTrunksById == NULL)
 	{
-		char buff[256];
 		logWarning("file: "__FILE__", line: %d, " \
-			"can't delete block entry, trunk info: %s", \
-			__LINE__, trunk_info_dump(pTrunkInfo, buff, \
-			sizeof(buff)));
+			"node NOT exist, trunk entry: %s", \
+			__LINE__, trunk_info_dump(pTrunkInfo, \
+			buff, sizeof(buff)));
 		return ENOENT;
+	}
+
+	result = ENOENT;
+	mid = 0;
+	left = 0;
+	right = pTrunksById->block_array.count - 1;
+	while (left <= right)
+	{
+		mid = (left + right) / 2;
+		if (pTrunksById->block_array.blocks[mid]->file.offset > pTrunkInfo->file.offset)
+		{
+			right = mid - 1;
+		}
+		else if (pTrunksById->block_array.blocks[mid]->file.offset == pTrunkInfo->file.offset)
+		{
+			result = 0;
+			break;
+		}
+		else
+		{
+			left = mid + 1;
+		}
+	}
+
+	if (result == ENOENT)
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"trunk node NOT exist, trunk entry: %s", \
+			__LINE__, trunk_info_dump(pTrunkInfo, \
+			buff, sizeof(buff)));
+		return result;
+	}
+
+	move_count = pTrunksById->block_array.count - (mid + 1);
+	if (move_count > 0)
+	{
+		memmove(&(pTrunksById->block_array.blocks[mid]), \
+			&(pTrunksById->block_array.blocks[mid + 1]), \
+			move_count * sizeof(FDFSTrunkFullInfo *));
+	}
+	pTrunksById->block_array.count--;
+
+	if (pTrunksById->block_array.count == 0)
+	{
+		free(pTrunksById->block_array.blocks);
+		if (avl_tree_delete(&tree_info_by_id, pTrunksById) != 1)
+		{
+			memset(&(pTrunksById->block_array), 0, \
+				sizeof(FDFSBlockArray));
+			logWarning("file: "__FILE__", line: %d, " \
+				"can't delete block node, trunk info: %s", \
+				__LINE__, trunk_info_dump(pTrunkInfo, buff, \
+				sizeof(buff)));
+			return ENOENT;
+		}
+	}
+	else
+	{
+		if ((pTrunksById->block_array.count < \
+			pTrunksById->block_array.alloc / 2) && \
+		    (pTrunksById->block_array.count > \
+			TRUNK_FREE_BLOCK_ARRAY_INIT_SIZE / 2)) //small the array
+		{
+			if ((result=trunk_free_block_realloc( \
+				&(pTrunksById->block_array), \
+				pTrunksById->block_array.alloc / 2)) != 0)
+			{
+				return result;
+			}
+		}
 	}
 
 	return 0;
