@@ -48,9 +48,11 @@ static AVLTreeNode *createTreeNode(AVLTreeNode *pParentNode, void *target_data)
 	pNewNode = (AVLTreeNode *)malloc(sizeof(AVLTreeNode));
 	if (pNewNode == NULL)
 	{
+		/*
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail!\n", __LINE__, \
 			(int)sizeof(AVLTreeNode));
+		*/
 		return NULL;
 	}
 
@@ -159,7 +161,7 @@ static int avl_tree_insert_loop(CompareFunc compare_func, AVLTreeNode **pCurrent
 	int nCompRes;
 	int success;
 
-	if (*pCurrentNode == NULL )
+	if (*pCurrentNode == NULL)
 	{
 		*pCurrentNode = createTreeNode(*pCurrentNode, target_data);
 		if (*pCurrentNode != NULL)
@@ -169,7 +171,7 @@ static int avl_tree_insert_loop(CompareFunc compare_func, AVLTreeNode **pCurrent
 		}
 		else
 		{
-			return 0;
+			return -ENOMEM;
 		}
 	}
 
@@ -250,7 +252,7 @@ static int avl_tree_replace_loop(CompareFunc compare_func, \
 		}
 		else
 		{
-			return 0;
+			return -ENOMEM;
 		}
 	}
 

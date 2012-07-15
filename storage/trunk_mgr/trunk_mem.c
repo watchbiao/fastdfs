@@ -97,6 +97,31 @@ static int storage_trunk_node_compare_size(void *p1, void *p2)
 	return ((FDFSTrunkSlot *)p1)->size - ((FDFSTrunkSlot *)p2)->size;
 }
 
+static int storage_trunk_node_compare_offset(void *p1, void *p2)
+{
+	FDFSTrunkFullInfo *pTrunkInfo1;
+	FDFSTrunkFullInfo *pTrunkInfo2;
+	int result;
+
+	pTrunkInfo1 = &(((FDFSTrunkNode *)p1)->trunk);
+	pTrunkInfo2 = &(((FDFSTrunkNode *)p2)->trunk);
+
+	result = memcmp(&(pTrunkInfo1->path), &(pTrunkInfo2->path), \
+			sizeof(FDFSTrunkPathInfo));
+	if (result != 0)
+	{
+		return result;
+	}
+
+	result = pTrunkInfo1->file.id - pTrunkInfo2->file.id;
+	if (result != 0)
+	{
+		return result;
+	}
+
+	return pTrunkInfo1->file.offset - pTrunkInfo2->file.offset;
+}
+
 int storage_trunk_init()
 {
 	int result;
@@ -424,7 +449,7 @@ static bool storage_trunk_is_space_occupied(const FDFSTrunkFullInfo *pTrunkInfo)
 	return (result == EEXIST);
 }
 
-static int trunk_add_space(const FDFSTrunkFullInfo *pTrunkInfo)
+static int trunk_add_space_by_trunk(const FDFSTrunkFullInfo *pTrunkInfo)
 {
 	int result;
 
@@ -436,6 +461,31 @@ static int trunk_add_space(const FDFSTrunkFullInfo *pTrunkInfo)
 	else
 	{
 		return result;
+	}
+}
+
+static int trunk_add_space_by_node(FDFSTrunkNode *pTrunkNode)
+{
+	int result;
+
+	if (pTrunkNode->trunk.file.size < g_slot_min_size)
+	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"space: %d is too small, do not need recycle!", \
+			__LINE__, pTrunkNode->trunk.file.size);
+		fast_mblock_free(&free_blocks_man, pTrunkNode->pMblockNode);
+		return 0;
+	}
+
+	result = trunk_add_free_block(pTrunkNode, false);
+	if (result == 0)
+	{
+		return 0;
+	}
+	else
+	{
+		fast_mblock_free(&free_blocks_man, pTrunkNode->pMblockNode);
+		return (result == EEXIST) ? 0 : result;
 	}
 }
 
@@ -457,7 +507,25 @@ static int storage_trunk_do_add_space(const FDFSTrunkFullInfo *pTrunkInfo)
 	}
 	*/
 
-	return trunk_add_space(pTrunkInfo);
+	return trunk_add_space_by_trunk(pTrunkInfo);
+}
+
+static void storage_trunk_free_node(void *ptr)
+{
+	fast_mblock_free(&free_blocks_man, \
+		((FDFSTrunkNode *)ptr)->pMblockNode);
+}
+
+static int storage_trunk_add_free_blocks_callback(void *data, void *args)
+{
+	/*
+	char buff[256];
+	logInfo("file: "__FILE__", line: %d"\
+		", adding trunk info: %s", __LINE__, \
+		trunk_info_dump(&(((FDFSTrunkNode *)data)->trunk), \
+		buff, sizeof(buff)));
+	*/
+	return trunk_add_space_by_node((FDFSTrunkNode *)data);
 }
 
 static int storage_trunk_restore(const int64_t restore_offset)
@@ -467,8 +535,14 @@ static int storage_trunk_restore(const int64_t restore_offset)
 	TrunkBinLogReader reader;
 	TrunkBinLogRecord record;
 	char trunk_mark_filename[MAX_PATH_SIZE];
+	char buff[256];
 	int record_length;
 	int result;
+	AVLTreeInfo tree_info_by_offset;
+	struct fast_mblock_node *pMblockNode;
+	FDFSTrunkNode *pTrunkNode;
+	FDFSTrunkNode trunkNode;
+	bool trunk_init_reload_from_binlog;
 
 	trunk_binlog_size = storage_trunk_get_binlog_size();
 	if (trunk_binlog_size < 0)
@@ -496,6 +570,23 @@ static int storage_trunk_restore(const int64_t restore_offset)
 		INT64_PRINTF_FORMAT, __LINE__, \
 		restore_offset, trunk_binlog_size - restore_offset);
 
+	trunk_init_reload_from_binlog = (restore_offset == 0);
+	if (trunk_init_reload_from_binlog)
+	{
+		memset(&trunkNode, 0, sizeof(trunkNode));
+		if ((result=avl_tree_init(&tree_info_by_offset, \
+			storage_trunk_free_node, \
+			storage_trunk_node_compare_offset)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"avl_tree_init fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
+			return result;
+		}
+	}
+
+	memset(&record, 0, sizeof(record));
 	memset(&reader, 0, sizeof(reader));
 	reader.binlog_offset = restore_offset;
 	if ((result=trunk_reader_init(NULL, &reader)) != 0)
@@ -521,7 +612,54 @@ static int storage_trunk_restore(const int64_t restore_offset)
 		if (record.op_type == TRUNK_OP_TYPE_ADD_SPACE)
 		{
 			record.trunk.status = FDFS_TRUNK_STATUS_FREE;
-			if ((result=trunk_add_space(&record.trunk))!=0)
+
+			if (trunk_init_reload_from_binlog)
+			{
+				pMblockNode = fast_mblock_alloc(&free_blocks_man);
+				if (pMblockNode == NULL)
+				{
+					result = errno != 0 ? errno : EIO;
+					logError("file: "__FILE__", line: %d, "\
+						"malloc %d bytes fail, " \
+						"errno: %d, error info: %s", \
+						__LINE__, \
+						(int)sizeof(FDFSTrunkNode), \
+						result, STRERROR(result));
+					return result;
+				}
+
+				pTrunkNode = (FDFSTrunkNode *)pMblockNode->data;
+				memcpy(&pTrunkNode->trunk, &(record.trunk), \
+					sizeof(FDFSTrunkFullInfo));
+
+				pTrunkNode->pMblockNode = pMblockNode;
+				pTrunkNode->next = NULL;
+				result = avl_tree_insert(&tree_info_by_offset,\
+							pTrunkNode);
+				if (result < 0) //error
+				{
+					result *= -1;
+					logError("file: "__FILE__", line: %d, "\
+						"avl_tree_insert fail, " \
+						"errno: %d, error info: %s", \
+						__LINE__, result, \
+						STRERROR(result));
+					return result;
+				}
+				else if (result == 0)
+				{
+					trunk_info_dump(&(record.trunk), \
+							buff, sizeof(buff));
+					logWarning("file: "__FILE__", line: %d"\
+						", trunk data line: " \
+						INT64_PRINTF_FORMAT", trunk "\
+						"space already exist, "\
+						"trunk info: %s", \
+						__LINE__, line_count, buff);
+				}
+			}
+			else if ((result=trunk_add_space_by_trunk( \
+						&record.trunk)) != 0)
 			{
 				break;
 			}
@@ -529,7 +667,25 @@ static int storage_trunk_restore(const int64_t restore_offset)
 		else if (record.op_type == TRUNK_OP_TYPE_DEL_SPACE)
 		{
 			record.trunk.status = FDFS_TRUNK_STATUS_FREE;
-			if ((result=trunk_delete_space(&record.trunk,false))!=0)
+			if (trunk_init_reload_from_binlog)
+			{
+				memcpy(&trunkNode.trunk, &record.trunk, \
+					sizeof(FDFSTrunkFullInfo));
+				if (avl_tree_delete(&tree_info_by_offset,\
+							&trunkNode) != 1)
+				{
+					trunk_info_dump(&(record.trunk), \
+							buff, sizeof(buff));
+					logWarning("file: "__FILE__", line: %d"\
+						", trunk data line: " \
+						INT64_PRINTF_FORMAT", trunk "\
+						"node not exist, " \
+						"trunk info: %s", \
+						__LINE__, line_count, buff);
+				}
+			}
+			else if ((result=trunk_delete_space( \
+						&record.trunk, false)) != 0)
 			{
 				if (result == ENOENT)
 				{
@@ -558,6 +714,28 @@ static int storage_trunk_restore(const int64_t restore_offset)
 			"unlink file %s fail, " \
 			"errno: %d, error info: %s", __LINE__, \
 			trunk_mark_filename, errno, STRERROR(errno));
+	}
+
+	if (result != 0)
+	{
+		if (trunk_init_reload_from_binlog)
+		{
+			avl_tree_destroy(&tree_info_by_offset);
+		}
+		return result;
+	}
+
+	if (trunk_init_reload_from_binlog)
+	{
+		logInfo("file: "__FILE__", line: %d, " \
+			"free tree node count: %d", \
+			__LINE__, avl_tree_count(&tree_info_by_offset));
+
+		result = avl_tree_walk(&tree_info_by_offset, \
+				storage_trunk_add_free_blocks_callback, NULL);
+
+		tree_info_by_offset.free_data_func = NULL;
+		avl_tree_destroy(&tree_info_by_offset);
 	}
 
 	if (result == 0)

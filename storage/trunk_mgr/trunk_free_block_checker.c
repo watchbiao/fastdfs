@@ -83,9 +83,10 @@ int trunk_free_block_total_count()
 }
 
 #define FILL_FILE_IDENTIFIER(target, pTrunkInfo) \
+	memset(&target, 0, sizeof(target)); \
 	memcpy(&(target.path), &(pTrunkInfo->path), sizeof(FDFSTrunkPathInfo));\
 	target.id = pTrunkInfo->file.id;
-	
+
 int trunk_free_block_check_duplicate(FDFSTrunkFullInfo *pTrunkInfo)
 {
 	FDFSTrunkFileIdentifier target;
@@ -97,6 +98,14 @@ int trunk_free_block_check_duplicate(FDFSTrunkFullInfo *pTrunkInfo)
 	int mid;
 	int result;
 
+	/*
+	char buff[256];
+
+	logWarning("file: "__FILE__", line: %d, " \
+		"trunk entry: %s", __LINE__, \
+		trunk_info_dump(pTrunkInfo, buff, sizeof(buff)));
+	*/
+
 	FILL_FILE_IDENTIFIER(target, pTrunkInfo);
 
 	pFound = (FDFSTrunksById *)avl_tree_find(&tree_info_by_id, &target);
@@ -104,6 +113,15 @@ int trunk_free_block_check_duplicate(FDFSTrunkFullInfo *pTrunkInfo)
 	{
 		return 0;
 	}
+
+	/*
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"ARRAY COUNT: %d, trunk entry: %s", \
+			__LINE__, pFound->block_array.count, \
+			trunk_info_dump(pTrunkInfo, buff, sizeof(buff)));
+	}
+	*/
 
 	if (pFound->block_array.count == 0)
 	{
@@ -123,6 +141,7 @@ int trunk_free_block_check_duplicate(FDFSTrunkFullInfo *pTrunkInfo)
 	{
 		return 0;
 	}
+
 
 	result = 0;
 	mid = 0;
@@ -256,7 +275,8 @@ static int trunk_free_block_do_insert(FDFSTrunkFullInfo *pTrunkInfo, \
 		{
 			right = mid - 1;
 		}
-		else if (pArray->blocks[mid]->file.offset == pTrunkInfo->file.offset)
+		else if (pArray->blocks[mid]->file.offset == \
+			pTrunkInfo->file.offset)
 		{
 			char buff[256];
 			logWarning("file: "__FILE__", line: %d, " \
@@ -358,11 +378,13 @@ int trunk_free_block_delete(FDFSTrunkFullInfo *pTrunkInfo)
 	while (left <= right)
 	{
 		mid = (left + right) / 2;
-		if (pTrunksById->block_array.blocks[mid]->file.offset > pTrunkInfo->file.offset)
+		if (pTrunksById->block_array.blocks[mid]->file.offset > \
+				pTrunkInfo->file.offset)
 		{
 			right = mid - 1;
 		}
-		else if (pTrunksById->block_array.blocks[mid]->file.offset == pTrunkInfo->file.offset)
+		else if (pTrunksById->block_array.blocks[mid]->file.offset == \
+				pTrunkInfo->file.offset)
 		{
 			result = 0;
 			break;
