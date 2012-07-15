@@ -456,6 +456,48 @@ static int block_tree_print_walk_callback(void *data, void *args)
 	fp = (FILE *)args;
 	pArray = &(((FDFSTrunksById *)data)->block_array);
 
+	/*
+	{
+	FDFSTrunkFileIdentifier *pFileIdentifier;
+	pFileIdentifier = &(((FDFSTrunksById *)data)->trunk_file_id);
+
+	fprintf(fp, "%d %d %d %d %d\n", \
+			pFileIdentifier->path.store_path_index, \
+			pFileIdentifier->path.sub_path_high, pFileIdentifier->path.sub_path_low, \
+			pFileIdentifier->id, pArray->count);
+	return 0;
+	}
+	*/
+
+	/*
+	{
+	FDFSTrunkFullInfo **ppPrevious;
+	if (pArray->count <= 1)
+	{
+		return 0;
+	}
+	ppPrevious = pArray->blocks;
+	ppEnd = pArray->blocks + pArray->count;
+	for (pp=pArray->blocks + 1; pp<ppEnd; pp++)
+	{
+		if ((*ppPrevious)->file.offset >= (*pp)->file.offset)
+		{
+			fprintf(fp, "%d %d %d %d %d %d\n", \
+				(*ppPrevious)->path.store_path_index, \
+				(*ppPrevious)->path.sub_path_high, (*ppPrevious)->path.sub_path_low, \
+				(*ppPrevious)->file.id, (*ppPrevious)->file.offset, (*ppPrevious)->file.size);
+
+			fprintf(fp, "%d %d %d %d %d %d\n", \
+				(*pp)->path.store_path_index, \
+				(*pp)->path.sub_path_high, (*pp)->path.sub_path_low, \
+				(*pp)->file.id, (*pp)->file.offset, (*pp)->file.size);
+		}
+		ppPrevious = pp;
+	}
+	return 0;
+	}
+	*/
+
 	ppEnd = pArray->blocks + pArray->count;
 	for (pp=pArray->blocks; pp<ppEnd; pp++)
 	{
@@ -486,6 +528,7 @@ int trunk_free_block_tree_print(const char *filename)
 
 	avl_tree_walk(&tree_info_by_id, block_tree_print_walk_callback, fp);
 	fclose(fp);
+	logInfo("sizeof(FDFSTrunkFullInfo): %d", (int)sizeof(FDFSTrunkFullInfo));
 	return 0;
 }
 

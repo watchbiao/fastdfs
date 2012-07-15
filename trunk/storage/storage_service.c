@@ -3748,7 +3748,8 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 	pFileContext =  &(pClientInfo->file_context);
 	pReader = (StorageBinLogReader *)pClientInfo->extra_arg;
 
-	store_path_index = pFileContext->extra_info.upload.trunk_info.path.store_path_index;
+	store_path_index = pFileContext->extra_info.upload.trunk_info. \
+				path.store_path_index;
 	pBasePath = g_fdfs_store_paths[store_path_index];
 	base_path_len = strlen(pBasePath);
 	pOutBuff = pTask->data;
@@ -3986,7 +3987,8 @@ static int storage_server_do_fetch_one_path_binlog( \
 	pFileContext->op = FDFS_STORAGE_FILE_OP_READ;
 	pFileContext->dio_thread_index = storage_dio_get_thread_index( \
 		pTask, store_path_index, pFileContext->op);
-	pFileContext->extra_info.upload.trunk_info.path.store_path_index = store_path_index;
+	pFileContext->extra_info.upload.trunk_info.path.store_path_index = 
+				store_path_index;
 	pClientInfo->extra_arg = pReader;
 
 	pClientInfo->total_length = INFINITE_FILE_SIZE + \
@@ -4620,7 +4622,8 @@ static int storage_modify_file(struct fast_task_info *pTask)
 	pFileContext->extra_info.upload.file_type = _FILE_TYPE_APPENDER;
 	pFileContext->extra_info.upload.before_open_callback = NULL;
 	pFileContext->extra_info.upload.before_close_callback = NULL;
-	pFileContext->extra_info.upload.trunk_info.path.store_path_index = store_path_index;
+	pFileContext->extra_info.upload.trunk_info.path.store_path_index = \
+			store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 	pFileContext->open_flags = O_WRONLY | g_extra_open_file_flags;
 
@@ -4804,7 +4807,8 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 	pFileContext->extra_info.upload.file_type = _FILE_TYPE_APPENDER;
 	pFileContext->extra_info.upload.before_open_callback = NULL;
 	pFileContext->extra_info.upload.before_close_callback = NULL;
-	pFileContext->extra_info.upload.trunk_info.path.store_path_index = store_path_index;
+	pFileContext->extra_info.upload.trunk_info.path.store_path_index = \
+			store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 	pFileContext->open_flags = O_WRONLY | g_extra_open_file_flags;
 
@@ -5001,7 +5005,8 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
 	pFileContext->extra_info.upload.before_open_callback = NULL;
 	pFileContext->extra_info.upload.before_close_callback = NULL;
-	pFileContext->extra_info.upload.trunk_info.path.store_path_index = store_path_index;
+	pFileContext->extra_info.upload.trunk_info.path.store_path_index = \
+			store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_WRITE;
 	pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC \
 				| g_extra_open_file_flags;
