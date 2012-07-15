@@ -2354,7 +2354,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 			memset(pFileContext->extra_info.upload.group_name, \
 				0, FDFS_GROUP_NAME_MAX_LEN + 1);
 			snprintf(pFileContext->extra_info.upload.group_name, \
-				FDFS_GROUP_NAME_MAX_LEN + 1, pGroupName);
+				FDFS_GROUP_NAME_MAX_LEN + 1, "%s", pGroupName);
 			result = storage_client_create_link_wrapper(pTask, \
 				pFileContext->extra_info.upload.master_filename, \
 				pSrcFilename, value_len-(pSrcFilename-value),\
