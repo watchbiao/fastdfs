@@ -532,6 +532,8 @@ int tracker_load_from_conf_file(const char *filename, \
 		g_trunk_init_check_occupying = iniGetBoolValue(NULL, \
 			"trunk_init_check_occupying", &iniContext, false);
 
+		g_trunk_init_reload_from_binlog = iniGetBoolValue(NULL, \
+			"trunk_init_reload_from_binlog", &iniContext, false);
 #ifdef WITH_HTTPD
 		if ((result=fdfs_http_params_load(&iniContext, \
 				filename, &g_http_params)) != 0)
@@ -600,7 +602,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			"trunk_create_file_time_base=%02d:%02d, " \
 			"trunk_create_file_interval=%d, " \
 			"trunk_create_file_space_threshold=%d GB, " \
-			"trunk_init_check_occupying=%d", \
+			"trunk_init_check_occupying=%d, " \
+			"trunk_init_reload_from_binlog=%d, ", \
 			g_fdfs_version.major, g_fdfs_version.minor,  \
 			g_fdfs_base_path, g_run_by_group, g_run_by_user, \
 			g_fdfs_connect_timeout, \
@@ -622,7 +625,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_trunk_create_file_time_base.minute, \
 			g_trunk_create_file_interval, \
 			(int)(g_trunk_create_file_space_threshold / \
-			(FDFS_ONE_MB * 1024)), g_trunk_init_check_occupying);
+			(FDFS_ONE_MB * 1024)), g_trunk_init_check_occupying, \
+			g_trunk_init_reload_from_binlog);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)

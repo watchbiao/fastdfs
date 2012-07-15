@@ -42,6 +42,7 @@ int g_storage_sync_file_max_time = DEFAULT_STORAGE_SYNC_FILE_MAX_TIME;
 bool g_if_use_trunk_file = false;   //if use trunk file
 bool g_trunk_create_file_advance = false;
 bool g_trunk_init_check_occupying = false;
+bool g_trunk_init_reload_from_binlog = false;
 int g_slot_min_size = 256;    //slot min size, such as 256 bytes
 int g_slot_max_size = 16 * 1024 * 1024;    //slot max size, such as 16MB
 int g_trunk_file_size = 64 * 1024 * 1024;  //the trunk file size, such as 64MB

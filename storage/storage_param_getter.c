@@ -95,6 +95,8 @@ int storage_get_params_from_tracker()
 
 	g_trunk_init_check_occupying = iniGetBoolValue(NULL, \
 			"trunk_init_check_occupying", &iniContext, false);
+	g_trunk_init_reload_from_binlog = iniGetBoolValue(NULL, \
+			"trunk_init_reload_from_binlog", &iniContext, false);
 	iniFreeContext(&iniContext);
 
 	if (use_trunk_file && !g_if_use_trunk_file)
@@ -118,7 +120,8 @@ int storage_get_params_from_tracker()
 		"trunk_create_file_time_base=%02d:%02d, " \
 		"trunk_create_file_interval=%d, " \
 		"trunk_create_file_space_threshold=%d GB, " \
-		"trunk_init_check_occupying=%d", \
+		"trunk_init_check_occupying=%d, "   \
+		"trunk_init_reload_from_binlog=%d", \
 		__LINE__, g_storage_ip_changed_auto_adjust, \
 		g_store_path_mode, g_storage_reserved_mb, \
 		g_if_use_trunk_file, g_slot_min_size, \
@@ -129,7 +132,8 @@ int storage_get_params_from_tracker()
 		g_trunk_create_file_time_base.minute, \
 		g_trunk_create_file_interval, \
 		(int)(g_trunk_create_file_space_threshold / \
-		(FDFS_ONE_MB * 1024)), g_trunk_init_check_occupying);
+		(FDFS_ONE_MB * 1024)), g_trunk_init_check_occupying, \
+		g_trunk_init_reload_from_binlog);
 
 	return 0;
 }
