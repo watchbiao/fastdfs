@@ -65,7 +65,7 @@ int trunk_free_block_tree_node_count()
 	return avl_tree_count(&tree_info_by_id);
 }
 
-static int block_tree_walk_callback(void *data, void *args)
+static int block_tree_count_walk_callback(void *data, void *args)
 {
 	int *pcount;
 	pcount = (int *)args;
@@ -78,7 +78,7 @@ int trunk_free_block_total_count()
 {
 	int count;
 	count = 0;
-	avl_tree_walk(&tree_info_by_id, block_tree_walk_callback, &count);
+	avl_tree_walk(&tree_info_by_id, block_tree_count_walk_callback, &count);
 	return count;
 }
 
@@ -421,6 +421,49 @@ int trunk_free_block_delete(FDFSTrunkFullInfo *pTrunkInfo)
 		}
 	}
 
+	return 0;
+}
+
+static int block_tree_print_walk_callback(void *data, void *args)
+{
+	FILE *fp;
+	FDFSBlockArray *pArray;
+	FDFSTrunkFullInfo **pp;
+	FDFSTrunkFullInfo **ppEnd;
+
+	fp = (FILE *)args;
+	pArray = &(((FDFSTrunksById *)data)->block_array);
+
+	ppEnd = pArray->blocks + pArray->count;
+	for (pp=pArray->blocks; pp<ppEnd; pp++)
+	{
+		fprintf(fp, "%d %d %d %d %d %d\n", \
+			(*pp)->path.store_path_index, \
+			(*pp)->path.sub_path_high, (*pp)->path.sub_path_low, \
+			(*pp)->file.id, (*pp)->file.offset, (*pp)->file.size);
+	}
+
+	return 0;
+}
+
+int trunk_free_block_tree_print(const char *filename)
+{
+	FILE *fp;
+	int result;
+
+	fp = fopen(filename, "w");
+	if (fp == NULL)
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"open file %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			filename, result, STRERROR(result));
+		return result;
+	}
+
+	avl_tree_walk(&tree_info_by_id, block_tree_print_walk_callback, fp);
+	fclose(fp);
 	return 0;
 }
 

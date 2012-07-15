@@ -179,6 +179,12 @@ int storage_trunk_init()
 		trunk_free_block_total_count(), \
 		g_trunk_total_free_space);
 
+	{
+	char filename[PATH_MAX];
+	sprintf(filename, "%s/logs/tttt.dat", g_fdfs_base_path);
+	trunk_free_block_tree_print(filename);
+	}
+
 	if_trunk_inited = true;
 	return 0;
 }
@@ -527,7 +533,7 @@ static int storage_trunk_restore(const int64_t restore_offset)
 				if (result == ENOENT)
 				{
 					logDebug("file: "__FILE__", line: %d, "\
-						"trunk dat line: " \
+						"trunk data line: " \
 						INT64_PRINTF_FORMAT, \
 						__LINE__, line_count);
 
@@ -1030,6 +1036,14 @@ static int trunk_split(FDFSTrunkNode *pNode, const int size)
 		return result;
 	}
 
+	result = trunk_mem_binlog_write(time(NULL), \
+			TRUNK_OP_TYPE_DEL_SPACE, &(pNode->trunk));
+	if (result != 0)
+	{
+		fast_mblock_free(&free_blocks_man, pMblockNode);
+		return result;
+	}
+
 	pTrunkNode = (FDFSTrunkNode *)pMblockNode->data;
 	memcpy(pTrunkNode, pNode, sizeof(FDFSTrunkNode));
 
@@ -1042,14 +1056,6 @@ static int trunk_split(FDFSTrunkNode *pNode, const int size)
 	result = trunk_add_free_block(pTrunkNode, true);
 	if (result != 0)
 	{
-		return result;
-	}
-
-	result = trunk_mem_binlog_write(time(NULL), \
-			TRUNK_OP_TYPE_DEL_SPACE, &(pNode->trunk));
-	if (result != 0)
-	{
-		trunk_delete_space(&(pTrunkNode->trunk), true); //rollback
 		return result;
 	}
 
