@@ -528,7 +528,6 @@ int trunk_free_block_tree_print(const char *filename)
 
 	avl_tree_walk(&tree_info_by_id, block_tree_print_walk_callback, fp);
 	fclose(fp);
-	logInfo("sizeof(FDFSTrunkFullInfo): %d", (int)sizeof(FDFSTrunkFullInfo));
 	return 0;
 }
 

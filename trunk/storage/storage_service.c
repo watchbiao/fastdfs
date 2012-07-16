@@ -2641,8 +2641,8 @@ static int storage_set_link_file_meta(struct fast_task_info *pTask, \
 		sizeof(key_info.szObjectId), \
 		"%s/%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
 		g_group_name, FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
-		pFileContext->extra_info.upload.trunk_info.path.store_path_index, \
-		pSrcFileInfo->src_true_filename);
+		pFileContext->extra_info.upload.trunk_info.path. \
+		store_path_index, pSrcFileInfo->src_true_filename);
 
 	key_info.key_len = sizeof(FDHT_KEY_NAME_REF_COUNT) - 1;
 	memcpy(key_info.szKey, FDHT_KEY_NAME_REF_COUNT, key_info.key_len);
@@ -3704,12 +3704,10 @@ static int storage_server_trunk_confirm_or_free(struct fast_task_info *pTask)
 
 	if (pHeader->cmd == STORAGE_PROTO_CMD_TRUNK_ALLOC_CONFIRM)
 	{
-		trunkInfo.status = FDFS_TRUNK_STATUS_HOLD;
 		return trunk_alloc_confirm(&trunkInfo, pHeader->status);
 	}
 	else
 	{
-		trunkInfo.status = FDFS_TRUNK_STATUS_FREE;
 		return trunk_free_space(&trunkInfo, true);
 	}
 }
@@ -4412,14 +4410,16 @@ static int storage_append_file(struct fast_task_info *pTask)
 	pFileContext->calc_file_hash = false;
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-		"%s/data/%s", g_fdfs_store_paths[store_path_index], true_filename);
+		"%s/data/%s", g_fdfs_store_paths[store_path_index], \
+		true_filename);
 
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_APPEND_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
 	pFileContext->extra_info.upload.file_type = _FILE_TYPE_APPENDER;
 	pFileContext->extra_info.upload.before_open_callback = NULL;
 	pFileContext->extra_info.upload.before_close_callback = NULL;
-	pFileContext->extra_info.upload.trunk_info.path.store_path_index = store_path_index;
+	pFileContext->extra_info.upload.trunk_info.path.store_path_index = \
+			store_path_index;
 	pFileContext->op = FDFS_STORAGE_FILE_OP_APPEND;
 	pFileContext->open_flags = O_WRONLY | O_APPEND | g_extra_open_file_flags;
 
