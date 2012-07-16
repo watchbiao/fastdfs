@@ -1,5 +1,5 @@
 
-Version 3.10  2012-07-15
+Version 3.10  2012-07-16
  * check and init trunk file more gracefully
  * remove unused-but-set-variable
  * bug fixed: return correct group name when g_check_file_duplicate is true
@@ -10,6 +10,8 @@ Version 3.10  2012-07-15
  * common/avl_tree.c: free data when delete
  * tracker.conf add parameter: trunk_init_reload_from_binlog, when this flag 
    is set to true, load all free trunk blocks from trunk binlog
+ * trunk status control only by trunk_mem.c and memcmp struct FDFSTrunkFullInfo
+   avoid memory alignment problem
 
 Version 3.09  2012-07-08
  * make.sh avoid override config files of /etc/fdfs/

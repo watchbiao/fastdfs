@@ -205,11 +205,13 @@ int storage_trunk_init()
 		trunk_free_block_total_count(), \
 		g_trunk_total_free_space);
 
+	/*
 	{
 	char filename[MAX_PATH_SIZE];
 	sprintf(filename, "%s/logs/tttt.dat", g_fdfs_base_path);
 	trunk_free_block_tree_print(filename);
 	}
+	*/
 
 	if_trunk_inited = true;
 	return 0;
@@ -1186,8 +1188,8 @@ static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
 	}
 
 	pCurrent = pSlot->head;
-	while (pCurrent != NULL && memcmp(&(pCurrent->trunk), pTrunkInfo, \
-		sizeof(FDFSTrunkFullInfo)) != 0)
+	while (pCurrent != NULL && memcmp(&(pCurrent->trunk), \
+		pTrunkInfo, sizeof(FDFSTrunkFullInfo)) != 0)
 	{
 		pCurrent = pCurrent->next;
 	}
@@ -1388,29 +1390,41 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 
 int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status)
 {
+	FDFSTrunkFullInfo target_trunk_info;
+
 	if (!g_if_trunker_self || !if_trunk_inited)
 	{
 		return EINVAL;
 	}
 
+	memset(&target_trunk_info, 0, sizeof(FDFSTrunkFullInfo));
+	target_trunk_info.status = FDFS_TRUNK_STATUS_HOLD;
+	target_trunk_info.path.store_path_index = \
+			pTrunkInfo->path.store_path_index;
+	target_trunk_info.path.sub_path_high = pTrunkInfo->path.sub_path_high;
+	target_trunk_info.path.sub_path_low = pTrunkInfo->path.sub_path_low;
+	target_trunk_info.file.id = pTrunkInfo->file.id;
+	target_trunk_info.file.offset = pTrunkInfo->file.offset;
+	target_trunk_info.file.size = pTrunkInfo->file.size;
+
 	if (status == 0)
 	{
-		return trunk_delete_space(pTrunkInfo, true);
+		return trunk_delete_space(&target_trunk_info, true);
 	}
 	else if (status == EEXIST)
 	{
 		char buff[256];
-		trunk_info_dump(pTrunkInfo, buff, sizeof(buff));
+		trunk_info_dump(&target_trunk_info, buff, sizeof(buff));
 
 		logWarning("file: "__FILE__", line: %d, " \
 			"trunk space already be occupied, " \
 			"delete this trunk space, trunk info: %s", \
 			__LINE__, buff);
-		return trunk_delete_space(pTrunkInfo, true);
+		return trunk_delete_space(&target_trunk_info, true);
 	}
 	else
 	{
-		return trunk_restore_node(pTrunkInfo);
+		return trunk_restore_node(&target_trunk_info);
 	}
 }
 
