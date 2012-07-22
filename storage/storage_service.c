@@ -5258,6 +5258,8 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 	{
 		#define MKTEMP_MAX_COUNT  10
 		int i;
+		struct stat stat_buf;
+
 		for (i=0; i < MKTEMP_MAX_COUNT; i++)
 		{
 			pthread_mutex_lock(&g_storage_thread_lock);
@@ -5269,13 +5271,30 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 
 			pthread_mutex_unlock(&g_storage_thread_lock);
 
-			if (fileExists(pFileContext->filename))
+			if (stat(pFileContext->filename, &stat_buf) == 0)
 			{
+				if (time(NULL) - stat_buf.st_mtime > 600)
+				{
+					if (unlink(pFileContext->filename) != 0
+						&& errno != ENOENT)
+					{
+					logWarning("file: "__FILE__", line: %d"\
+					", client ip: %s, unlink temp file %s "\
+					" fail, errno: %d, error info: %s", \
+					__LINE__, pTask->client_ip, \
+					pFileContext->filename, \
+					errno, STRERROR(errno));
+					continue;
+					}
+				}
+				else
+				{
 				logWarning("file: "__FILE__", line: %d, " \
 					"client ip: %s, temp file %s already "\
 					"exists", __LINE__, pTask->client_ip, \
 					pFileContext->filename);
 				continue;
+				}
 			}
 
 			break;
@@ -5289,7 +5308,6 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 			pClientInfo->total_length = sizeof(TrackerHeader);
 			return EAGAIN;
 		}
-
 
 		clean_func = dio_write_finish_clean_up;
 		file_offset = 0;
