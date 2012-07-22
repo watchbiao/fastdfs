@@ -1,15 +1,15 @@
 
-Version 3.10  2012-07-16
+Version 3.10  2012-07-22
  * check and init trunk file more gracefully
  * remove unused-but-set-variable
  * bug fixed: return correct group name when g_check_file_duplicate is true
  * bug fixed: php extension call_user_function replace TSRMLS_CC with TSRMLS_DC
- * large tracker re-select trunk server interval
+ * large the interval of tracker re-select trunk server
  * trunk free block check duplicate using avl tree
  * trunk file sync overwrite the dest file anyway
  * common/avl_tree.c: free data when delete
  * tracker.conf add parameter: trunk_init_reload_from_binlog, when this flag 
-   is set to true, load all free trunk blocks from trunk binlog
+   is set to true, load all free trunk blocks from the trunk binlog
  * trunk status control only by trunk_mem.c and memcmp struct FDFSTrunkFullInfo
    avoid memory alignment problem
 
