@@ -1271,7 +1271,11 @@ int tcpsetserveropt(int fd, const int timeout)
 	struct timeval waittime;
 
 	linger.l_onoff = 1;
+#ifdef OS_FREEBSD
 	linger.l_linger = timeout * 100;
+#else
+	linger.l_linger = timeout;
+#endif
 	if (setsockopt(fd, SOL_SOCKET, SO_LINGER, \
                 &linger, (socklen_t)sizeof(struct linger)) < 0)
 	{
