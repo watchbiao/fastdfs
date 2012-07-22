@@ -461,10 +461,22 @@ static int block_tree_print_walk_callback(void *data, void *args)
 	FDFSTrunkFileIdentifier *pFileIdentifier;
 	pFileIdentifier = &(((FDFSTrunksById *)data)->trunk_file_id);
 
-	fprintf(fp, "%d %d %d %d %d\n", \
+	fprintf(fp, "%d %d %d %d %d", \
 			pFileIdentifier->path.store_path_index, \
-			pFileIdentifier->path.sub_path_high, pFileIdentifier->path.sub_path_low, \
+			pFileIdentifier->path.sub_path_high, \
+			pFileIdentifier->path.sub_path_low, \
 			pFileIdentifier->id, pArray->count);
+	if (pArray->count > 0)
+	{
+		fprintf(fp, " %d", pArray->blocks[0]->file.offset);
+		if (pArray->count > 1)
+		{
+			fprintf(fp, " %d", pArray->blocks[pArray->count-1]-> \
+				file.offset + pArray->blocks[pArray->count-1]->\
+				file.size);
+		}
+	}
+	fprintf(fp, "\n");
 	return 0;
 	}
 	*/
