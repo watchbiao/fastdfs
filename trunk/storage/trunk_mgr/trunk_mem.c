@@ -596,14 +596,23 @@ static int storage_trunk_restore(const int64_t restore_offset)
 	line_count = 0;
 	while (1)
 	{
+		record_length = 0;
 		result = trunk_binlog_read(&reader, &record, &record_length);
 		if (result != 0)
 		{
 			if (result == ENOENT)
 			{
+				if (record_length > 0)  //skip incorrect record
+				{
+					line_count++;
+					reader.binlog_offset += record_length;
+					continue;
+				}
+
 				result = (reader.binlog_offset >= \
 					trunk_binlog_size) ? 0 : EINVAL;
 			}
+		
 			break;
 		}
 
