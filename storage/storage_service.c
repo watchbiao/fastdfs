@@ -241,7 +241,6 @@ static int storage_delete_file_auto(StorageFileContext *pFileContext)
 	}
 }
 
-/*
 static bool storage_judge_file_type_by_size(const char *remote_filename, \
 		const int filename_len, const int64_t type_mask)
 {
@@ -268,7 +267,6 @@ static bool storage_judge_file_type_by_size(const char *remote_filename, \
 	file_size = buff2long(buff + sizeof(int) * 2);
 	return (file_size & type_mask) ? true : false;
 }
-*/
 
 static bool storage_is_slave_file(const char *remote_filename, \
 		const int filename_len)
@@ -3783,16 +3781,23 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 			continue;
 		}
 
+		if (storage_judge_file_type_by_size(record.true_filename, \
+			record.true_filename_len, FDFS_TRUNK_FILE_MARK_SIZE))
+		{
+		if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK)
+		{
+			record.op_type = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
+		}
+		else if (record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_LINK)
+		{
+			record.op_type = STORAGE_OP_TYPE_REPLICA_CREATE_FILE;
+		}
+		}
+		else
+		{
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 			g_fdfs_store_paths[record.store_path_index], \
 			record.true_filename);
-
-		/*
-		if ((result=trunk_file_lstat(store_path_index, \
-			record.true_filename, filename_len, &stat_buf, \
-			&(pFileContext->extra_info.upload.trunk_info), \
-			&trunkHeader)) != 0)
-		*/
 		if (lstat(full_filename, &stat_buf) != 0)
 		{
 			if (errno == ENOENT)
@@ -3848,6 +3853,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 			record.op_type = STORAGE_OP_TYPE_REPLICA_CREATE_FILE;
 			}
 			}
+		}
 		}
 
 		if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE
