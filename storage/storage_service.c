@@ -252,9 +252,10 @@ static bool storage_judge_file_type_by_size(const char *remote_filename, \
 		+ FDFS_FILENAME_BASE64_LENGTH + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"filename is too short, length: %d < %d", \
-			__LINE__, filename_len, FDFS_LOGIC_FILE_PATH_LEN \
-			+ FDFS_FILENAME_BASE64_LENGTH \
+			"filename: %s is too short, length: %d(%d) < %d", \
+			__LINE__, remote_filename, filename_len, \
+			(int)strlen(remote_filename), \
+			FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
 			+ FDFS_FILE_EXT_NAME_MAX_LEN + 1);
 		return false;
 	}
