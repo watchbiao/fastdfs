@@ -53,9 +53,9 @@ static int storage_do_fetch_binlog(TrackerServerInfo *pSrcStorage, \
 	char full_binlog_filename[MAX_PATH_SIZE];
 	TrackerHeader *pHeader;
 	char *pBasePath;
-	int result;
 	int64_t in_bytes;
 	int64_t file_bytes;
+	int result;
 
 	pBasePath = g_fdfs_store_paths[store_path_index];
 	recovery_get_binlog_filename(pBasePath, full_binlog_filename);
@@ -497,13 +497,13 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 	int result;
 	int log_level;
 	int count;
+	int store_path_index;
 	int64_t file_size;
 	int64_t total_count;
 	int64_t success_count;
 	bool bContinueFlag;
 	char local_filename[MAX_PATH_SIZE];
 	char src_filename[MAX_PATH_SIZE];
-	char *pSrcFilename;
 
 	pTrackerServer = g_tracker_group.servers;
 	count = 0;
@@ -561,42 +561,37 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 		else if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK
 		      || record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_LINK)
 		{
-			pSrcFilename = strchr(record.filename, ' ');
-			if (pSrcFilename == NULL)
+			if (record.src_filename_len == 0)
 			{
 				logError("file: "__FILE__", line: %d, " \
-					"invalid binlog file line: %s", \
-					__LINE__, record.filename);
+					"invalid binlog line, filename: %s, " \
+					"expect src filename", __LINE__, \
+					record.filename);
 				result = EINVAL;
 				bContinueFlag = false;
 				break;
 			}
 
-			record.filename_len = pSrcFilename - record.filename;
-			*pSrcFilename = '\0';
-			pSrcFilename++;
-
-			if ((result=storage_split_filename(record.filename, \
+			if ((result=storage_split_filename_ex(record.filename, \
 				&record.filename_len, record.true_filename, \
-				&g_fdfs_store_paths[record.store_path_index])) != 0)
+				&store_path_index)) != 0)
 			{
 				bContinueFlag = false;
 				break;
 			}
 			sprintf(local_filename, "%s/data/%s", \
-				g_fdfs_store_paths[record.store_path_index], \
+				g_fdfs_store_paths[store_path_index], \
 				record.true_filename);
 
-			record.filename_len = strlen(pSrcFilename);
-			if ((result=storage_split_filename(pSrcFilename, \
-				&record.filename_len, record.true_filename, \
-				&g_fdfs_store_paths[record.store_path_index])) != 0)
+			if ((result=storage_split_filename_ex( \
+				record.src_filename, &record.src_filename_len,\
+				record.true_filename, &store_path_index)) != 0)
 			{
 				bContinueFlag = false;
 				break;
 			}
 			sprintf(src_filename, "%s/data/%s", \
-				g_fdfs_store_paths[record.store_path_index], \
+				g_fdfs_store_paths[store_path_index], \
 				record.true_filename);
 			if (symlink(src_filename, local_filename) == 0)
 			{
