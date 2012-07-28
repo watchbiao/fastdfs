@@ -3786,6 +3786,13 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
 			g_fdfs_store_paths[record.store_path_index], \
 			record.true_filename);
+
+		/*
+		if ((result=trunk_file_lstat(store_path_index, \
+			record.true_filename, filename_len, &stat_buf, \
+			&(pFileContext->extra_info.upload.trunk_info), \
+			&trunkHeader)) != 0)
+		*/
 		if (lstat(full_filename, &stat_buf) != 0)
 		{
 			if (errno == ENOENT)

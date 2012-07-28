@@ -97,6 +97,10 @@ static int storage_do_fetch_binlog(TrackerServerInfo *pSrcStorage, \
 		return result;
 	}
 
+	logInfo("file: "__FILE__", line: %d, " \
+		"recovery binlog file size: "INT64_PRINTF_FORMAT, \
+		__LINE__, file_bytes);
+
 	return 0;
 }
 
@@ -507,7 +511,7 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 	success_count = 0;
 	result = 0;
 
-	logDebug("file: "__FILE__", line: %d, " \
+	logInfo("file: "__FILE__", line: %d, " \
 		"disk recovery: recovering files of data path: %s ...", \
 		__LINE__, pBasePath);
 
@@ -655,7 +659,7 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 		recovery_write_to_mark_file(pBasePath, pReader);
 		count = 0;
 
-		logDebug("file: "__FILE__", line: %d, " \
+		logInfo("file: "__FILE__", line: %d, " \
 			"disk recovery: recover path: %s, " \
 			"file count: "INT64_PRINTF_FORMAT \
 			", success count: "INT64_PRINTF_FORMAT, \
@@ -669,7 +673,7 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 
 	if (result == 0)
 	{
-		logDebug("file: "__FILE__", line: %d, " \
+		logInfo("file: "__FILE__", line: %d, " \
 			"disk recovery: recover files of data path: %s done", \
 			__LINE__, pBasePath);
 	}
@@ -694,7 +698,7 @@ int storage_disk_recovery_restore(const char *pBasePath)
 		return 0;
 	}
 
-	logDebug("file: "__FILE__", line: %d, " \
+	logInfo("file: "__FILE__", line: %d, " \
 		"disk recovery: begin recovery data path: %s ...", \
 		__LINE__, pBasePath);
 
@@ -745,7 +749,7 @@ int storage_disk_recovery_restore(const char *pBasePath)
 		return EINTR;
 	}
 
-	logDebug("file: "__FILE__", line: %d, " \
+	logInfo("file: "__FILE__", line: %d, " \
 		"disk recovery: end of recovery data path: %s", \
 		__LINE__, pBasePath);
 
