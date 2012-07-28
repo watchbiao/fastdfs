@@ -34,6 +34,12 @@
 #include "storage_disk_recovery.h"
 #include "storage_client.h"
 
+typedef struct {
+	char line[128];
+	FDFSTrunkPathInfo path;  //trunk file path
+	int id;                  //trunk file id
+} FDFSTrunkFileIdInfo;
+
 #define RECOVERY_BINLOG_FILENAME	".binlog.recovery"
 #define RECOVERY_MARK_FILENAME		".recovery.mark"
 
@@ -524,7 +530,7 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 		continue;
 	}
 
-	while (1)
+	while (g_continue_flag)
 	{
 		result=storage_binlog_read(pReader, &record, &record_length);
 		if (result != 0)
@@ -533,7 +539,6 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 			{
 				result = 0;
 			}
-
 			bContinueFlag = false;
 			break;
 		}
@@ -749,6 +754,150 @@ int storage_disk_recovery_restore(const char *pBasePath)
 		__LINE__, pBasePath);
 
 	return storage_disk_recovery_finish(pBasePath);
+}
+
+static int storage_decode_trunk_info(const int store_path_index, \
+		const char *true_filename, const int filename_len, \
+		FDFSTrunkFullInfo *pTrunkInfo)
+{
+	if (filename_len != FDFS_TRUNK_FILENAME_LENGTH) //not trunk file
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"trunk filename length: %d != %d", \
+			__LINE__, filename_len, \
+			FDFS_TRUNK_FILENAME_LENGTH);
+		return EINVAL;
+	}
+
+	pTrunkInfo->path.store_path_index = store_path_index;
+	pTrunkInfo->path.sub_path_high = strtol(true_filename, NULL, 16);
+	pTrunkInfo->path.sub_path_low = strtol(true_filename + 3, NULL, 16);
+	trunk_file_info_decode(true_filename + FDFS_TRUE_FILE_PATH_LEN + \
+		FDFS_FILENAME_BASE64_LENGTH, &pTrunkInfo->file);
+	return 0;
+}
+
+static int storage_do_split_trunk_binlog(const int store_path_index, 
+		StorageBinLogReader *pReader)
+{
+	FILE *fp;
+	char *pBasePath;
+	char tmpFullFilename[MAX_PATH_SIZE];
+	FDFSTrunkFullInfo trunk_info;
+	FDFSTrunkFileIdInfo trunkFileId;
+	StorageBinLogRecord record;
+	int record_length;
+	int result;
+	
+	pBasePath = g_fdfs_store_paths[store_path_index];
+	recovery_get_full_filename(pBasePath, \
+		RECOVERY_BINLOG_FILENAME".tmp", tmpFullFilename);
+	fp = fopen(tmpFullFilename, "w");
+	if (fp == NULL)
+	{
+		result = errno != 0 ? errno : EPERM;
+		logError("file: "__FILE__", line: %d, " \
+			"open file: %s fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, tmpFullFilename,
+			result, STRERROR(result));
+		return result;
+	}
+
+	memset(&trunk_info, 0, sizeof(trunk_info));
+	memset(&trunkFileId, 0, sizeof(trunkFileId));
+	result = 0;
+	while (g_continue_flag)
+	{
+		result=storage_binlog_read(pReader, &record, &record_length);
+		if (result != 0)
+		{
+			if (result == ENOENT)
+			{
+				result = 0;
+			}
+			break;
+		}
+
+		if (storage_judge_file_type_by_size(record.filename, \
+			record.filename_len, FDFS_TRUNK_FILE_MARK_SIZE))
+		{
+			if (storage_decode_trunk_info(store_path_index, \
+				record.true_filename, record.true_filename_len,\
+				&trunk_info) != 0)
+			{
+				continue;
+			}
+
+			trunkFileId.path = trunk_info.path;
+			trunkFileId.id = trunk_info.file.id;
+			sprintf(trunkFileId.line, "%d %c %s", \
+				(int)record.timestamp, \
+				record.op_type, record.filename);
+		}
+		else
+		{
+			if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE
+		 	|| record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_FILE)
+			{
+				if (fprintf(fp, "%d %c %s\n", \
+					(int)record.timestamp, \
+					record.op_type, record.filename) < 0)
+				{
+					result = errno != 0 ? errno : EIO;
+					logError("file: "__FILE__", line: %d, " \
+						"write to file: %s fail, " \
+						"errno: %d, error info: %s.", \
+						__LINE__, tmpFullFilename,
+						result, STRERROR(result));
+					break;
+				}
+			}
+			else
+			{
+				if (fprintf(fp, "%d %c %s %s\n", \
+					(int)record.timestamp, \
+					record.op_type, record.filename, \
+					record.src_filename) < 0)
+				{
+					result = errno != 0 ? errno : EIO;
+					logError("file: "__FILE__", line: %d, " \
+						"write to file: %s fail, " \
+						"errno: %d, error info: %s.", \
+						__LINE__, tmpFullFilename,
+						result, STRERROR(result));
+					break;
+				}
+			}
+		}
+	}
+
+	fclose(fp);
+	if (!g_continue_flag)
+	{
+		return EINTR;
+	}
+
+	return result;
+}
+
+static int storage_disk_recovery_split_trunk_binlog(const int store_path_index)
+{
+	char *pBasePath;
+	StorageBinLogReader reader;
+	int result;
+
+	pBasePath = g_fdfs_store_paths[store_path_index];
+	if ((result=recovery_reader_init(pBasePath, &reader)) != 0)
+	{
+		storage_reader_destroy(&reader);
+		return result;
+	}
+
+	result = storage_do_split_trunk_binlog(store_path_index, &reader);
+
+	storage_reader_destroy(&reader);
+	return result;
 }
 
 int storage_disk_recovery_start(const int store_path_index)

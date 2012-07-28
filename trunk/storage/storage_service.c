@@ -241,34 +241,6 @@ static int storage_delete_file_auto(StorageFileContext *pFileContext)
 	}
 }
 
-static bool storage_judge_file_type_by_size(const char *remote_filename, \
-		const int filename_len, const int64_t type_mask)
-{
-	int buff_len;
-	char buff[64];
-	int64_t file_size;
-
-	if (filename_len < FDFS_LOGIC_FILE_PATH_LEN \
-		+ FDFS_FILENAME_BASE64_LENGTH + FDFS_FILE_EXT_NAME_MAX_LEN + 1)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"filename: %s is too short, length: %d(%d) < %d", \
-			__LINE__, remote_filename, filename_len, \
-			(int)strlen(remote_filename), \
-			FDFS_LOGIC_FILE_PATH_LEN + FDFS_FILENAME_BASE64_LENGTH \
-			+ FDFS_FILE_EXT_NAME_MAX_LEN + 1);
-		return false;
-	}
-
-	memset(buff, 0, sizeof(buff));
-	base64_decode_auto(&g_fdfs_base64_context, (char *)remote_filename + \
-		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
-		buff, &buff_len);
-
-	file_size = buff2long(buff + sizeof(int) * 2);
-	return (file_size & type_mask) ? true : false;
-}
-
 static bool storage_is_slave_file(const char *remote_filename, \
 		const int filename_len)
 {
