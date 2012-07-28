@@ -3782,8 +3782,8 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 			continue;
 		}
 
-		if (storage_judge_file_type_by_size(record.true_filename, \
-			record.true_filename_len, FDFS_TRUNK_FILE_MARK_SIZE))
+		if (storage_judge_file_type_by_size(record.filename, \
+			record.filename_len, FDFS_TRUNK_FILE_MARK_SIZE))
 		{
 		if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK)
 		{
