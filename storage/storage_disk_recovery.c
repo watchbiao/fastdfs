@@ -963,12 +963,17 @@ static int storage_do_split_trunk_binlog(const int store_path_index,
 
 	if (result == 0)
 	{
-		logInfo("file: "__FILE__", line: %d, " \
-			"recovering trunk file count: %d", __LINE__, \
-			avl_tree_count(&tree_unique_trunks));
+		int tree_node_count;
+		tree_node_count = avl_tree_count(&tree_unique_trunks);
+		if (tree_node_count > 0)
+		{
+			logInfo("file: "__FILE__", line: %d, " \
+				"recovering trunk file count: %d", __LINE__, \
+				tree_node_count);
 
-		result = avl_tree_walk(&tree_unique_trunks, \
-			tree_write_file_walk_callback, fp);
+			result = avl_tree_walk(&tree_unique_trunks, \
+				tree_write_file_walk_callback, fp);
+		}
 	}
 
 	avl_tree_destroy(&tree_unique_trunks);
