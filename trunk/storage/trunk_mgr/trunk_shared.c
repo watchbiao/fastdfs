@@ -650,3 +650,24 @@ bool fdfs_is_trunk_file(const char *remote_filename, const int filename_len)
 	return (file_size & FDFS_TRUNK_FILE_MARK_SIZE) ? true : false;
 }
 
+int fdfs_decode_trunk_info(const int store_path_index, \
+		const char *true_filename, const int filename_len, \
+		FDFSTrunkFullInfo *pTrunkInfo)
+{
+	if (filename_len != FDFS_TRUNK_FILENAME_LENGTH) //not trunk file
+	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"trunk filename length: %d != %d, filename: %s", \
+			__LINE__, filename_len, FDFS_TRUNK_FILENAME_LENGTH, \
+			true_filename);
+		return EINVAL;
+	}
+
+	pTrunkInfo->path.store_path_index = store_path_index;
+	pTrunkInfo->path.sub_path_high = strtol(true_filename, NULL, 16);
+	pTrunkInfo->path.sub_path_low = strtol(true_filename + 3, NULL, 16);
+	trunk_file_info_decode(true_filename + FDFS_TRUE_FILE_PATH_LEN + \
+		FDFS_FILENAME_BASE64_LENGTH, &pTrunkInfo->file);
+	return 0;
+}
+
