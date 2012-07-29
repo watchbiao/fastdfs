@@ -764,9 +764,9 @@ static int storage_decode_trunk_info(const int store_path_index, \
 	if (filename_len != FDFS_TRUNK_FILENAME_LENGTH) //not trunk file
 	{
 		logWarning("file: "__FILE__", line: %d, " \
-			"trunk filename length: %d != %d", \
-			__LINE__, filename_len, \
-			FDFS_TRUNK_FILENAME_LENGTH);
+			"trunk filename length: %d != %d, filename: %s", \
+			__LINE__, filename_len, FDFS_TRUNK_FILENAME_LENGTH, \
+			true_filename);
 		return EINVAL;
 	}
 
@@ -868,8 +868,7 @@ static int storage_do_split_trunk_binlog(const int store_path_index,
 			break;
 		}
 
-		if (storage_judge_file_type_by_size(record.filename, \
-			record.filename_len, FDFS_TRUNK_FILE_MARK_SIZE))
+		if (fdfs_is_trunk_file(record.filename, record.filename_len))
 		{
 			if (storage_decode_trunk_info(store_path_index, \
 				record.true_filename, record.true_filename_len,\
@@ -953,6 +952,10 @@ static int storage_do_split_trunk_binlog(const int store_path_index,
 
 	if (result == 0)
 	{
+		logInfo("file: "__FILE__", line: %d, " \
+			"trunk file count: %d", __LINE__, \
+			avl_tree_count(&tree_unique_trunks));
+
 		result = avl_tree_walk(&tree_unique_trunks, \
 			tree_write_file_walk_callback, fp);
 	}
@@ -971,6 +974,16 @@ static int storage_do_split_trunk_binlog(const int store_path_index,
 
 	recovery_get_full_filename(pBasePath, \
 		RECOVERY_BINLOG_FILENAME, binlogFullFilename);
+	if (rename(binlogFullFilename, "/tmp/"RECOVERY_BINLOG_FILENAME) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"rename file %s to %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			binlogFullFilename, "/tmp/"RECOVERY_BINLOG_FILENAME, \
+			errno, STRERROR(errno));
+		return errno != 0 ? errno : EPERM;
+	}
+
 	if (rename(tmpFullFilename, binlogFullFilename) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1058,15 +1071,17 @@ int storage_disk_recovery_start(const int store_path_index)
 		return result;
 	}
 
-	if ((result=storage_disk_recovery_split_trunk_binlog( \
-			store_path_index)) != 0)
+	//set fetch binlog done
+	if ((result=recovery_init_mark_file(pBasePath, true)) != 0)
 	{
 		return result;
 	}
 
-	//set fetch binlog done
-	if ((result=recovery_init_mark_file(pBasePath, true)) != 0)
+	if ((result=storage_disk_recovery_split_trunk_binlog( \
+			store_path_index)) != 0)
 	{
+		char markFullFilename[MAX_PATH_SIZE];
+		unlink(recovery_get_mark_filename(pBasePath, markFullFilename));
 		return result;
 	}
 

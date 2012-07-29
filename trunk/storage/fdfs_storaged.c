@@ -96,6 +96,7 @@ int main(int argc, char *argv[])
 
 	g_up_time = time(NULL);
 	log_init();
+	trunk_shared_init();
 
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
 	if (getExeAbsoluteFilename(argv[0], g_exe_name, \
@@ -165,7 +166,6 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	trunk_shared_init();
 	if ((result=set_rand_seed()) != 0)
 	{
 		logCrit("file: "__FILE__", line: %d, " \
