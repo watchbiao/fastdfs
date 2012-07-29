@@ -499,6 +499,7 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 		TrackerServerInfo *pSrcStorage)
 {
 	TrackerServerInfo *pTrackerServer;
+	FDFSTrunkFullInfo trunk_info;
 	StorageBinLogRecord record;
 	int record_length;
 	int result;
@@ -548,9 +549,40 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 		if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE
 		 || record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_FILE)
 		{
+			if (fdfs_is_trunk_file(record.filename, \
+					record.filename_len))
+			{
+			char *pTrunkPathEnd;
+			char *pLocalFilename;
+			if (fdfs_decode_trunk_info(record.store_path_index, \
+				record.true_filename, record.true_filename_len,\
+				&trunk_info) != 0)
+			{
+				pReader->binlog_offset += record_length;
+				count++;
+				continue;
+			}
+
+			trunk_get_full_filename(&trunk_info, \
+                		local_filename, sizeof(local_filename));
+
+			pTrunkPathEnd = strrchr(record.filename, '/');
+			pLocalFilename = strrchr(local_filename, '/');
+			if (pTrunkPathEnd == NULL || pLocalFilename == NULL)
+			{
+				pReader->binlog_offset += record_length;
+				count++;
+				continue;
+			}
+			sprintf(pTrunkPathEnd + 1, "%s", pLocalFilename + 1);
+			}
+			else
+			{
 			sprintf(local_filename, "%s/data/%s", \
 				g_fdfs_store_paths[record.store_path_index], \
 				record.true_filename);
+			}
+
 			result = storage_download_file_to_file(pTrackerServer, \
 					pSrcStorage, g_group_name, \
 					record.filename, local_filename, \
@@ -757,27 +789,6 @@ int storage_disk_recovery_restore(const char *pBasePath)
 	return storage_disk_recovery_finish(pBasePath);
 }
 
-static int storage_decode_trunk_info(const int store_path_index, \
-		const char *true_filename, const int filename_len, \
-		FDFSTrunkFullInfo *pTrunkInfo)
-{
-	if (filename_len != FDFS_TRUNK_FILENAME_LENGTH) //not trunk file
-	{
-		logWarning("file: "__FILE__", line: %d, " \
-			"trunk filename length: %d != %d, filename: %s", \
-			__LINE__, filename_len, FDFS_TRUNK_FILENAME_LENGTH, \
-			true_filename);
-		return EINVAL;
-	}
-
-	pTrunkInfo->path.store_path_index = store_path_index;
-	pTrunkInfo->path.sub_path_high = strtol(true_filename, NULL, 16);
-	pTrunkInfo->path.sub_path_low = strtol(true_filename + 3, NULL, 16);
-	trunk_file_info_decode(true_filename + FDFS_TRUE_FILE_PATH_LEN + \
-		FDFS_FILENAME_BASE64_LENGTH, &pTrunkInfo->file);
-	return 0;
-}
-
 static int storage_compare_trunk_id_info(void *p1, void *p2)
 {
 	int result;
@@ -870,7 +881,7 @@ static int storage_do_split_trunk_binlog(const int store_path_index,
 
 		if (fdfs_is_trunk_file(record.filename, record.filename_len))
 		{
-			if (storage_decode_trunk_info(store_path_index, \
+			if (fdfs_decode_trunk_info(store_path_index, \
 				record.true_filename, record.true_filename_len,\
 				&trunk_info) != 0)
 			{
@@ -953,7 +964,7 @@ static int storage_do_split_trunk_binlog(const int store_path_index,
 	if (result == 0)
 	{
 		logInfo("file: "__FILE__", line: %d, " \
-			"trunk file count: %d", __LINE__, \
+			"recovering trunk file count: %d", __LINE__, \
 			avl_tree_count(&tree_unique_trunks));
 
 		result = avl_tree_walk(&tree_unique_trunks, \
@@ -974,16 +985,6 @@ static int storage_do_split_trunk_binlog(const int store_path_index,
 
 	recovery_get_full_filename(pBasePath, \
 		RECOVERY_BINLOG_FILENAME, binlogFullFilename);
-	if (rename(binlogFullFilename, "/tmp/"RECOVERY_BINLOG_FILENAME) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"rename file %s to %s fail, " \
-			"errno: %d, error info: %s", __LINE__, \
-			binlogFullFilename, "/tmp/"RECOVERY_BINLOG_FILENAME, \
-			errno, STRERROR(errno));
-		return errno != 0 ? errno : EPERM;
-	}
-
 	if (rename(tmpFullFilename, binlogFullFilename) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
