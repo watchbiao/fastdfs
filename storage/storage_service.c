@@ -1851,7 +1851,9 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 			r |= 0x80000000;
 		}
 
-		masked_file_size = (((int64_t)r) << 32 ) | file_size;
+		masked_file_size = ((((int64_t)r) << 32 ) | file_size) & \
+					(~(FDFS_TRUNK_FILE_MARK_SIZE | \
+					FDFS_APPENDER_FILE_SIZE));
 	}
 	long2buff(masked_file_size, buff+sizeof(int)*2);
 	int2buff(crc32, buff+sizeof(int)*4);
@@ -3754,8 +3756,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 			continue;
 		}
 
-		if (storage_judge_file_type_by_size(record.filename, \
-			record.filename_len, FDFS_TRUNK_FILE_MARK_SIZE))
+		if (fdfs_is_trunk_file(record.filename, record.filename_len))
 		{
 		if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_LINK)
 		{

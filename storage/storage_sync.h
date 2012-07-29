@@ -101,9 +101,6 @@ void storage_reader_destroy(StorageBinLogReader *pReader);
 
 int storage_report_storage_status(const char *ip_addr, const char status);
 
-bool storage_judge_file_type_by_size(const char *remote_filename, \
-		const int filename_len, const int64_t type_mask);
-
 #ifdef __cplusplus
 }
 #endif

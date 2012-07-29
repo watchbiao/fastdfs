@@ -630,3 +630,23 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 	return 0;
 }
 
+bool fdfs_is_trunk_file(const char *remote_filename, const int filename_len)
+{
+	int buff_len;
+	char buff[64];
+	int64_t file_size;
+
+	if (filename_len != FDFS_TRUNK_LOGIC_FILENAME_LENGTH) //not trunk file
+	{
+		return false;
+	}
+
+	memset(buff, 0, sizeof(buff));
+	base64_decode_auto(&g_fdfs_base64_context, (char *)remote_filename + \
+		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
+		buff, &buff_len);
+
+	file_size = buff2long(buff + sizeof(int) * 2);
+	return (file_size & FDFS_TRUNK_FILE_MARK_SIZE) ? true : false;
+}
+

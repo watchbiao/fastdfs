@@ -143,6 +143,8 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader, int *pfd);
 
+bool fdfs_is_trunk_file(const char *remote_filename, const int filename_len);
+
 #ifdef __cplusplus
 }
 #endif
