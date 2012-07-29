@@ -24,6 +24,7 @@
 #include "logger.h"
 #include "fdfs_global.h"
 #include "sockopt.h"
+#include "avl_tree.h"
 #include "shared_func.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
@@ -777,15 +778,52 @@ static int storage_decode_trunk_info(const int store_path_index, \
 	return 0;
 }
 
+static int storage_compare_trunk_id_info(void *p1, void *p2)
+{
+	int result;
+	result = memcmp(&(((FDFSTrunkFileIdInfo *)p1)->path), \
+			&(((FDFSTrunkFileIdInfo *)p2)->path), \
+			sizeof(FDFSTrunkPathInfo));
+	if (result != 0)
+	{
+		return result;
+	}
+
+	return ((FDFSTrunkFileIdInfo *)p1)->id - ((FDFSTrunkFileIdInfo *)p2)->id;
+}
+
+static int tree_write_file_walk_callback(void *data, void *args)
+{
+	int result;
+
+	if (fprintf((FILE *)args, "%s\n", \
+		((FDFSTrunkFileIdInfo *)data)->line) > 0)
+	{
+		return 0;
+	}
+	else
+	{
+		result = errno != 0 ? errno : EIO;
+		logError("file: "__FILE__", line: %d, " \
+			"write to binlog file fail, " \
+			"errno: %d, error info: %s.", \
+			__LINE__, result, STRERROR(result));
+		return EIO;
+	}
+}
+
 static int storage_do_split_trunk_binlog(const int store_path_index, 
 		StorageBinLogReader *pReader)
 {
 	FILE *fp;
 	char *pBasePath;
+	FDFSTrunkFileIdInfo *pFound;
+	char binlogFullFilename[MAX_PATH_SIZE];
 	char tmpFullFilename[MAX_PATH_SIZE];
 	FDFSTrunkFullInfo trunk_info;
 	FDFSTrunkFileIdInfo trunkFileId;
 	StorageBinLogRecord record;
+	AVLTreeInfo tree_unique_trunks;
 	int record_length;
 	int result;
 	
@@ -801,6 +839,17 @@ static int storage_do_split_trunk_binlog(const int store_path_index,
 			"errno: %d, error info: %s.", \
 			__LINE__, tmpFullFilename,
 			result, STRERROR(result));
+		return result;
+	}
+
+	if ((result=avl_tree_init(&tree_unique_trunks, free, \
+			storage_compare_trunk_id_info)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"avl_tree_init fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, STRERROR(result));
+		fclose(fp);
 		return result;
 	}
 
@@ -831,9 +880,39 @@ static int storage_do_split_trunk_binlog(const int store_path_index,
 
 			trunkFileId.path = trunk_info.path;
 			trunkFileId.id = trunk_info.file.id;
+			pFound = (FDFSTrunkFileIdInfo *)avl_tree_find( \
+					&tree_unique_trunks, &trunkFileId);
+			if (pFound != NULL)
+			{
+				continue;
+			}
+
+			pFound = (FDFSTrunkFileIdInfo *)malloc( \
+					sizeof(FDFSTrunkFileIdInfo));
+			if (pFound == NULL)
+			{
+				result = errno != 0 ? errno : ENOMEM;
+				logError("file: "__FILE__", line: %d, " \
+					"malloc %d bytes fail, " \
+					"errno: %d, error info: %s", __LINE__,\
+					(int)sizeof(FDFSTrunkFileIdInfo), \
+					result, STRERROR(result));
+				break;
+			}
+
 			sprintf(trunkFileId.line, "%d %c %s", \
 				(int)record.timestamp, \
 				record.op_type, record.filename);
+			memcpy(pFound, &trunkFileId, sizeof(FDFSTrunkFileIdInfo));
+			if (avl_tree_insert(&tree_unique_trunks, pFound) != 1)
+			{
+				result = errno != 0 ? errno : ENOMEM;
+				logError("file: "__FILE__", line: %d, " \
+					"avl_tree_insert fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, result, STRERROR(result));
+				break;
+			}
 		}
 		else
 		{
@@ -872,13 +951,37 @@ static int storage_do_split_trunk_binlog(const int store_path_index,
 		}
 	}
 
+	if (result == 0)
+	{
+		result = avl_tree_walk(&tree_unique_trunks, \
+			tree_write_file_walk_callback, fp);
+	}
+
+	avl_tree_destroy(&tree_unique_trunks);
 	fclose(fp);
 	if (!g_continue_flag)
 	{
 		return EINTR;
 	}
 
-	return result;
+	if (result != 0)
+	{
+		return result;
+	}
+
+	recovery_get_full_filename(pBasePath, \
+		RECOVERY_BINLOG_FILENAME, binlogFullFilename);
+	if (rename(tmpFullFilename, binlogFullFilename) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"rename file %s to %s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			tmpFullFilename, binlogFullFilename, \
+			errno, STRERROR(errno));
+		return errno != 0 ? errno : EPERM;
+	}
+
+	return 0;
 }
 
 static int storage_disk_recovery_split_trunk_binlog(const int store_path_index)
@@ -951,6 +1054,12 @@ int storage_disk_recovery_start(const int store_path_index)
 	result = storage_do_fetch_binlog(&srcStorage, store_path_index);
 	tracker_disconnect_server(&srcStorage);
 	if (result != 0)
+	{
+		return result;
+	}
+
+	if ((result=storage_disk_recovery_split_trunk_binlog( \
+			store_path_index)) != 0)
 	{
 		return result;
 	}
