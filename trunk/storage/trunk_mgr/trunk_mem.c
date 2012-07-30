@@ -1560,7 +1560,7 @@ static int trunk_wait_file_ready(const char *filename, const int64_t file_size,
 
 		if (abs(time(NULL) - file_mtime) > 10)
 		{
-			return ETIME;
+			return ETIMEDOUT;
 		}
 
 		usleep(5 * 1000);
@@ -1599,7 +1599,7 @@ int trunk_init_file_ex(const char *filename, const int64_t file_size)
 				"ready ...", __LINE__, filename);
 
 			result = trunk_wait_file_ready(filename, file_size, true);
-			if (result == ETIME)
+			if (result == ETIMEDOUT)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"waiting for trunk file: %s " \
@@ -1653,7 +1653,7 @@ int trunk_check_and_init_file_ex(const char *filename, const int64_t file_size)
 	{
 		return trunk_init_file_ex(filename, file_size);
 	}
-	if (result != ETIME)
+	if (result != ETIMEDOUT)
 	{
 		return result;
 	}
