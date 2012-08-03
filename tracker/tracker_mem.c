@@ -1108,6 +1108,16 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 			result = ENOENT;
 			break;
 		}
+		if (*ip_addr == '\0')
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"in the file \"%s/%s\", " \
+				"item \"%s\" is empty", \
+				__LINE__, data_path, \
+				STORAGE_SERVERS_LIST_FILENAME_NEW, \
+				STORAGE_ITEM_IP_ADDR);
+			continue;
+		}
 
 		memset(&clientInfo, 0, sizeof(TrackerClientInfo));
 		if ((clientInfo.pGroup=tracker_mem_get_group_ex(pGroups, \
@@ -1308,7 +1318,6 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 			IP_ADDRESS_SIZE, "%s", psync_src_ip_addr);
 
 		nStorageSyncCount++;
-
 	}
 
 	iniFreeContext(&iniContext);
