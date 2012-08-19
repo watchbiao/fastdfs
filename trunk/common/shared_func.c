@@ -687,7 +687,7 @@ char **split(char *src, const char seperator, const int nMaxCols, int *nColCount
 		if (i != nLastIndex)
 		{
 			*p = '\0';
-			p++;	//Ìø¹ý·Ö¸ô·û
+			p++;
 		}
 	}
 
