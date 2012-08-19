@@ -26,8 +26,9 @@
 #include "pthread_func.h"
 #include "tracker_global.h"
 #include "tracker_proto.h"
-#include "tracker_mem.h"
+#include "tracker_func.h"
 #include "tracker_relationship.h"
+#include "tracker_mem.h"
 
 #define TRACKER_MEM_ALLOC_ONCE	2
 
@@ -3354,12 +3355,31 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	const bool bNeedSleep, bool *bInserted)
 {
 	int result;
+	FDFSStorageIdInfo *pStorageIdInfo;
 
 	if (*ip_addr == '\0')
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"ip address is empty!", __LINE__);
 		return EINVAL;
+	}
+
+	if (g_use_storage_id)
+	{
+		pStorageIdInfo = tracker_get_storage_id_info( \
+				pGroup->group_name, ip_addr);
+		if (pStorageIdInfo == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"get storage id info fail, group_name: %s, " \
+				"storage ip: %s", __LINE__, \
+				pGroup->group_name, ip_addr);
+			return ENOENT;
+		}
+	}
+	else
+	{
+		pStorageIdInfo = NULL;
 	}
 
 	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
@@ -3413,6 +3433,16 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 		logError("file: "__FILE__", line: %d, "   \
 			"call pthread_mutex_unlock fail", \
 			__LINE__);
+	}
+
+	if (result != 0)
+	{
+		return result;
+	}
+
+	if (pStorageIdInfo != NULL)
+	{
+		strcpy((*ppStorageServer)->id, pStorageIdInfo->id);
 	}
 
 	return result;
@@ -4816,10 +4846,20 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 		}
 #endif
 
-		logDebug("file: "__FILE__", line: %d, " \
-			"storage server %s::%s now active", \
-			__LINE__, pGroup->group_name, \
-			pTargetServer->ip_addr);
+		if (g_use_storage_id)
+		{
+			logDebug("file: "__FILE__", line: %d, " \
+				"storage server %s::%s(%s) now active", \
+				__LINE__, pGroup->group_name, \
+				pTargetServer->id, pTargetServer->ip_addr);
+		}
+		else
+		{
+			logDebug("file: "__FILE__", line: %d, " \
+				"storage server %s::%s now active", \
+				__LINE__, pGroup->group_name, \
+				pTargetServer->ip_addr);
+		}
 	}
 
 	tracker_mem_find_store_server(pGroup);
@@ -4877,10 +4917,20 @@ int tracker_mem_offline_store_server(FDFSGroupInfo *pGroup, \
 		return 0;
 	}
 
-	logDebug("file: "__FILE__", line: %d, " \
-		"storage server %s::%s offline", \
-		__LINE__, pGroup->group_name, \
-		pStorage->ip_addr);
+	if (g_use_storage_id)
+	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"storage server %s::%s (%s) offline", \
+			__LINE__, pGroup->group_name, \
+			pStorage->id, pStorage->ip_addr);
+	}
+	else
+	{
+		logDebug("file: "__FILE__", line: %d, " \
+			"storage server %s::%s offline", \
+			__LINE__, pGroup->group_name, \
+			pStorage->ip_addr);
+	}
 
 	pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
 	return tracker_mem_deactive_store_server(pGroup, pStorage);
