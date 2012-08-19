@@ -11,6 +11,8 @@
 #ifndef _TRACKER_FUNC_H_
 #define _TRACKER_FUNC_H_
 
+#include "tracker_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
