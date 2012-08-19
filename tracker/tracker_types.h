@@ -410,9 +410,9 @@ typedef struct
 
 typedef struct
 {
-	in_addr_t ip_addr;
-	int port;
 	char id[FDFS_STORAGE_ID_MAX_SIZE];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	in_addr_t ip_addr;
 } FDFSStorageIdInfo;
 
 #endif

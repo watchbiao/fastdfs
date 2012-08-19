@@ -94,18 +94,30 @@ static int tracker_load_store_lookup(const char *filename, \
 	return 0;
 }
 
-static int tracker_cmp_ip_and_port (const void *p1, const void *p2)
+static int tracker_cmp_group_name_and_ip(const void *p1, const void *p2)
 {
 	int result;
-	result = ((FDFSStorageIdInfo *)p1)->ip_addr - \
-		((FDFSStorageIdInfo *)p2)->ip_addr;
+	result = strcmp(((FDFSStorageIdInfo *)p1)->group_name,
+		((FDFSStorageIdInfo *)p2)->group_name);
 	if (result != 0)
 	{
 		return result;
 	}
 
-	return ((FDFSStorageIdInfo *)p1)->port - \
-		((FDFSStorageIdInfo *)p2)->port;
+	return ((FDFSStorageIdInfo *)p1)->ip_addr - \
+		((FDFSStorageIdInfo *)p2)->ip_addr;
+}
+
+FDFSStorageIdInfo *tracker_get_storage_id_info(const char *group_name, \
+		const char *pIpAddr)
+{
+	FDFSStorageIdInfo target;
+	memset(&target, 0, sizeof(FDFSStorageIdInfo));
+	snprintf(target.group_name, sizeof(target.group_name), "%s", group_name);
+	target.ip_addr = getIpaddrByName(pIpAddr, NULL, 0);
+	return (FDFSStorageIdInfo *)bsearch(&target, g_storage_ids, \
+		g_storage_id_count, sizeof(FDFSStorageIdInfo), \
+		tracker_cmp_group_name_and_ip);
 }
 
 static int tracker_load_storage_ids(const char *filename, \
@@ -116,8 +128,8 @@ static int tracker_load_storage_ids(const char *filename, \
 	char **lines;
 	char *line;
 	char *id;
-	char *ip_port;
-	char *pPort;
+	char *group_name;
+	char *pIpAddr;
 	FDFSStorageIdInfo *pStorageIdInfo;
 	int64_t file_size;
 	int alloc_bytes;
@@ -242,13 +254,40 @@ static int tracker_load_storage_ids(const char *filename, \
 			}
 
 			id = line;
-			ip_port = line;
-			while (!(*ip_port == ' ' || *ip_port == '\t' || *ip_port == '\0'))
+			group_name = line;
+			while (!(*group_name == ' ' || *group_name == '\t' \
+				|| *group_name == '\0'))
 			{
-				ip_port++;
+				group_name++;
 			}
 
-			if (*ip_port == '\0')
+			if (*group_name == '\0')
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"config file: %s, line no: %d, " \
+					"content: %s, invalid format, " \
+					"expect group name and ip address!", \
+					__LINE__, pStorageIdsFilename, \
+					i + 1, line);
+				result = EINVAL;
+				break;
+			}
+
+			*group_name = '\0';
+			group_name++;  //skip space char
+			while (*group_name == ' ' || *group_name == '\t')
+			{
+				group_name++;
+			}
+		
+			pIpAddr = group_name;
+			while (!(*pIpAddr == ' ' || *pIpAddr == '\t' \
+				|| *pIpAddr == '\0'))
+			{
+				pIpAddr++;
+			}
+
+			if (*pIpAddr == '\0')
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"config file: %s, line no: %d, " \
@@ -259,36 +298,29 @@ static int tracker_load_storage_ids(const char *filename, \
 				break;
 			}
 
-			*ip_port = '\0';
-			ip_port++;  //skip space char
-			while (*ip_port == ' ' || *ip_port == '\t')
+			*pIpAddr = '\0';
+			pIpAddr++;  //skip space char
+			while (*pIpAddr == ' ' || *pIpAddr == '\t')
 			{
-				ip_port++;
-			}
-		
-			pPort = strchr(ip_port, ':');
-			if (pPort != NULL)
-			{
-				*pPort = '\0';
-				pStorageIdInfo->port = atoi(pPort + 1);
-			}
-			else
-			{
-				pStorageIdInfo->port = 0;
+				pIpAddr++;
 			}
 
-			pStorageIdInfo->ip_addr = getIpaddrByName(ip_port, NULL, 0);
+			pStorageIdInfo->ip_addr = getIpaddrByName( \
+							pIpAddr, NULL, 0);
 			if (pStorageIdInfo->ip_addr == INADDR_NONE)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"invalid host name: %s", \
-					__LINE__, ip_port);
+					__LINE__, pIpAddr);
 				result = EINVAL;
 				break;
 			}
 
 			snprintf(pStorageIdInfo->id, \
 				sizeof(pStorageIdInfo->id), "%s", id);
+			snprintf(pStorageIdInfo->group_name, \
+				sizeof(pStorageIdInfo->group_name), \
+				"%s", group_name);
 			pStorageIdInfo++;
 		}
 	} while (0);
@@ -307,24 +339,16 @@ static int tracker_load_storage_ids(const char *filename, \
 	{
 		char szIpAddr[IP_ADDRESS_SIZE];
 
-		if (pStorageIdInfo->port != 0)
-		{
-			logInfo("%s  %s:%d", pStorageIdInfo->id, inet_ntop( \
-				AF_INET, &pStorageIdInfo->ip_addr, szIpAddr, \
-				sizeof(szIpAddr)), pStorageIdInfo->port);
-		}
-		else
-		{
-			logInfo("%s  %s", pStorageIdInfo->id, inet_ntop( \
-				AF_INET, &pStorageIdInfo->ip_addr, szIpAddr, \
-				sizeof(szIpAddr)));
-		}
+		logInfo("%s  %s  %s", pStorageIdInfo->id, \
+			pStorageIdInfo->group_name, inet_ntop( \
+			AF_INET, &pStorageIdInfo->ip_addr, szIpAddr, \
+			sizeof(szIpAddr)));
 
 		pStorageIdInfo++;
 	}
 	
 	qsort(g_storage_ids, g_storage_id_count, sizeof(FDFSStorageIdInfo), \
-		tracker_cmp_ip_and_port);
+		tracker_cmp_group_name_and_ip);
 	return result;
 }
 
