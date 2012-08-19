@@ -20,6 +20,7 @@
 #include "tracker_types.h"
 #include "tracker_status.h"
 #include "base64.h"
+#include "hash.h"
 #include "local_ip_func.h"
 
 #ifdef WITH_HTTPD
@@ -58,6 +59,10 @@ extern char g_run_by_group[32];
 extern char g_run_by_user[32];
 
 extern bool g_storage_ip_changed_auto_adjust;
+extern bool g_use_storage_id;  //if use storage ID instead of IP address
+
+extern FDFSStorageIdInfo *g_storage_ids;  //sorted by storage IP address and port
+extern int g_storage_id_count;		  //storage id count
 
 extern int g_thread_stack_size;
 extern int g_storage_sync_file_max_delay;

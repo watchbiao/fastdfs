@@ -112,6 +112,8 @@
 #define FDFS_TRUNK_FILE_TRUE_SIZE(file_size) \
 	(file_size & (~(FDFS_TRUNK_FILE_MARK_SIZE)))
 
+#define FDFS_STORAGE_ID_MAX_SIZE	16
+
 typedef struct
 {
 	char status;
@@ -405,6 +407,13 @@ typedef struct
 	int length;    //the content length
 	int version;   //for binlog pre-read, compare with binlog_write_version
 } BinLogBuffer;
+
+typedef struct
+{
+	in_addr_t ip_addr;
+	int port;
+	char id[FDFS_STORAGE_ID_MAX_SIZE];
+} FDFSStorageIdInfo;
 
 #endif
 

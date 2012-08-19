@@ -94,6 +94,240 @@ static int tracker_load_store_lookup(const char *filename, \
 	return 0;
 }
 
+static int tracker_cmp_ip_and_port (const void *p1, const void *p2)
+{
+	int result;
+	result = ((FDFSStorageIdInfo *)p1)->ip_addr - \
+		((FDFSStorageIdInfo *)p2)->ip_addr;
+	if (result != 0)
+	{
+		return result;
+	}
+
+	return ((FDFSStorageIdInfo *)p1)->port - \
+		((FDFSStorageIdInfo *)p2)->port;
+}
+
+static int tracker_load_storage_ids(const char *filename, \
+		IniContext *pItemContext)
+{
+	char *pStorageIdsFilename;
+	char *content;
+	char **lines;
+	char *line;
+	char *id;
+	char *ip_port;
+	char *pPort;
+	FDFSStorageIdInfo *pStorageIdInfo;
+	int64_t file_size;
+	int alloc_bytes;
+	int result;
+	int line_count;
+	int i;
+
+	g_use_storage_id = iniGetBoolValue(NULL, "use_storage_id", \
+				pItemContext, false);
+	if (!g_use_storage_id)
+	{
+		return 0;
+	}
+
+	pStorageIdsFilename = iniGetStrValue(NULL, "storage_ids_filename", \
+				pItemContext);
+	if (pStorageIdsFilename == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"conf file \"%s\" must have item " \
+			"\"storage_ids_filename\"!", __LINE__, filename);
+		return ENOENT;
+	}
+
+	if (*pStorageIdsFilename == '\0')
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"conf file \"%s\", storage_ids_filename is emtpy!", \
+			__LINE__, filename);
+		return EINVAL;
+	}
+
+	if (*pStorageIdsFilename == '/')  //absolute path
+	{
+		result = getFileContent(pStorageIdsFilename, \
+				&content, &file_size);
+	}
+	else
+	{
+		const char *lastSlash = strrchr(filename, '/');
+		if (lastSlash == NULL)
+		{
+			result = getFileContent(pStorageIdsFilename, \
+					&content, &file_size);
+		}
+		else
+		{
+			char filepath[MAX_PATH_SIZE];
+			char full_filename[MAX_PATH_SIZE];
+			int len;
+
+			len = lastSlash - filename;
+			if (len >= sizeof(filepath))
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"conf filename: \"%s\" is too long!", \
+					__LINE__, filename);
+				return ENOSPC;
+			}
+			memcpy(filepath, filename, len);
+			*(filepath + len) = '\0';
+			snprintf(full_filename, sizeof(full_filename), \
+				"%s/%s", filepath, pStorageIdsFilename);
+			result = getFileContent(full_filename, \
+					&content, &file_size);
+		}
+	}
+	if (result != 0)
+	{
+		return result;
+	}
+
+	lines = split(content, '\n', 0, &line_count);
+	if (lines == NULL)
+	{
+		free(content);
+		return ENOMEM;
+	}
+
+	do
+	{
+		g_storage_id_count = 0;
+		for (i=0; i<line_count; i++)
+		{
+			trim(lines[i]);
+			if (*lines[i] == '\0' || *lines[i] == '#')
+			{
+				continue;
+			}
+			g_storage_id_count++;
+		}
+
+		if (g_storage_id_count == 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"config file: %s, no storage id!", \
+				__LINE__, pStorageIdsFilename);
+			result = ENOENT;
+			break;
+		}
+
+		alloc_bytes = sizeof(FDFSStorageIdInfo) * g_storage_id_count;
+		g_storage_ids = (FDFSStorageIdInfo *)malloc(alloc_bytes);
+		if (g_storage_ids == NULL)
+		{
+			result = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				alloc_bytes, result, STRERROR(result));
+			break;
+		}
+		memset(g_storage_ids, 0, alloc_bytes);
+
+		pStorageIdInfo = g_storage_ids;
+		for (i=0; i<line_count; i++)
+		{
+			line = lines[i];
+			if (*line == '\0' || *line == '#')
+			{
+				continue;
+			}
+
+			id = line;
+			ip_port = line;
+			while (!(*ip_port == ' ' || *ip_port == '\t' || *ip_port == '\0'))
+			{
+				ip_port++;
+			}
+
+			if (*ip_port == '\0')
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"config file: %s, line no: %d, " \
+					"content: %s, invalid format, " \
+					"expect ip address!", __LINE__, \
+					pStorageIdsFilename, i + 1, line);
+				result = EINVAL;
+				break;
+			}
+
+			*ip_port = '\0';
+			ip_port++;  //skip space char
+			while (*ip_port == ' ' || *ip_port == '\t')
+			{
+				ip_port++;
+			}
+		
+			pPort = strchr(ip_port, ':');
+			if (pPort != NULL)
+			{
+				*pPort = '\0';
+				pStorageIdInfo->port = atoi(pPort + 1);
+			}
+			else
+			{
+				pStorageIdInfo->port = 0;
+			}
+
+			pStorageIdInfo->ip_addr = getIpaddrByName(ip_port, NULL, 0);
+			if (pStorageIdInfo->ip_addr == INADDR_NONE)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"invalid host name: %s", \
+					__LINE__, ip_port);
+				result = EINVAL;
+				break;
+			}
+
+			snprintf(pStorageIdInfo->id, \
+				sizeof(pStorageIdInfo->id), "%s", id);
+			pStorageIdInfo++;
+		}
+	} while (0);
+
+	free(content);
+	freeSplit(lines);
+
+	if (result != 0)
+	{
+		return result;
+	}
+
+	logInfo("g_storage_id_count: %d", g_storage_id_count);
+	pStorageIdInfo = g_storage_ids;
+	for (i=0; i<g_storage_id_count; i++)
+	{
+		char szIpAddr[IP_ADDRESS_SIZE];
+
+		if (pStorageIdInfo->port != 0)
+		{
+			logInfo("%s  %s:%d", pStorageIdInfo->id, inet_ntop( \
+				AF_INET, &pStorageIdInfo->ip_addr, szIpAddr, \
+				sizeof(szIpAddr)), pStorageIdInfo->port);
+		}
+		else
+		{
+			logInfo("%s  %s", pStorageIdInfo->id, inet_ntop( \
+				AF_INET, &pStorageIdInfo->ip_addr, szIpAddr, \
+				sizeof(szIpAddr)));
+		}
+
+		pStorageIdInfo++;
+	}
+	
+	qsort(g_storage_ids, g_storage_id_count, sizeof(FDFSStorageIdInfo), \
+		tracker_cmp_ip_and_port);
+	return result;
+}
+
 int tracker_load_from_conf_file(const char *filename, \
 		char *bind_addr, const int addr_size)
 {
@@ -534,6 +768,11 @@ int tracker_load_from_conf_file(const char *filename, \
 
 		g_trunk_init_reload_from_binlog = iniGetBoolValue(NULL, \
 			"trunk_init_reload_from_binlog", &iniContext, false);
+
+		if ((result=tracker_load_storage_ids(filename, &iniContext)) != 0)
+		{
+			return result;
+		}
 #ifdef WITH_HTTPD
 		if ((result=fdfs_http_params_load(&iniContext, \
 				filename, &g_http_params)) != 0)
@@ -603,7 +842,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			"trunk_create_file_interval=%d, " \
 			"trunk_create_file_space_threshold=%d GB, " \
 			"trunk_init_check_occupying=%d, " \
-			"trunk_init_reload_from_binlog=%d, ", \
+			"trunk_init_reload_from_binlog=%d, " \
+			"use_storage_id=%d, storage_id_count=%d", \
 			g_fdfs_version.major, g_fdfs_version.minor,  \
 			g_fdfs_base_path, g_run_by_group, g_run_by_user, \
 			g_fdfs_connect_timeout, \
@@ -626,7 +866,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_trunk_create_file_interval, \
 			(int)(g_trunk_create_file_space_threshold / \
 			(FDFS_ONE_MB * 1024)), g_trunk_init_check_occupying, \
-			g_trunk_init_reload_from_binlog);
+			g_trunk_init_reload_from_binlog, \
+			g_use_storage_id, g_storage_id_count);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)
