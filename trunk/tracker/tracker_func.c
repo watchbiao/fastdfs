@@ -376,6 +376,7 @@ int tracker_load_from_conf_file(const char *filename, \
 	int64_t trunk_file_size;
 	int64_t slot_min_size;
 	int64_t slot_max_size;
+	char reserved_space_str[32];
 
 	memset(&g_groups, 0, sizeof(FDFSGroups));
 	memset(&iniContext, 0, sizeof(IniContext));
@@ -524,7 +525,48 @@ int tracker_load_from_conf_file(const char *filename, \
 					"reserved_storage_space", &iniContext);
 		if (pStorageReserved == NULL)
 		{
-			g_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
+			g_storage_reserved_space.flag = \
+					TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB;
+			g_storage_reserved_space.rs.mb = \
+					FDFS_DEF_STORAGE_RESERVED_MB;
+		}
+		else if (*pStorageReserved == '\0')
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"item \"reserved_storage_space\" is empty!", \
+				__LINE__);
+			result = EINVAL;
+                        break;
+		}
+		else if (*(pStorageReserved+strlen(pStorageReserved)-1) == '%')
+		{
+			char *endptr;
+			g_storage_reserved_space.flag = \
+				TRACKER_STORAGE_RESERVED_SPACE_FLAG_RATIO;
+			endptr = NULL;
+			*(pStorageReserved+strlen(pStorageReserved)-1) = '\0';
+			g_storage_reserved_space.rs.ratio = \
+					strtod(pStorageReserved, &endptr);
+			if (endptr != NULL && *endptr != '\0')
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"item \"reserved_storage_space\": %s%%"\
+					" is invalid!", __LINE__, \
+					pStorageReserved);
+				result = EINVAL;
+        	                break;
+			}
+
+			if (g_storage_reserved_space.rs.ratio <= 0.00 || \
+				g_storage_reserved_space.rs.ratio >= 100.00)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"item \"reserved_storage_space\": %s%%"\
+					" is invalid!", __LINE__, \
+					pStorageReserved);
+				result = EINVAL;
+        	                break;
+			}
 		}
 		else
 		{
@@ -534,7 +576,10 @@ int tracker_load_from_conf_file(const char *filename, \
 				return result;
 			}
 
-			g_storage_reserved_mb = storage_reserved / FDFS_ONE_MB;
+			g_storage_reserved_space.flag = \
+					TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB;
+			g_storage_reserved_space.rs.mb = \
+					storage_reserved / FDFS_ONE_MB;
 		}
 
 		g_max_connections = iniGetIntValue(NULL, "max_connections", \
@@ -840,6 +885,18 @@ int tracker_load_from_conf_file(const char *filename, \
 
 #endif
 
+		if (g_storage_reserved_space.flag == \
+				TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+		{
+			sprintf(reserved_space_str, "%dMB", \
+				g_storage_reserved_space.rs.mb);
+		}
+		else
+		{
+			sprintf(reserved_space_str, "%.2f%%", \
+				g_storage_reserved_space.rs.ratio);
+		}
+	
 		logInfo("FastDFS v%d.%02d, base_path=%s, " \
 			"run_by_group=%s, run_by_user=%s, " \
 			"connect_timeout=%ds, "    \
@@ -849,7 +906,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			"work_threads=%d, "    \
 			"store_lookup=%d, store_group=%s, " \
 			"store_server=%d, store_path=%d, " \
-			"reserved_storage_space=%dMB, " \
+			"reserved_storage_space=%s, " \
 			"download_server=%d, " \
 			"allow_ip_count=%d, sync_log_buff_interval=%ds, " \
 			"check_active_interval=%ds, " \
@@ -875,7 +932,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_max_connections, g_work_threads, \
 			g_groups.store_lookup, g_groups.store_group, \
 			g_groups.store_server, g_groups.store_path, \
-			g_storage_reserved_mb, g_groups.download_server, \
+			reserved_space_str, g_groups.download_server, \
 			g_allow_ip_count, g_sync_log_buff_interval, \
 			g_check_active_interval, g_thread_stack_size / 1024, \
 			g_storage_ip_changed_auto_adjust, \

@@ -38,6 +38,7 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 
 	total_len = snprintf(buff, buffSize, 
 		"group_name=%s\n"
+		"total_mb="INT64_PRINTF_FORMAT"\n"
 		"free_mb="INT64_PRINTF_FORMAT"\n"
 		"alloc_size=%d\n"
 		"server count=%d\n"
@@ -57,6 +58,7 @@ static int fdfs_dump_group_stat(FDFSGroupInfo *pGroup, char *buff, const int buf
 		"last_source_update=%s\n"
 		"last_sync_update=%s\n",
 		pGroup->group_name, 
+		pGroup->total_mb, 
 		pGroup->free_mb, 
 		pGroup->alloc_size, 
 		pGroup->count, 
@@ -283,7 +285,20 @@ static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer,
 static int fdfs_dump_global_vars(char *buff, const int buffSize)
 {
 	int total_len;
+	char reserved_space_str[32];
 
+	if (g_storage_reserved_space.flag == \
+			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+	{
+		sprintf(reserved_space_str, "%dMB", \
+			g_storage_reserved_space.rs.mb);
+	}
+	else
+	{
+		sprintf(reserved_space_str, "%.2f%%", \
+			g_storage_reserved_space.rs.ratio);
+	}
+	
 	total_len = snprintf(buff, buffSize,
 		"g_fdfs_connect_timeout=%ds\n"
 		"g_fdfs_network_timeout=%ds\n"
@@ -298,7 +313,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_check_active_interval=%ds\n"
 		"g_storage_stat_chg_count=%d\n"
 		"g_storage_sync_time_chg_count=%d\n"
-		"g_storage_reserved_mb=%d MB\n"
+		"g_storage_reserved_space=%s\n"
 		"g_allow_ip_count=%d\n"
 		"g_run_by_group=%s\n"
 		"g_run_by_user=%s\n"
@@ -349,7 +364,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_check_active_interval
 		, g_storage_stat_chg_count
 		, g_storage_sync_time_chg_count
-		, g_storage_reserved_mb
+		, reserved_space_str
 		, g_allow_ip_count
 		, g_run_by_group
 		, g_run_by_user

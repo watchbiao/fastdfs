@@ -586,6 +586,8 @@ static int tracker_deal_get_trunk_fid(struct fast_task_info *pTask)
 
 static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 {
+	char reserved_space_str[32];
+
 	if (pTask->length - sizeof(TrackerHeader) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -600,12 +602,24 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
+	if (g_storage_reserved_space.flag == \
+			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+	{
+		sprintf(reserved_space_str, "%dMB", \
+			g_storage_reserved_space.rs.mb);
+	}
+	else
+	{
+		sprintf(reserved_space_str, "%.2f%%", \
+			g_storage_reserved_space.rs.ratio);
+	}
+	
 	pTask->length = sizeof(TrackerHeader) + \
 	sprintf(pTask->data + sizeof(TrackerHeader), \
 		"storage_ip_changed_auto_adjust=%d\n" \
 		"storage_sync_file_max_delay=%d\n" \
 		"store_path=%d\n" \
-		"reserved_storage_space=%dMB\n" \
+		"reserved_storage_space=%s\n" \
 		"use_trunk_file=%d\n" \
 		"slot_min_size=%d\n" \
 		"slot_max_size=%d\n" \
@@ -619,7 +633,7 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 		g_storage_ip_changed_auto_adjust, \
 		g_storage_sync_file_max_delay, \
 		g_groups.store_path, \
-		g_storage_reserved_mb, \
+		reserved_space_str, \
 		g_if_use_trunk_file, \
 		g_slot_min_size, \
 		g_slot_max_size, \
@@ -1964,6 +1978,65 @@ static int tracker_deal_service_query_fetch_update( \
 	return 0;
 }
 
+static bool tracker_check_reserved_space(FDFSGroupInfo *pGroup)
+{
+	if (g_storage_reserved_space.flag == \
+			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+	{
+		return pGroup->free_mb > g_storage_reserved_space.rs.mb;
+	}
+	else
+	{
+		if (pGroup->total_mb == 0)
+		{
+			return false;
+		}
+
+		return (pGroup->free_mb / pGroup->total_mb) > \
+			g_storage_reserved_space.rs.ratio;
+	}
+}
+
+static bool tracker_check_reserved_space_trunk(FDFSGroupInfo *pGroup)
+{
+	if (g_storage_reserved_space.flag == \
+			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+	{
+		return (pGroup->free_mb + pGroup->trunk_free_mb > 
+			g_storage_reserved_space.rs.mb);
+	}
+	else
+	{
+		if (pGroup->total_mb == 0)
+		{
+			return false;
+		}
+
+		return ((pGroup->free_mb + pGroup->trunk_free_mb) / \
+		pGroup->total_mb) > g_storage_reserved_space.rs.ratio;
+	}
+}
+
+static bool tracker_check_reserved_space_path(const int64_t total_mb, \
+	const int64_t free_mb, const int avg_mb)
+{
+	if (g_storage_reserved_space.flag == \
+			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+	{
+		return free_mb > avg_mb;
+	}
+	else
+	{
+		if (total_mb == 0)
+		{
+			return false;
+		}
+
+		return (free_mb / total_mb) > \
+		  	g_storage_reserved_space.rs.ratio;
+	}
+}
+
 static int tracker_deal_service_query_storage( \
 		struct fast_task_info *pTask, char cmd)
 {
@@ -2029,8 +2102,7 @@ static int tracker_deal_service_query_storage( \
 			return ENOENT;
 		}
 
-		if (pStoreGroup->free_mb + pStoreGroup->trunk_free_mb <= 
-			g_storage_reserved_mb)
+		if (!tracker_check_reserved_space_trunk(pStoreGroup))
 		{
 			pTask->length = sizeof(TrackerHeader);
 			return ENOSPC;
@@ -2053,16 +2125,15 @@ static int tracker_deal_service_query_storage( \
 		if ((*ppFoundGroup)->active_count > 0)
 		{
 			bHaveActiveServer = true;
-			if ((*ppFoundGroup)->free_mb > \
-					g_storage_reserved_mb)
+			if (tracker_check_reserved_space(*ppFoundGroup))
 			{
 				pStoreGroup = *ppFoundGroup;
 			}
-			else if (g_if_use_trunk_file && g_groups.store_lookup==
+			else if (g_if_use_trunk_file && \
+				g_groups.store_lookup== \
 				FDFS_STORE_LOOKUP_LOAD_BALANCE && \
-				(*ppFoundGroup)->free_mb + \
-				(*ppFoundGroup)->trunk_free_mb > 
-				g_storage_reserved_mb)
+				tracker_check_reserved_space_trunk( \
+					*ppFoundGroup))
 			{
 				pStoreGroup = *ppFoundGroup;
 			}
@@ -2082,8 +2153,7 @@ static int tracker_deal_service_query_storage( \
 				}
 
 				bHaveActiveServer = true;
-				if ((*ppGroup)->free_mb > \
-						g_storage_reserved_mb)
+				if (tracker_check_reserved_space(*ppGroup))
 				{
 					pStoreGroup = *ppGroup;
 					g_groups.current_write_group = \
@@ -2103,8 +2173,7 @@ static int tracker_deal_service_query_storage( \
 					}
 
 					bHaveActiveServer = true;
-					if ((*ppGroup)->free_mb > \
-							g_storage_reserved_mb)
+					if (tracker_check_reserved_space(*ppGroup))
 					{
 						pStoreGroup = *ppGroup;
 						g_groups.current_write_group = \
@@ -2135,9 +2204,7 @@ static int tracker_deal_service_query_storage( \
 					{
 						continue;
 					}
-					if ((*ppGroup)->free_mb + (*ppGroup)->\
-						trunk_free_mb > \
-						g_storage_reserved_mb)
+					if (tracker_check_reserved_space_trunk(*ppGroup))
 					{
 						pStoreGroup = *ppGroup;
 						g_groups.current_write_group = \
@@ -2172,8 +2239,7 @@ static int tracker_deal_service_query_storage( \
 			return ENOENT;
 		}
 
-		if (g_groups.pStoreGroup->free_mb  + g_groups.pStoreGroup-> \
-			trunk_free_mb <= g_storage_reserved_mb)
+		if (tracker_check_reserved_space_trunk(g_groups.pStoreGroup))
 		{
 			pTask->length = sizeof(TrackerHeader);
 			return ENOSPC;
@@ -2214,14 +2280,19 @@ static int tracker_deal_service_query_storage( \
 		write_path_index = 0;
 	}
 
-	avg_reserved_mb = g_storage_reserved_mb / \
+	avg_reserved_mb = g_storage_reserved_space.rs.mb / \
 			  pStoreGroup->store_path_count;
-	if (pStorageServer->path_free_mbs[write_path_index] <= avg_reserved_mb)
+	if (!tracker_check_reserved_space_path(pStorageServer-> \
+		path_total_mbs[write_path_index], pStorageServer-> \
+		path_free_mbs[write_path_index], avg_reserved_mb))
 	{
 		int i;
 		for (i=0; i<pStoreGroup->store_path_count; i++)
 		{
-			if (pStorageServer->path_free_mbs[i] > avg_reserved_mb)
+			if (tracker_check_reserved_space_path( \
+				pStorageServer->path_total_mbs[i], \
+				pStorageServer->path_free_mbs[i], \
+				avg_reserved_mb))
 			{
 				pStorageServer->current_write_path = i;
 				write_path_index = i;
@@ -2240,8 +2311,11 @@ static int tracker_deal_service_query_storage( \
 			for (i=write_path_index; i<pStoreGroup-> \
 				store_path_count; i++)
 			{
-				if (pStorageServer->path_free_mbs[i] + \
-				    pStoreGroup->trunk_free_mb > avg_reserved_mb)
+				if (tracker_check_reserved_space_path( \
+				  pStorageServer->path_total_mbs[i], \
+				  pStorageServer->path_free_mbs[i] + \
+				  pStoreGroup->trunk_free_mb, \
+				  avg_reserved_mb))
 				{
 					pStorageServer->current_write_path = i;
 					write_path_index = i;
@@ -2252,8 +2326,11 @@ static int tracker_deal_service_query_storage( \
 			{
 				for (i=0; i<write_path_index; i++)
 				{
-				if (pStorageServer->path_free_mbs[i] + \
-				    pStoreGroup->trunk_free_mb > avg_reserved_mb)
+				if (tracker_check_reserved_space_path( \
+				  pStorageServer->path_total_mbs[i], \
+				  pStorageServer->path_free_mbs[i] + \
+				  pStoreGroup->trunk_free_mb, \
+				  avg_reserved_mb))
 				{
 					pStorageServer->current_write_path = i;
 					write_path_index = i;
@@ -2368,6 +2445,7 @@ static int tracker_deal_server_list_one_group(struct fast_task_info *pTask)
 	pDest = (TrackerGroupStat *)(pTask->data + sizeof(TrackerHeader));
 	memcpy(pDest->group_name, pGroup->group_name, \
 			FDFS_GROUP_NAME_MAX_LEN + 1);
+	long2buff(pGroup->total_mb, pDest->sz_total_mb);
 	long2buff(pGroup->free_mb, pDest->sz_free_mb);
 	long2buff(pGroup->trunk_free_mb, pDest->sz_trunk_free_mb);
 	long2buff(pGroup->count, pDest->sz_count);
@@ -2413,6 +2491,7 @@ static int tracker_deal_server_list_all_groups(struct fast_task_info *pTask)
 	{
 		memcpy(pDest->group_name, (*ppGroup)->group_name, \
 				FDFS_GROUP_NAME_MAX_LEN + 1);
+		long2buff((*ppGroup)->total_mb, pDest->sz_total_mb);
 		long2buff((*ppGroup)->free_mb, pDest->sz_free_mb);
 		long2buff((*ppGroup)->trunk_free_mb, pDest->sz_trunk_free_mb);
 		long2buff((*ppGroup)->count, pDest->sz_count);
@@ -2701,7 +2780,7 @@ static void tracker_find_max_free_space_group()
 		return;
 	}
 
-	if ((*ppMaxGroup)->free_mb > g_storage_reserved_mb \
+	if (tracker_check_reserved_space(*ppMaxGroup) \
 		|| !g_if_use_trunk_file)
 	{
 		g_groups.current_write_group = \
@@ -2749,6 +2828,7 @@ static void tracker_find_min_free_space(FDFSGroupInfo *pGroup)
 		return;
 	}
 
+	pGroup->total_mb = (*(pGroup->active_servers))->total_mb;
 	pGroup->free_mb = (*(pGroup->active_servers))->free_mb;
 	ppServerEnd = pGroup->active_servers + pGroup->active_count;
 	for (ppServer=pGroup->active_servers+1; \
@@ -2756,6 +2836,7 @@ static void tracker_find_min_free_space(FDFSGroupInfo *pGroup)
 	{
 		if ((*ppServer)->free_mb < pGroup->free_mb)
 		{
+			pGroup->total_mb = (*ppServer)->total_mb;
 			pGroup->free_mb = (*ppServer)->free_mb;
 		}
 	}
