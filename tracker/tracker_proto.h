@@ -138,6 +138,7 @@ typedef struct
 typedef struct
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char sz_total_mb[FDFS_PROTO_PKG_LEN_SIZE]; //total disk storage in MB
 	char sz_free_mb[FDFS_PROTO_PKG_LEN_SIZE];  //free disk storage in MB
 	char sz_trunk_free_mb[FDFS_PROTO_PKG_LEN_SIZE];  //trunk free space in MB
 	char sz_count[FDFS_PROTO_PKG_LEN_SIZE];    //server count

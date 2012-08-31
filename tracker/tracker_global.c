@@ -20,7 +20,8 @@ struct timeval g_network_tv = {DEFAULT_NETWORK_TIMEOUT, 0};
 FDFSGroups g_groups;
 int g_storage_stat_chg_count = 0;
 int g_storage_sync_time_chg_count = 0; //sync timestamp
-int g_storage_reserved_mb = 0;
+FDFSStorageReservedSpace g_storage_reserved_space = { \
+		TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB};
 
 int g_allow_ip_count = 0;
 in_addr_t *g_allow_ip_addrs = NULL;

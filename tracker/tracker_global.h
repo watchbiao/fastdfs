@@ -31,9 +31,20 @@
 #define TRACKER_MAX_PACKAGE_SIZE		(8 * 1024)
 #define TRACKER_SYNC_STATUS_FILE_INTERVAL	3600   //one hour
 
+#define TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB		0
+#define TRACKER_STORAGE_RESERVED_SPACE_FLAG_RATIO	1
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct {
+	char flag;
+	union {
+		int mb;
+		double ratio;
+	} rs;
+} FDFSStorageReservedSpace;
 
 extern bool g_continue_flag;
 extern int g_server_port;
@@ -42,7 +53,7 @@ extern int g_storage_stat_chg_count;
 extern int g_storage_sync_time_chg_count; //sync timestamp
 extern int g_max_connections;
 extern int g_work_threads;
-extern int g_storage_reserved_mb;
+extern FDFSStorageReservedSpace g_storage_reserved_space;
 extern int g_sync_log_buff_interval; //sync log buff to disk every interval seconds
 extern int g_check_active_interval; //check storage server alive every interval seconds
 
