@@ -1925,12 +1925,12 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
 			return errno != 0 ? errno : EACCES;
 		}
 
-		g_path_free_mbs[i] = ((int64_t)(sbuf.f_bavail) * \
+		g_path_space_list[i].total_mb = ((int64_t)(sbuf.f_blocks) * \
 					sbuf.f_frsize) / FDFS_ONE_MB;
-
-		long2buff((((int64_t)(sbuf.f_blocks) * sbuf.f_frsize) / FDFS_ONE_MB),\
-			pStatBuff->sz_total_mb);
-		long2buff(g_path_free_mbs[i], pStatBuff->sz_free_mb);
+		g_path_space_list[i].free_mb = ((int64_t)(sbuf.f_bavail) * \
+					sbuf.f_frsize) / FDFS_ONE_MB;
+		long2buff(g_path_space_list[i].total_mb, pStatBuff->sz_total_mb);
+		long2buff(g_path_space_list[i].free_mb, pStatBuff->sz_free_mb);
 
 		pStatBuff++;
 	}
@@ -1944,11 +1944,12 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
 		store_path_index = -1;
 		for (i=0; i<g_fdfs_path_count; i++)
 		{
-			if (g_path_free_mbs[i] > g_avg_storage_reserved_mb \
-			 && g_path_free_mbs[i] > max_free_mb)
+			if (g_path_space_list[i].free_mb > \
+				g_avg_storage_reserved_mb \
+				&& g_path_space_list[i].free_mb > max_free_mb)
 			{
 				store_path_index = i;
-				max_free_mb = g_path_free_mbs[i];
+				max_free_mb = g_path_space_list[i].free_mb;
 			}
 		}
 		if (g_store_path_index != store_path_index)

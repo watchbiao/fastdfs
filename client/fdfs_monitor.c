@@ -233,8 +233,9 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 	int max_last_source_update;
 
 	printf( "group name = %s\n" \
-		"disk free space = "INT64_PRINTF_FORMAT" GB\n" \
-		"trunk free space = "INT64_PRINTF_FORMAT" GB\n" \
+		"disk total space = "INT64_PRINTF_FORMAT" MB\n" \
+		"disk free space = "INT64_PRINTF_FORMAT" MB\n" \
+		"trunk free space = "INT64_PRINTF_FORMAT" MB\n" \
 		"storage server count = %d\n" \
 		"active server count = %d\n" \
 		"storage server port = %d\n" \
@@ -244,8 +245,9 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 		"current write server index = %d\n" \
 		"current trunk file id = %d\n\n", \
 		pGroupStat->group_name, \
-		pGroupStat->free_mb / 1024, \
-		pGroupStat->trunk_free_mb / 1024, \
+		pGroupStat->total_mb, \
+		pGroupStat->free_mb, \
+		pGroupStat->trunk_free_mb, \
 		pGroupStat->count, \
 		pGroupStat->active_count, \
 		pGroupStat->storage_port, \
@@ -362,8 +364,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tversion = %s\n" \
 			"\t\tjoin time = %s\n" \
 			"\t\tup time = %s\n" \
-			"\t\ttotal storage = %dGB\n" \
-			"\t\tfree storage = %dGB\n" \
+			"\t\ttotal storage = %d MB\n" \
+			"\t\tfree storage = %d MB\n" \
 			"\t\tupload priority = %d\n" \
 			"\t\tstore_path_count = %d\n" \
 			"\t\tsubdir_count_per_path = %d\n" \
@@ -421,8 +423,8 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			formatDatetime(pStorage->join_time, \
 				"%Y-%m-%d %H:%M:%S", \
 				szJoinTime, sizeof(szJoinTime)), \
-			szUpTime, pStorage->total_mb / 1024, \
-			pStorage->free_mb / 1024,  \
+			szUpTime, pStorage->total_mb, \
+			pStorage->free_mb,  \
 			pStorage->upload_priority,  \
 			pStorage->store_path_count,  \
 			pStorage->subdir_count_per_path,  \

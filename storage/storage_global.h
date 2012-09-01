@@ -48,8 +48,15 @@ typedef struct
 	int last_sync_src_timestamp;
 } FDFSStorageServer;
 
+typedef struct
+{
+	int total_mb; //total spaces
+	int free_mb;  //free spaces
+} FDFSStorePathInfo;
+
 extern bool g_continue_flag;
-extern int *g_path_free_mbs; //store path free spaces
+
+extern FDFSStorePathInfo *g_path_space_list;
 
 /* subdirs under store path, g_subdir_count * g_subdir_count 2 level subdirs */
 extern int g_subdir_count_per_path;

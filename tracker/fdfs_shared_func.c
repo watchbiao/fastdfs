@@ -8,7 +8,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "ini_file_reader.h"
 #include "logger.h"
 #include "shared_func.h"
 #include "fdfs_shared_func.h"
@@ -91,6 +90,7 @@ int fdfs_parse_storage_reserved_space(IniContext *pIniContext, \
 			return EINVAL;
 		}
 
+		pStorageReservedSpace->rs.ratio /= 100.00;
 		return 0;
 	}
 
@@ -110,13 +110,127 @@ const char *fdfs_storage_reserved_space_to_string(FDFSStorageReservedSpace \
 	if (pStorageReservedSpace->flag == \
 			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
 	{
-		sprintf(buff, "%dMB", pStorageReservedSpace->rs.mb);
+		sprintf(buff, "%d MB", pStorageReservedSpace->rs.mb);
 	}
 	else
 	{
-		sprintf(buff, "%.2f%%", pStorageReservedSpace->rs.ratio);
+		sprintf(buff, "%.2f%%", 100.00 * \
+			pStorageReservedSpace->rs.ratio);
 	}
 
 	return buff;
+}
+
+const char *fdfs_storage_reserved_space_to_string_ex(const bool flag, \
+	const int space_mb, const int total_mb, const double space_ratio, \
+	char *buff)
+{
+	if (flag == TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+	{
+		sprintf(buff, "%d MB", space_mb);
+	}
+	else
+	{
+		sprintf(buff, "%d MB(%.2f%%)", (int)(total_mb * space_ratio), \
+			 100.00 * space_ratio);
+	}
+
+	return buff;
+}
+
+int fdfs_get_storage_reserved_space_mb(const int total_mb, \
+		FDFSStorageReservedSpace *pStorageReservedSpace)
+{
+	if (pStorageReservedSpace->flag == \
+			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+	{
+		return pStorageReservedSpace->rs.mb;
+	}
+	else
+	{
+		return (int)(total_mb * pStorageReservedSpace->rs.ratio);
+	}
+}
+
+bool fdfs_check_reserved_space(FDFSGroupInfo *pGroup, \
+	FDFSStorageReservedSpace *pStorageReservedSpace)
+{
+	if (pStorageReservedSpace->flag == \
+			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+	{
+		return pGroup->free_mb > pStorageReservedSpace->rs.mb;
+	}
+	else
+	{
+		if (pGroup->total_mb == 0)
+		{
+			return false;
+		}
+
+		/*
+		logInfo("storage=%.4f, rs.ratio=%.4f", 
+			((double)pGroup->free_mb / (double)pGroup->total_mb),
+			pStorageReservedSpace->rs.ratio);
+		*/
+
+		return ((double)pGroup->free_mb / (double)pGroup->total_mb) > \
+			pStorageReservedSpace->rs.ratio;
+	}
+}
+
+bool fdfs_check_reserved_space_trunk(FDFSGroupInfo *pGroup, \
+	FDFSStorageReservedSpace *pStorageReservedSpace)
+{
+	if (pStorageReservedSpace->flag == \
+			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+	{
+		return (pGroup->free_mb + pGroup->trunk_free_mb > 
+			pStorageReservedSpace->rs.mb);
+	}
+	else
+	{
+		if (pGroup->total_mb == 0)
+		{
+			return false;
+		}
+
+		/*
+		logInfo("storage trunk=%.4f, rs.ratio=%.4f", 
+		((double)(pGroup->free_mb + pGroup->trunk_free_mb) / \
+		(double)pGroup->total_mb), pStorageReservedSpace->rs.ratio);
+		*/
+
+		return ((double)(pGroup->free_mb + pGroup->trunk_free_mb) / \
+		(double)pGroup->total_mb) > pStorageReservedSpace->rs.ratio;
+	}
+}
+
+bool fdfs_check_reserved_space_path(const int64_t total_mb, \
+	const int64_t free_mb, const int avg_mb, \
+	FDFSStorageReservedSpace *pStorageReservedSpace)
+{
+	if (pStorageReservedSpace->flag == \
+			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+	{
+		return free_mb > avg_mb;
+	}
+	else
+	{
+		if (total_mb == 0)
+		{
+			return false;
+		}
+
+		/*
+		logInfo("storage path, free_mb="INT64_PRINTF_FORMAT \
+			", total_mb="INT64_PRINTF_FORMAT", " \
+			"real ratio=%.4f, rs.ratio=%.4f", \
+			free_mb, total_mb, ((double)free_mb / total_mb), \
+			pStorageReservedSpace->rs.ratio);
+		*/
+
+		return ((double)free_mb / (double)total_mb) > \
+			pStorageReservedSpace->rs.ratio;
+	}
 }
 

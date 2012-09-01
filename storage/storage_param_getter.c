@@ -33,9 +33,8 @@ int storage_get_params_from_tracker()
 {
 	IniContext iniContext;
 	int result;
-	char *pSpaceSize;
-	int64_t reserved_storage_space;
 	bool use_trunk_file;
+	char reserved_space_str[32];
 
 	if ((result=fdfs_get_ini_context_from_tracker(&g_tracker_group, \
 		&iniContext, &g_continue_flag, \
@@ -51,22 +50,22 @@ int storage_get_params_from_tracker()
 	g_store_path_mode = iniGetIntValue(NULL, "store_path", &iniContext, \
 				FDFS_STORE_PATH_ROUND_ROBIN);
 
-	pSpaceSize = iniGetStrValue(NULL, "reserved_storage_space", &iniContext);
-	if (pSpaceSize == NULL)
-	{
-		g_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
-	}
-	else if ((result=parse_bytes(pSpaceSize, 1, \
-			&reserved_storage_space)) != 0)
+	if ((result=fdfs_parse_storage_reserved_space(&iniContext, \
+		&g_storage_reserved_space)) != 0)
 	{
 		iniFreeContext(&iniContext);
 		return result;
 	}
+	if (g_storage_reserved_space.flag == \
+		TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
+	{
+		g_avg_storage_reserved_mb = g_storage_reserved_space.rs.mb \
+						/ g_fdfs_path_count;
+	}
 	else
 	{
-		g_storage_reserved_mb = reserved_storage_space / FDFS_ONE_MB;
+		g_avg_storage_reserved_mb = 0;
 	}
-	g_avg_storage_reserved_mb = g_storage_reserved_mb / g_fdfs_path_count;
 
 	use_trunk_file = iniGetBoolValue(NULL, "use_trunk_file", \
 				&iniContext, false);
@@ -111,7 +110,7 @@ int storage_get_params_from_tracker()
 	logInfo("file: "__FILE__", line: %d, " \
 		"storage_ip_changed_auto_adjust=%d, " \
 		"store_path=%d, " \
-		"reserved_storage_space=%d MB, " \
+		"reserved_storage_space=%s, " \
 		"use_trunk_file=%d, " \
 		"slot_min_size=%d, " \
 		"slot_max_size=%d MB, " \
@@ -123,7 +122,8 @@ int storage_get_params_from_tracker()
 		"trunk_init_check_occupying=%d, "   \
 		"trunk_init_reload_from_binlog=%d", \
 		__LINE__, g_storage_ip_changed_auto_adjust, \
-		g_store_path_mode, g_storage_reserved_mb, \
+		g_store_path_mode, fdfs_storage_reserved_space_to_string( \
+			&g_storage_reserved_space, reserved_space_str), \
 		g_if_use_trunk_file, g_slot_min_size, \
 		g_slot_max_size / FDFS_ONE_MB, \
 		g_trunk_file_size / FDFS_ONE_MB, \

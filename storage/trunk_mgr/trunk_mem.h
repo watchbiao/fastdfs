@@ -17,9 +17,9 @@
 #include <pthread.h>
 #include "common_define.h"
 #include "fdfs_global.h"
-#include "tracker_types.h"
 #include "fast_mblock.h"
 #include "trunk_shared.h"
+#include "fdfs_shared_func.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +29,7 @@ extern int g_slot_min_size;    //slot min size, such as 256 bytes
 extern int g_slot_max_size;    //slot max size
 extern int g_trunk_file_size;  //the trunk file size, such as 64MB
 extern int g_store_path_mode;  //store which path mode, fetch from tracker
-extern int g_storage_reserved_mb;  //fetch from tracker
+extern FDFSStorageReservedSpace g_storage_reserved_space;  //fetch from tracker
 extern int g_avg_storage_reserved_mb;  //calc by above var: g_storage_reserved_mb
 extern int g_store_path_index;  //store to which path
 extern int g_current_trunk_file_id;  //current trunk file id
@@ -83,6 +83,19 @@ int trunk_file_delete(const char *trunk_filename, \
 int trunk_create_trunk_file_advance(void *args);
 
 int storage_delete_trunk_data_file();
+
+#define storage_check_reserved_space(pGroup) \
+        fdfs_check_reserved_space(pGroup, &g_storage_reserved_space)
+
+#define storage_check_reserved_space_trunk(pGroup) \
+        fdfs_check_reserved_space_trunk(pGroup, &g_storage_reserved_space)
+
+#define storage_check_reserved_space_path(total_mb, free_mb, avg_mb) \
+        fdfs_check_reserved_space_path(total_mb, free_mb, avg_mb, \
+                                &g_storage_reserved_space)
+
+#define storage_get_storage_reserved_space_mb(total_mb) \
+	fdfs_get_storage_reserved_space_mb(total_mb, &g_storage_reserved_space)
 
 #ifdef __cplusplus
 }
