@@ -114,6 +114,9 @@
 
 #define FDFS_STORAGE_ID_MAX_SIZE	16
 
+#define TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB		0
+#define TRACKER_STORAGE_RESERVED_SPACE_FLAG_RATIO	1
+
 typedef struct
 {
 	char status;
@@ -417,6 +420,14 @@ typedef struct
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	in_addr_t ip_addr;
 } FDFSStorageIdInfo;
+
+typedef struct {
+	char flag;
+	union {
+		int mb;
+		double ratio;
+	} rs;
+} FDFSStorageReservedSpace;
 
 #endif
 
