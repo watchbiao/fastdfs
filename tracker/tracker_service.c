@@ -1749,6 +1749,7 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 		pStatBuff = &(pDest->stat_buff);
 		pStorageStat = &((*ppServer)->stat);
 		pDest->status = (*ppServer)->status;
+		strcpy(pDest->id, (*ppServer)->id);
 		strcpy(pDest->ip_addr, (*ppServer)->ip_addr);
 		if ((*ppServer)->psync_src_server != NULL)
 		{
