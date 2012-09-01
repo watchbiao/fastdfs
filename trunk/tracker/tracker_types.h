@@ -308,7 +308,7 @@ typedef struct
 	FDFSStorageDetail **active_servers;  //storages order by ip addr
 	FDFSStorageDetail *pStoreServer;  //for upload priority mode
 	FDFSStorageDetail *pTrunkServer;  //point to the trunk server
-	char last_trunk_server_ip[IP_ADDRESS_SIZE];
+	char last_trunk_server_id[FDFS_STORAGE_ID_MAX_SIZE];
 
 #ifdef WITH_HTTPD
 	FDFSStorageDetail **http_servers;  //storages order by ip addr
@@ -375,13 +375,6 @@ typedef struct
 
 typedef struct
 {
-	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char ip_addr[IP_ADDRESS_SIZE];
-	char sync_src_ip_addr[IP_ADDRESS_SIZE];
-} FDFSStorageSync;
-
-typedef struct
-{
 	int storage_port;
 	int storage_http_port;
 	int store_path_count;
@@ -420,6 +413,13 @@ typedef struct
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	in_addr_t ip_addr;
 } FDFSStorageIdInfo;
+
+typedef struct
+{
+	char id[FDFS_STORAGE_ID_MAX_SIZE];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char sync_src_id[FDFS_STORAGE_ID_MAX_SIZE];
+} FDFSStorageSync;
 
 typedef struct {
 	char flag;

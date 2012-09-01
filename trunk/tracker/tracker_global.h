@@ -59,7 +59,7 @@ extern char g_run_by_group[32];
 extern char g_run_by_user[32];
 
 extern bool g_storage_ip_changed_auto_adjust;
-extern bool g_use_storage_id;  //if use storage ID instead of IP address
+extern bool g_use_storage_id;  //identify storage by ID instead of IP address
 
 extern FDFSStorageIdInfo *g_storage_ids;  //sorted by storage IP address and port
 extern int g_storage_id_count;		  //storage id count

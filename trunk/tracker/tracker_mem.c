@@ -635,8 +635,8 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path,
 			GROUP_ITEM_LAST_TRUNK_SERVER, &iniContext);
 		if (pValue != NULL)
 		{
-			snprintf(pGroup->last_trunk_server_ip, 
-				sizeof(pGroup->last_trunk_server_ip), "%s", pValue);
+			snprintf(pGroup->last_trunk_server_id, 
+				sizeof(pGroup->last_trunk_server_id), "%s", pValue);
 		}
 
 		pValue = iniGetStrValue(section_name, \
@@ -662,8 +662,8 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path,
 
 		strcpy((*ppTrunkServers)[*nTrunkServerCount].group_name, \
 			clientInfo.pGroup->group_name);
-		snprintf((*ppTrunkServers)[*nTrunkServerCount].ip_addr, \
-			IP_ADDRESS_SIZE, "%s", pValue);
+		snprintf((*ppTrunkServers)[*nTrunkServerCount].id, \
+			FDFS_STORAGE_ID_MAX_SIZE, "%s", pValue);
 
 		(*nTrunkServerCount)++;
 		}
@@ -698,7 +698,7 @@ static int tracker_locate_group_trunk_servers(FDFSGroups *pGroups, \
 			continue;
 		}
 
-		pStorage = tracker_mem_get_storage(pGroup, pServer->ip_addr);
+		pStorage = tracker_mem_get_storage(pGroup, pServer->id);
 		if (pStorage == NULL)
 		{
 			char buff[MAX_PATH_SIZE+64];
@@ -715,20 +715,18 @@ static int tracker_locate_group_trunk_servers(FDFSGroups *pGroups, \
 			}
 
 			logError("file: "__FILE__", line: %d, " \
-				"%sgroup_name: %s, trunk server \"%s:%d\" " \
-				"does not exist", \
-				__LINE__, buff, pServer->group_name, \
-				pServer->ip_addr, \
-				pGroup->storage_port);
+				"%sgroup_name: %s, trunk server \"%s\" " \
+				"does not exist", __LINE__, buff, \
+				pServer->group_name, pServer->id);
 
 			return ENOENT;
 		}
 
 		pGroup->pTrunkServer = pStorage;
 		pGroup->trunk_chg_count++;
-		if (*(pGroup->last_trunk_server_ip) == '\0')
+		if (*(pGroup->last_trunk_server_id) == '\0')
 		{
-			strcpy (pGroup->last_trunk_server_ip, pStorage->ip_addr);
+			strcpy(pGroup->last_trunk_server_id, pStorage->id);
 		}
 	}
 
@@ -759,14 +757,14 @@ static int tracker_locate_storage_sync_server(FDFSGroups *pGroups, \
 			continue;
 		}
 
-		pStorage=tracker_mem_get_storage(pGroup, pSyncServer->ip_addr);
+		pStorage=tracker_mem_get_storage(pGroup, pSyncServer->id);
 		if (pStorage == NULL)
 		{
 			continue;
 		}
 
 		pStorage->psync_src_server = tracker_mem_get_storage(pGroup, \
-			pSyncServer->sync_src_ip_addr);
+			pSyncServer->sync_src_id);
 		if (pStorage->psync_src_server == NULL)
 		{
 			char buff[MAX_PATH_SIZE+64];
@@ -783,11 +781,10 @@ static int tracker_locate_storage_sync_server(FDFSGroups *pGroups, \
 			}
 
 			logError("file: "__FILE__", line: %d, " \
-				"%sgroup_name: %s, storage server \"%s:%d\" " \
-				"does not exist", \
-				__LINE__, buff, pSyncServer->group_name, \
-				pSyncServer->sync_src_ip_addr, \
-				pGroup->storage_port);
+				"%sgroup_name: %s, storage server \"%s\" " \
+				"does not exist", __LINE__, buff, \
+				pSyncServer->group_name, \
+				pSyncServer->sync_src_id);
 
 			return ENOENT;
 		}
@@ -805,7 +802,7 @@ static int tracker_load_storages_old(FDFSGroups *pGroups, const char *data_path)
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char *fields[STORAGE_DATA_SERVER_FIELDS];
 	char ip_addr[IP_ADDRESS_SIZE];
-	char *psync_src_ip_addr;
+	char *psync_src_id;
 	FDFSStorageDetail *pStorage;
 	FDFSStorageSync *pStorageSyncs;
 	int nStorageSyncSize;
@@ -903,7 +900,7 @@ static int tracker_load_storages_old(FDFSGroups *pGroups, const char *data_path)
 				FDFS_STORAGE_STATUS_OFFLINE;
 		}
 
-		psync_src_ip_addr = trim(fields[3]);
+		psync_src_id = trim(fields[3]);
 		pStorage->sync_until_timestamp = atoi( \
 					trim_left(fields[4]));
 		pStorage->stat.total_upload_count = strtoll( \
@@ -963,7 +960,7 @@ static int tracker_load_storages_old(FDFSGroups *pGroups, const char *data_path)
 			}
 		}
 
-		if (*psync_src_ip_addr == '\0')
+		if (*psync_src_id == '\0')
 		{
 			continue;
 		}
@@ -987,10 +984,9 @@ static int tracker_load_storages_old(FDFSGroups *pGroups, const char *data_path)
 
 		strcpy(pStorageSyncs[nStorageSyncCount].group_name, \
 			clientInfo.pGroup->group_name);
-		strcpy(pStorageSyncs[nStorageSyncCount].ip_addr, \
-			pStorage->ip_addr);
-		snprintf(pStorageSyncs[nStorageSyncCount].sync_src_ip_addr, \
-			IP_ADDRESS_SIZE, "%s", psync_src_ip_addr);
+		strcpy(pStorageSyncs[nStorageSyncCount].id, pStorage->id);
+		snprintf(pStorageSyncs[nStorageSyncCount].sync_src_id, \
+			FDFS_STORAGE_ID_MAX_SIZE, "%s", psync_src_id);
 
 		nStorageSyncCount++;
 
@@ -1020,7 +1016,7 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 	IniContext iniContext;
 	char *group_name;
 	char *ip_addr;
-	char *psync_src_ip_addr;
+	char *psync_src_id;
 	char *pValue;
 	FDFSStorageDetail *pStorage;
 	FDFSStorageStat *pStat;
@@ -1182,11 +1178,11 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 			pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
 		}
 
-		psync_src_ip_addr = iniGetStrValue(section_name, \
+		psync_src_id = iniGetStrValue(section_name, \
 				STORAGE_ITEM_SYNC_SRC_SERVER, &iniContext);
-		if (psync_src_ip_addr == NULL)
+		if (psync_src_id == NULL)
 		{
-			psync_src_ip_addr = "";
+			psync_src_id = "";
 		}
 
 		pStorage->sync_until_timestamp = iniGetIntValue(section_name, \
@@ -1282,7 +1278,7 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 		pStorage->changelog_offset = iniGetInt64Value(section_name, \
 			STORAGE_ITEM_CHANGELOG_OFFSET, &iniContext, 0);
 
-		if (*psync_src_ip_addr == '\0')
+		if (*psync_src_id == '\0')
 		{
 			continue;
 		}
@@ -1313,10 +1309,9 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 
 		strcpy(pStorageSyncs[nStorageSyncCount].group_name, \
 			clientInfo.pGroup->group_name);
-		strcpy(pStorageSyncs[nStorageSyncCount].ip_addr, \
-			pStorage->ip_addr);
-		snprintf(pStorageSyncs[nStorageSyncCount].sync_src_ip_addr, \
-			IP_ADDRESS_SIZE, "%s", psync_src_ip_addr);
+		strcpy(pStorageSyncs[nStorageSyncCount].id, pStorage->id);
+		snprintf(pStorageSyncs[nStorageSyncCount].sync_src_id, \
+			FDFS_STORAGE_ID_MAX_SIZE, "%s", psync_src_id);
 
 		nStorageSyncCount++;
 	}
@@ -1708,7 +1703,7 @@ int tracker_save_groups()
 				(*ppGroup)->pTrunkServer ? \
 					(*ppGroup)->pTrunkServer->ip_addr : "",
 				GROUP_ITEM_LAST_TRUNK_SERVER, \
-				(*ppGroup)->last_trunk_server_ip
+				(*ppGroup)->last_trunk_server_id
 			);
 
 		if (write(fd, buff, len) != len)
@@ -2941,10 +2936,10 @@ static int tracker_mem_cmp_by_group_name(const void *p1, const void *p2)
 			(*((FDFSGroupInfo **)p2))->group_name);
 }
 
-static int tracker_mem_cmp_by_ip_addr(const void *p1, const void *p2)
+static int tracker_mem_cmp_by_storage_id(const void *p1, const void *p2)
 {
-	return strcmp((*((FDFSStorageDetail **)p1))->ip_addr,
-			(*((FDFSStorageDetail **)p2))->ip_addr);
+	return strcmp((*((FDFSStorageDetail **)p1))->id,
+			(*((FDFSStorageDetail **)p2))->id);
 }
 
 static void tracker_mem_insert_into_sorted_servers( \
@@ -2957,11 +2952,9 @@ static void tracker_mem_insert_into_sorted_servers( \
 	ppEnd = sorted_servers + count;
 	for (ppServer=ppEnd; ppServer>sorted_servers; ppServer--)
 	{
-		if (strcmp(pTargetServer->ip_addr, \
-			   (*(ppServer-1))->ip_addr) > 0)
+		if (strcmp(pTargetServer->id, (*(ppServer-1))->id) > 0)
 		{
-			*ppServer = pTargetServer;
-			return;
+			break;
 		}
 		else
 		{
@@ -3096,25 +3089,25 @@ static int tracker_mem_add_group_ex(FDFSGroups *pGroups, \
 }
 
 FDFSStorageDetail *tracker_mem_get_active_storage(FDFSGroupInfo *pGroup, \
-				const char *ip_addr)
+				const char *id)
 {
 	FDFSStorageDetail target_storage;
 	FDFSStorageDetail *pTargetStorage;
 	FDFSStorageDetail **ppStorageServer;
 
-	if (ip_addr == NULL)
+	if (id == NULL)
 	{
 		return NULL;
 	}
 
 	memset(&target_storage, 0, sizeof(target_storage));
-	strcpy(target_storage.ip_addr, ip_addr);
+	strcpy(target_storage.id, id);
 	pTargetStorage = &target_storage;
 	ppStorageServer = (FDFSStorageDetail **)bsearch(&pTargetStorage, \
 			pGroup->active_servers, \
 			pGroup->active_count, \
 			sizeof(FDFSStorageDetail *), \
-			tracker_mem_cmp_by_ip_addr);
+			tracker_mem_cmp_by_storage_id);
 	if (ppStorageServer != NULL)
 	{
 		return *ppStorageServer;
@@ -3140,7 +3133,7 @@ static FDFSStorageDetail *tracker_mem_get_active_http_server( \
 			pGroup->http_servers, \
 			pGroup->http_server_count, \
 			sizeof(FDFSStorageDetail *), \
-			tracker_mem_cmp_by_ip_addr);
+			tracker_mem_cmp_by_storage_id);
 	if (ppStorageServer != NULL)
 	{
 		return *ppStorageServer;
@@ -3153,20 +3146,20 @@ static FDFSStorageDetail *tracker_mem_get_active_http_server( \
 #endif
 
 FDFSStorageDetail *tracker_mem_get_storage(FDFSGroupInfo *pGroup, \
-				const char *ip_addr)
+				const char *id)
 {
 	FDFSStorageDetail target_storage;
 	FDFSStorageDetail *pTargetStorage;
 	FDFSStorageDetail **ppStorageServer;
 
 	memset(&target_storage, 0, sizeof(target_storage));
-	strcpy(target_storage.ip_addr, ip_addr);
+	strcpy(target_storage.id, id);
 	pTargetStorage = &target_storage;
 	ppStorageServer = (FDFSStorageDetail **)bsearch(&pTargetStorage, \
 			pGroup->sorted_servers, \
 			pGroup->count, \
 			sizeof(FDFSStorageDetail *), \
-			tracker_mem_cmp_by_ip_addr);
+			tracker_mem_cmp_by_storage_id);
 	if (ppStorageServer != NULL)
 	{
 		return *ppStorageServer;
@@ -3324,7 +3317,7 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 
 	//need re-sort
 	qsort(pGroup->sorted_servers, pGroup->count, \
-		sizeof(FDFSStorageDetail *), tracker_mem_cmp_by_ip_addr);
+		sizeof(FDFSStorageDetail *), tracker_mem_cmp_by_storage_id);
 
 	pthread_mutex_unlock(&mem_thread_lock);
 
@@ -3356,6 +3349,7 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 {
 	int result;
 	FDFSStorageIdInfo *pStorageIdInfo;
+	const char *storage_id;
 
 	if (*ip_addr == '\0')
 	{
@@ -3376,10 +3370,11 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 				pGroup->group_name, ip_addr);
 			return ENOENT;
 		}
+		storage_id = pStorageIdInfo->id;
 	}
 	else
 	{
-		pStorageIdInfo = NULL;
+		storage_id = ip_addr;
 	}
 
 	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
@@ -3440,10 +3435,8 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 		return result;
 	}
 
-	if (pStorageIdInfo != NULL)
-	{
-		strcpy((*ppStorageServer)->id, pStorageIdInfo->id);
-	}
+	snprintf((*ppStorageServer)->id, FDFS_STORAGE_ID_MAX_SIZE, \
+		"%s", storage_id);
 
 	return result;
 }
@@ -4482,7 +4475,7 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 				pGroup->sorted_servers, \
 				pGroup->count, \
 				sizeof(FDFSStorageDetail *), \
-				tracker_mem_cmp_by_ip_addr)) != NULL)
+				tracker_mem_cmp_by_storage_id)) != NULL)
 			{
 				if ((*ppFound)->status == pServer->status \
 				 || (*ppFound)->status == \
@@ -4692,8 +4685,8 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 		}
 	}
 
-	if (*(pGroup->last_trunk_server_ip) != '\0' && 
-	    strcmp(pStoreServer->ip_addr, pGroup->last_trunk_server_ip) != 0)
+	if (*(pGroup->last_trunk_server_id) != '\0' && 
+	    strcmp(pStoreServer->id, pGroup->last_trunk_server_id) != 0)
 	{
 		if ((result=fdfs_deal_no_body_cmd_ex(
 			pStoreServer->ip_addr, 
@@ -4707,7 +4700,7 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 	pGroup->pTrunkServer = pStoreServer;
 	pGroup->trunk_chg_count++;
 	g_trunk_server_chg_count++;
-	strcpy(pGroup->last_trunk_server_ip, pStoreServer->ip_addr);
+	strcpy(pGroup->last_trunk_server_id, pStoreServer->id);
 
 	logInfo("file: "__FILE__", line: %d, " \
 		"group: %s, trunk server set to %s:%d", __LINE__, \
@@ -4743,7 +4736,7 @@ int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
 			pGroup->active_servers, \
 			pGroup->active_count,   \
 			sizeof(FDFSStorageDetail *), \
-			tracker_mem_cmp_by_ip_addr);
+			tracker_mem_cmp_by_storage_id);
 	if (ppStorageServer != NULL)
 	{
 		(*ppStorageServer)->chg_count = 0;
@@ -4811,7 +4804,7 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 			pGroup->active_servers, \
 			pGroup->active_count,   \
 			sizeof(FDFSStorageDetail *), \
-			tracker_mem_cmp_by_ip_addr);
+			tracker_mem_cmp_by_storage_id);
 	if (ppStorageServer != NULL)
 	{
 		return 0;
@@ -4830,7 +4823,7 @@ int tracker_mem_active_store_server(FDFSGroupInfo *pGroup, \
 			pGroup->active_servers, \
 			pGroup->active_count,   \
 			sizeof(FDFSStorageDetail *), \
-			tracker_mem_cmp_by_ip_addr);
+			tracker_mem_cmp_by_storage_id);
 	if (ppStorageServer == NULL)
 	{
 		tracker_mem_insert_into_sorted_servers( \
