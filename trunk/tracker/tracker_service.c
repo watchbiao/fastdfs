@@ -1113,8 +1113,8 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 
 	if (pClientInfo->pStorage->psync_src_server != NULL)
 	{
-		strcpy(pJoinBodyResp->src_ip_addr, \
-			pClientInfo->pStorage->psync_src_server->ip_addr);
+		strcpy(pJoinBodyResp->src_id, \
+			pClientInfo->pStorage->psync_src_server->id);
 	}
 
 	pTask->length = sizeof(TrackerHeader) + \
@@ -1569,7 +1569,7 @@ static int tracker_deal_storage_report_ip_changed(struct fast_task_info *pTask)
 static int tracker_deal_storage_sync_notify(struct fast_task_info *pTask)
 {
 	TrackerStorageSyncReqBody *pBody;
-	char sync_src_ip_addr[IP_ADDRESS_SIZE];
+	char sync_src_id[FDFS_STORAGE_ID_MAX_SIZE];
 	bool bSaveStorages;
 	TrackerClientInfo *pClientInfo;
 	
@@ -1591,7 +1591,7 @@ static int tracker_deal_storage_sync_notify(struct fast_task_info *pTask)
 	}
 
 	pBody=(TrackerStorageSyncReqBody *)(pTask->data+sizeof(TrackerHeader));
-	if (*(pBody->src_ip_addr) == '\0')
+	if (*(pBody->src_id) == '\0')
 	{
 	if (pClientInfo->pStorage->status == FDFS_STORAGE_STATUS_INIT || \
 	    pClientInfo->pStorage->status == FDFS_STORAGE_STATUS_WAIT_SYNC || \
@@ -1616,19 +1616,20 @@ static int tracker_deal_storage_sync_notify(struct fast_task_info *pTask)
 
 	if (pClientInfo->pStorage->psync_src_server == NULL)
 	{
-		memcpy(sync_src_ip_addr, pBody->src_ip_addr, IP_ADDRESS_SIZE);
-		sync_src_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
+		memcpy(sync_src_id, pBody->src_id, \
+				FDFS_STORAGE_ID_MAX_SIZE);
+		sync_src_id[FDFS_STORAGE_ID_MAX_SIZE - 1] = '\0';
 
 		pClientInfo->pStorage->psync_src_server = \
 			tracker_mem_get_storage(pClientInfo->pGroup, \
-				sync_src_ip_addr);
+				sync_src_id);
 		if (pClientInfo->pStorage->psync_src_server == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"client ip: %s, " \
 				"sync src server: %s not exists", \
 				__LINE__, pTask->client_ip, \
-				sync_src_ip_addr);
+				sync_src_id);
 			pTask->length = sizeof(TrackerHeader);
 			return ENOENT;
 		}
@@ -1640,7 +1641,7 @@ static int tracker_deal_storage_sync_notify(struct fast_task_info *pTask)
 				"client ip: %s, " \
 				"sync src server: %s already be deleted", \
 				__LINE__, pTask->client_ip, \
-				sync_src_ip_addr);
+				sync_src_id);
 			pTask->length = sizeof(TrackerHeader);
 			return ENOENT;
 		}
@@ -1652,7 +1653,7 @@ static int tracker_deal_storage_sync_notify(struct fast_task_info *pTask)
 				"client ip: %s, the ip address of " \
 				"the sync src server: %s changed", \
 				__LINE__, pTask->client_ip, \
-				sync_src_ip_addr);
+				sync_src_id);
 			pTask->length = sizeof(TrackerHeader);
 			return ENOENT;
 		}
@@ -1753,8 +1754,8 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 		strcpy(pDest->ip_addr, (*ppServer)->ip_addr);
 		if ((*ppServer)->psync_src_server != NULL)
 		{
-			strcpy(pDest->src_ip_addr, \
-				(*ppServer)->psync_src_server->ip_addr);
+			strcpy(pDest->src_id, \
+				(*ppServer)->psync_src_server->id);
 		}
 
 		strcpy(pDest->domain_name, (*ppServer)->domain_name);
@@ -2536,8 +2537,8 @@ static int tracker_deal_storage_sync_src_req(struct fast_task_info *pTask)
 			TrackerStorageSyncReqBody *pBody;
 			pBody = (TrackerStorageSyncReqBody *)(pTask->data + \
 						sizeof(TrackerHeader));
-			strcpy(pBody->src_ip_addr, \
-					pDestStorage->psync_src_server->ip_addr);
+			strcpy(pBody->src_id, \
+					pDestStorage->psync_src_server->id);
 			long2buff(pDestStorage->sync_until_timestamp, \
 					pBody->until_timestamp);
 			pTask->length += sizeof(TrackerStorageSyncReqBody);
@@ -2620,7 +2621,7 @@ static int tracker_deal_storage_sync_dest_req(struct fast_task_info *pTask)
 	}
 
 	pBody=(TrackerStorageSyncReqBody *)(pTask->data+sizeof(TrackerHeader));
-	strcpy(pBody->src_ip_addr, pSrcStorage->ip_addr);
+	strcpy(pBody->src_id, pSrcStorage->id);
 
 	long2buff(sync_until_timestamp, pBody->until_timestamp);
 
@@ -2675,7 +2676,7 @@ static int tracker_deal_storage_sync_dest_query(struct fast_task_info *pTask)
 		TrackerStorageSyncReqBody *pBody;
 		pBody = (TrackerStorageSyncReqBody *)(pTask->data + \
 					sizeof(TrackerHeader));
-		strcpy(pBody->src_ip_addr, pSrcStorage->ip_addr);
+		strcpy(pBody->src_id, pSrcStorage->id);
 
 		long2buff(pClientInfo->pStorage->sync_until_timestamp, \
 				pBody->until_timestamp);
@@ -2796,7 +2797,7 @@ static int tracker_deal_storage_sync_report(struct fast_task_info *pTask)
 {
 	char *p;
 	char *pEnd;
-	char *src_ip_addr;
+	char *src_id;
 	int status;
 	int sync_timestamp;
 	int src_index;
@@ -2808,7 +2809,7 @@ static int tracker_deal_storage_sync_report(struct fast_task_info *pTask)
 	pClientInfo = (TrackerClientInfo *)pTask->arg;
 
 	nPkgLen = pTask->length - sizeof(TrackerHeader);
-	if (nPkgLen <= 0 || nPkgLen % (IP_ADDRESS_SIZE + 4) != 0)
+	if (nPkgLen <= 0 || nPkgLen % (FDFS_STORAGE_ID_MAX_SIZE + 4) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
@@ -2837,18 +2838,18 @@ static int tracker_deal_storage_sync_report(struct fast_task_info *pTask)
 		min_synced_timestamp = 0;
 		pEnd = pTask->data + pTask->length;
 		for (p=pTask->data + sizeof(TrackerHeader); p<pEnd; \
-			p += (IP_ADDRESS_SIZE + 4))
+			p += (FDFS_STORAGE_ID_MAX_SIZE + 4))
 		{
-			sync_timestamp = buff2int(p + IP_ADDRESS_SIZE);
+			sync_timestamp = buff2int(p + FDFS_STORAGE_ID_MAX_SIZE);
 			if (sync_timestamp <= 0)
 			{
 				continue;
 			}
 
-			src_ip_addr = p;
-			*(src_ip_addr + (IP_ADDRESS_SIZE - 1)) = '\0';
+			src_id = p;
+			*(src_id + (FDFS_STORAGE_ID_MAX_SIZE - 1)) = '\0';
 			pSrcStorage = tracker_mem_get_storage( \
-					pClientInfo->pGroup, src_ip_addr);
+					pClientInfo->pGroup, src_id);
 			if (pSrcStorage == NULL)
 			{
 				continue;
@@ -2893,18 +2894,18 @@ static int tracker_deal_storage_sync_report(struct fast_task_info *pTask)
 				       last_synced_timestamp;
 		pEnd = pTask->data + pTask->length;
 		for (p=pTask->data + sizeof(TrackerHeader); p<pEnd; \
-			p += (IP_ADDRESS_SIZE + 4))
+			p += (FDFS_STORAGE_ID_MAX_SIZE + 4))
 		{
-			sync_timestamp = buff2int(p + IP_ADDRESS_SIZE);
+			sync_timestamp = buff2int(p + FDFS_STORAGE_ID_MAX_SIZE);
 			if (sync_timestamp <= 0)
 			{
 				continue;
 			}
 
-			src_ip_addr = p;
-			*(src_ip_addr + (IP_ADDRESS_SIZE - 1)) = '\0';
+			src_id = p;
+			*(src_id + (FDFS_STORAGE_ID_MAX_SIZE - 1)) = '\0';
 			pSrcStorage = tracker_mem_get_storage( \
-					pClientInfo->pGroup, src_ip_addr);
+					pClientInfo->pGroup, src_id);
 			if (pSrcStorage == NULL)
 			{
 				continue;
