@@ -305,8 +305,8 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 		pStorageStat = &(pDest->stat);
 
 		pDest->status = pSrc->status;
-		memcpy(pDest->ip_addr, pSrc->ip_addr, \
-				IP_ADDRESS_SIZE - 1);
+		memcpy(pDest->id, pSrc->id, FDFS_STORAGE_ID_MAX_SIZE - 1);
+		memcpy(pDest->ip_addr, pSrc->ip_addr, IP_ADDRESS_SIZE - 1);
 		memcpy(pDest->src_ip_addr, pSrc->src_ip_addr, \
 				IP_ADDRESS_SIZE - 1);
 		strcpy(pDest->domain_name, pSrc->domain_name);
