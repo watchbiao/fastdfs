@@ -359,6 +359,7 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 		}
 
 		printf( "\tStorage %d:\n" \
+			"\t\tid = %s\n" \
 			"\t\tip_addr = %s%s  %s\n" \
 			"\t\thttp domain = %s\n" \
 			"\t\tversion = %s\n" \
@@ -416,9 +417,9 @@ static int list_storages(FDFSGroupStat *pGroupStat)
 			"\t\tlast_source_update = %s\n" \
 			"\t\tlast_sync_update = %s\n"   \
 			"\t\tlast_synced_timestamp = %s %s\n",  \
-			++k, pStorage->ip_addr, szHostnamePrompt, \
-			get_storage_status_caption(pStorage->status), \
-			pStorage->domain_name, \
+			++k, pStorage->id, pStorage->ip_addr, \
+			szHostnamePrompt, get_storage_status_caption( \
+			    pStorage->status), pStorage->domain_name, \
 			pStorage->version,  \
 			formatDatetime(pStorage->join_time, \
 				"%Y-%m-%d %H:%M:%S", \

@@ -37,14 +37,14 @@ static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
 	int result;
 	int success_count;
 	int64_t in_bytes;
-	char in_buff[(FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE) * \
+	char in_buff[(FDFS_GROUP_NAME_MAX_LEN + FDFS_STORAGE_ID_MAX_SIZE) * \
 			FDFS_MAX_GROUPS];
 	char *pInBuff;
 	char *p;
 	char *pEnd;
 	FDFSGroupInfo *pGroup;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char trunk_server_ip[IP_ADDRESS_SIZE];
+	char trunk_server_id[FDFS_STORAGE_ID_MAX_SIZE];
 
 	memset(&header, 0, sizeof(header));
 	header.cmd = TRACKER_PROTO_CMD_TRACKER_PING_LEADER;
@@ -82,14 +82,14 @@ static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
 
 	success_count = 0;
 	memset(group_name, 0, sizeof(group_name));
-	memset(trunk_server_ip, 0, sizeof(trunk_server_ip));
+	memset(trunk_server_id, 0, sizeof(trunk_server_id));
 
 	pEnd = in_buff + in_bytes;
 	for (p=in_buff; p<pEnd; p += FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE)
 	{
 		memcpy(group_name, p, FDFS_GROUP_NAME_MAX_LEN);
-		memcpy(trunk_server_ip, p + FDFS_GROUP_NAME_MAX_LEN, \
-			IP_ADDRESS_SIZE - 1);
+		memcpy(trunk_server_id, p + FDFS_GROUP_NAME_MAX_LEN, \
+			FDFS_STORAGE_ID_MAX_SIZE - 1);
 
 		pGroup = tracker_mem_get_group(group_name);
 		if (pGroup == NULL)
@@ -100,33 +100,32 @@ static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
 			continue;
 		}
 
-		if (*trunk_server_ip == '\0')
+		if (*trunk_server_id == '\0')
 		{
-			*(pGroup->last_trunk_server_ip) = '\0';
+			*(pGroup->last_trunk_server_id) = '\0';
 			pGroup->pTrunkServer = NULL;
 			success_count++;
 			continue;
 		}
 
 		pGroup->pTrunkServer = tracker_mem_get_storage(pGroup, \
-							trunk_server_ip);
+							trunk_server_id);
 		if (pGroup->pTrunkServer == NULL)
 		{
 			logWarning("file: "__FILE__", line: %d, " \
 				"tracker server ip: %s, group: %s, " \
 				"trunk server: %s not exists", \
 				__LINE__, pTrackerServer->ip_addr, \
-				group_name, trunk_server_ip);
+				group_name, trunk_server_id);
 		}
-		snprintf(pGroup->last_trunk_server_ip, sizeof( \
-			pGroup->last_trunk_server_ip), "%s", trunk_server_ip);
+		snprintf(pGroup->last_trunk_server_id, sizeof( \
+			pGroup->last_trunk_server_id), "%s", trunk_server_id);
 		success_count++;
 	}
 
 	if (success_count > 0)
 	{
 		tracker_save_groups();
-
 	}
 
 	return 0;
