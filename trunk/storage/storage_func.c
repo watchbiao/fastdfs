@@ -871,6 +871,7 @@ static int init_fsync_pthread_cond()
 static int storage_load_paths(IniContext *pItemContext)
 {
 	int result;
+	int bytes;
 
 	result = storage_load_paths_from_conf_file(pItemContext);
 	if (result != 0)
@@ -878,16 +879,16 @@ static int storage_load_paths(IniContext *pItemContext)
 		return result;
 	}
 
-	g_path_free_mbs = (int *)malloc(sizeof(int) * g_fdfs_path_count);
-	if (g_path_free_mbs == NULL)
+	bytes = sizeof(FDFSStorePathInfo) * g_fdfs_path_count;
+	g_path_space_list = (FDFSStorePathInfo *)malloc(bytes);
+	if (g_path_space_list == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)sizeof(int) *g_fdfs_path_count, \
-			errno, STRERROR(errno));
+			__LINE__, bytes, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
-	memset(g_path_free_mbs, 0, sizeof(int) * g_fdfs_path_count);
+	memset(g_path_space_list, 0, bytes);
 	return 0;
 }
 

@@ -12,6 +12,7 @@
 #define _FDFS_SHARED_FUNC_H
 
 #include "common_define.h"
+#include "ini_file_reader.h"
 #include "tracker_types.h"
 
 #ifdef __cplusplus
@@ -26,6 +27,23 @@ int fdfs_parse_storage_reserved_space(IniContext *pIniContext, \
 
 const char *fdfs_storage_reserved_space_to_string(FDFSStorageReservedSpace \
 			*pStorageReservedSpace, char *buff);
+
+const char *fdfs_storage_reserved_space_to_string_ex(const bool flag, \
+	const int space_mb, const int total_mb, const double space_ratio, \
+	char *buff);
+
+int fdfs_get_storage_reserved_space_mb(const int total_mb, \
+		FDFSStorageReservedSpace *pStorageReservedSpace);
+
+bool fdfs_check_reserved_space(FDFSGroupInfo *pGroup, \
+	FDFSStorageReservedSpace *pStorageReservedSpace);
+
+bool fdfs_check_reserved_space_trunk(FDFSGroupInfo *pGroup, \
+	FDFSStorageReservedSpace *pStorageReservedSpace);
+
+bool fdfs_check_reserved_space_path(const int64_t total_mb, \
+	const int64_t free_mb, const int avg_mb, \
+	FDFSStorageReservedSpace *pStorageReservedSpace);
 
 #ifdef __cplusplus
 }

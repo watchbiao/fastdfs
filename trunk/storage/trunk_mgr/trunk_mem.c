@@ -42,7 +42,8 @@ int g_slot_min_size;
 int g_trunk_file_size;
 int g_slot_max_size;
 int g_store_path_mode = FDFS_STORE_PATH_ROUND_ROBIN;
-int g_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
+FDFSStorageReservedSpace g_storage_reserved_space = {
+			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB};
 int g_avg_storage_reserved_mb = FDFS_DEF_STORAGE_RESERVED_MB;
 int g_store_path_index = 0;
 int g_current_trunk_file_id = 0;
@@ -1464,12 +1465,16 @@ static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo)
 			store_path_index = 0;
 		}
 
-		if (g_path_free_mbs[store_path_index] <= \
-			g_avg_storage_reserved_mb)
+		if (!storage_check_reserved_space_path(g_path_space_list \
+			[store_path_index].total_mb, g_path_space_list \
+			[store_path_index].free_mb, g_avg_storage_reserved_mb))
 		{
 			for (i=0; i<g_fdfs_path_count; i++)
 			{
-				if (g_path_free_mbs[i] > g_avg_storage_reserved_mb)
+				if (storage_check_reserved_space_path( \
+					g_path_space_list[i].total_mb, \
+					g_path_space_list[i].free_mb, \
+			 		g_avg_storage_reserved_mb))
 				{
 					store_path_index = i;
 					g_store_path_index = i;
@@ -1768,7 +1773,8 @@ int trunk_file_delete(const char *trunk_filename, \
 
 int trunk_create_trunk_file_advance(void *args)
 {
-	int64_t total_free_mbs;
+	int64_t total_mb_sum;
+	int64_t free_mb_sum;
 	int64_t alloc_space;
 	FDFSTrunkNode *pTrunkNode;
 	int result;
@@ -1798,13 +1804,16 @@ int trunk_create_trunk_file_advance(void *args)
 		return 0;
 	}
 
-	total_free_mbs = 0;
+	total_mb_sum = 0;
+	free_mb_sum = 0;
 	for (i=0; i<g_fdfs_path_count; i++)
 	{
-		total_free_mbs += g_path_free_mbs[i];
+		total_mb_sum += g_path_space_list[i].total_mb;
+		free_mb_sum += g_path_space_list[i].free_mb;
 	}
 
-	if (alloc_space >= total_free_mbs * FDFS_ONE_MB)
+	if (!storage_check_reserved_space_path(total_mb_sum, free_mb_sum \
+		- (alloc_space / FDFS_ONE_MB), g_storage_reserved_space.rs.mb))
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"free space is not enough!", __LINE__);

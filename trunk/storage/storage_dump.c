@@ -28,6 +28,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 	char szStorageJoinTime[32];
 	char szSyncUntilTimestamp[32];
 	char szUptime[32];
+	char reserved_space_str[32];
 	int total_len;
 	int i;
 
@@ -99,7 +100,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_slot_min_size=%d\n"
 		"g_trunk_file_size=%d\n"
 		"g_store_path_mode=%d\n"
-		"g_storage_reserved_mb=%d\n"
+		"storage_reserved_mb=%s\n"
 		"g_avg_storage_reserved_mb=%d\n"
 		"g_store_path_index=%d\n"
 		"g_current_trunk_file_id=%d\n"
@@ -191,7 +192,8 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_slot_min_size
 		, g_trunk_file_size
 		, g_store_path_mode
-		, g_storage_reserved_mb
+		, fdfs_storage_reserved_space_to_string( \
+			&g_storage_reserved_space, reserved_space_str) \
 		, g_avg_storage_reserved_mb
 		, g_store_path_index
 		, g_current_trunk_file_id
@@ -221,8 +223,11 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 	for (i=0; i<g_fdfs_path_count; i++)
 	{
 		total_len += snprintf(buff + total_len, buffSize - total_len,
-				"\tg_fdfs_store_paths[%d]=%s\n", i, g_fdfs_store_paths[i]);
-
+				"\tg_fdfs_store_paths[%d]=%s, " \
+				"total=%d MB, free=%d MB\n", i, \
+				g_fdfs_store_paths[i], \
+				g_path_space_list[i].total_mb, \
+				g_path_space_list[i].free_mb);
 	}
 
 	total_len += snprintf(buff + total_len, buffSize - total_len,

@@ -4171,15 +4171,25 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 	}
 	else
 	{
-		if (g_path_free_mbs[store_path_index] - (file_bytes/FDFS_ONE_MB)
-				<= g_avg_storage_reserved_mb)
+		char reserved_space_str[32];
+
+		if (!storage_check_reserved_space_path(g_path_space_list \
+			[store_path_index].total_mb, g_path_space_list \
+			[store_path_index].free_mb - (file_bytes/FDFS_ONE_MB), \
+			g_avg_storage_reserved_mb))
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"no space to upload file, "
 				"free space: %d MB is too small, file bytes: " \
-				INT64_PRINTF_FORMAT", reserved space: %d MB", \
-				__LINE__, g_path_free_mbs[store_path_index], \
-				file_bytes, g_avg_storage_reserved_mb);
+				INT64_PRINTF_FORMAT", reserved space: %s", \
+				__LINE__, g_path_space_list[store_path_index].\
+				free_mb, file_bytes, \
+				fdfs_storage_reserved_space_to_string_ex( \
+				  g_storage_reserved_space.flag, \
+        			  g_avg_storage_reserved_mb, \
+				  g_path_space_list[store_path_index]. \
+				  total_mb, g_storage_reserved_space.rs.ratio,\
+				  reserved_space_str));
 			pClientInfo->total_length = sizeof(TrackerHeader);
 			return ENOSPC;
 		}
@@ -4824,6 +4834,7 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	char true_filename[128];
 	char prefix_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
 	char file_ext_name[FDFS_FILE_PREFIX_MAX_LEN + 1];
+	char reserved_space_str[32];
 	int master_filename_len;
 	int64_t nInPackLen;
 	int64_t file_bytes;
@@ -4908,15 +4919,22 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 		return result;
 	}
 
-	if (g_path_free_mbs[store_path_index] - (file_bytes / FDFS_ONE_MB)  <= \
-			g_avg_storage_reserved_mb)
+	if (!storage_check_reserved_space_path(g_path_space_list \
+		[store_path_index].total_mb, g_path_space_list \
+		[store_path_index].free_mb - (file_bytes / FDFS_ONE_MB), \
+		g_avg_storage_reserved_mb))
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"no space to upload file, "
 			"free space: %d MB is too small, file bytes: " \
-			INT64_PRINTF_FORMAT", reserved space: %d MB", __LINE__,\
-			g_path_free_mbs[store_path_index], file_bytes, \
-			g_avg_storage_reserved_mb);
+			INT64_PRINTF_FORMAT", reserved space: %s", __LINE__,\
+			g_path_space_list[store_path_index].free_mb, \
+			file_bytes, fdfs_storage_reserved_space_to_string_ex(\
+				g_storage_reserved_space.flag, \
+        			g_avg_storage_reserved_mb, \
+				g_path_space_list[store_path_index].total_mb, \
+				g_storage_reserved_space.rs.ratio, \
+				reserved_space_str));
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return ENOSPC;
 	}

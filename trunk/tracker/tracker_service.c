@@ -1967,64 +1967,15 @@ static int tracker_deal_service_query_fetch_update( \
 	return 0;
 }
 
-static bool tracker_check_reserved_space(FDFSGroupInfo *pGroup)
-{
-	if (g_storage_reserved_space.flag == \
-			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
-	{
-		return pGroup->free_mb > g_storage_reserved_space.rs.mb;
-	}
-	else
-	{
-		if (pGroup->total_mb == 0)
-		{
-			return false;
-		}
+#define tracker_check_reserved_space(pGroup) \
+	fdfs_check_reserved_space(pGroup, &g_storage_reserved_space)
 
-		return (pGroup->free_mb / pGroup->total_mb) > \
-			g_storage_reserved_space.rs.ratio;
-	}
-}
+#define tracker_check_reserved_space_trunk(pGroup) \
+	fdfs_check_reserved_space_trunk(pGroup, &g_storage_reserved_space)
 
-static bool tracker_check_reserved_space_trunk(FDFSGroupInfo *pGroup)
-{
-	if (g_storage_reserved_space.flag == \
-			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
-	{
-		return (pGroup->free_mb + pGroup->trunk_free_mb > 
-			g_storage_reserved_space.rs.mb);
-	}
-	else
-	{
-		if (pGroup->total_mb == 0)
-		{
-			return false;
-		}
-
-		return ((pGroup->free_mb + pGroup->trunk_free_mb) / \
-		pGroup->total_mb) > g_storage_reserved_space.rs.ratio;
-	}
-}
-
-static bool tracker_check_reserved_space_path(const int64_t total_mb, \
-	const int64_t free_mb, const int avg_mb)
-{
-	if (g_storage_reserved_space.flag == \
-			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
-	{
-		return free_mb > avg_mb;
-	}
-	else
-	{
-		if (total_mb == 0)
-		{
-			return false;
-		}
-
-		return (free_mb / total_mb) > \
-		  	g_storage_reserved_space.rs.ratio;
-	}
-}
+#define tracker_check_reserved_space_path(total_mb, free_mb, avg_mb) \
+	fdfs_check_reserved_space_path(total_mb, free_mb, avg_mb, \
+				&g_storage_reserved_space)
 
 static int tracker_deal_service_query_storage( \
 		struct fast_task_info *pTask, char cmd)
@@ -2091,10 +2042,14 @@ static int tracker_deal_service_query_storage( \
 			return ENOENT;
 		}
 
-		if (!tracker_check_reserved_space_trunk(pStoreGroup))
+		if (!tracker_check_reserved_space(pStoreGroup))
 		{
-			pTask->length = sizeof(TrackerHeader);
-			return ENOSPC;
+			if (!(g_if_use_trunk_file && \
+				tracker_check_reserved_space_trunk(pStoreGroup)))
+			{
+				pTask->length = sizeof(TrackerHeader);
+				return ENOSPC;
+			}
 		}
 	}
 	else if (g_groups.store_lookup == FDFS_STORE_LOOKUP_ROUND_ROBIN
@@ -2119,7 +2074,7 @@ static int tracker_deal_service_query_storage( \
 				pStoreGroup = *ppFoundGroup;
 			}
 			else if (g_if_use_trunk_file && \
-				g_groups.store_lookup== \
+				g_groups.store_lookup == \
 				FDFS_STORE_LOOKUP_LOAD_BALANCE && \
 				tracker_check_reserved_space_trunk( \
 					*ppFoundGroup))
@@ -2228,10 +2183,15 @@ static int tracker_deal_service_query_storage( \
 			return ENOENT;
 		}
 
-		if (tracker_check_reserved_space_trunk(g_groups.pStoreGroup))
+		if (!tracker_check_reserved_space(g_groups.pStoreGroup))
 		{
-			pTask->length = sizeof(TrackerHeader);
-			return ENOSPC;
+			if (!(g_if_use_trunk_file && \
+				tracker_check_reserved_space_trunk( \
+						g_groups.pStoreGroup)))
+			{
+				pTask->length = sizeof(TrackerHeader);
+				return ENOSPC;
+			}
 		}
 
 		pStoreGroup = g_groups.pStoreGroup;
@@ -3053,6 +3013,7 @@ static int tracker_deal_storage_df_report(struct fast_task_info *pTask)
 	if ((pClientInfo->pGroup->free_mb == 0) ||
 		(pClientInfo->pStorage->free_mb < pClientInfo->pGroup->free_mb))
 	{
+		pClientInfo->pGroup->total_mb = pClientInfo->pStorage->total_mb;
 		pClientInfo->pGroup->free_mb = pClientInfo->pStorage->free_mb;
 	}
 	else if (pClientInfo->pStorage->free_mb > old_free_mb)
