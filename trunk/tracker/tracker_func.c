@@ -32,6 +32,7 @@
 #include "tracker_func.h"
 #include "tracker_mem.h"
 #include "local_ip_func.h"
+#include "fdfs_shared_func.h"
 
 #ifdef WITH_HTTPD
 #include "fdfs_http_shared.h"
@@ -357,7 +358,6 @@ int tracker_load_from_conf_file(const char *filename, \
 {
 	char *pBasePath;
 	char *pBindAddr;
-	char *pStorageReserved;
 	char *pRunByGroup;
 	char *pRunByUser;
 	char *pThreadStackSize;
@@ -371,7 +371,6 @@ int tracker_load_from_conf_file(const char *filename, \
 #endif
 	IniContext iniContext;
 	int result;
-	int64_t storage_reserved;
 	int64_t thread_stack_size;
 	int64_t trunk_file_size;
 	int64_t slot_min_size;
@@ -521,65 +520,10 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_groups.store_path = FDFS_STORE_PATH_ROUND_ROBIN;
 		}
 
-		pStorageReserved = iniGetStrValue(NULL, \
-					"reserved_storage_space", &iniContext);
-		if (pStorageReserved == NULL)
+		if ((result=fdfs_parse_storage_reserved_space(&iniContext, \
+				&g_storage_reserved_space)) != 0)
 		{
-			g_storage_reserved_space.flag = \
-					TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB;
-			g_storage_reserved_space.rs.mb = \
-					FDFS_DEF_STORAGE_RESERVED_MB;
-		}
-		else if (*pStorageReserved == '\0')
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"item \"reserved_storage_space\" is empty!", \
-				__LINE__);
-			result = EINVAL;
-                        break;
-		}
-		else if (*(pStorageReserved+strlen(pStorageReserved)-1) == '%')
-		{
-			char *endptr;
-			g_storage_reserved_space.flag = \
-				TRACKER_STORAGE_RESERVED_SPACE_FLAG_RATIO;
-			endptr = NULL;
-			*(pStorageReserved+strlen(pStorageReserved)-1) = '\0';
-			g_storage_reserved_space.rs.ratio = \
-					strtod(pStorageReserved, &endptr);
-			if (endptr != NULL && *endptr != '\0')
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"item \"reserved_storage_space\": %s%%"\
-					" is invalid!", __LINE__, \
-					pStorageReserved);
-				result = EINVAL;
-        	                break;
-			}
-
-			if (g_storage_reserved_space.rs.ratio <= 0.00 || \
-				g_storage_reserved_space.rs.ratio >= 100.00)
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"item \"reserved_storage_space\": %s%%"\
-					" is invalid!", __LINE__, \
-					pStorageReserved);
-				result = EINVAL;
-        	                break;
-			}
-		}
-		else
-		{
-			if ((result=parse_bytes(pStorageReserved, 1, \
-					&storage_reserved)) != 0)
-			{
-				return result;
-			}
-
-			g_storage_reserved_space.flag = \
-					TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB;
-			g_storage_reserved_space.rs.mb = \
-					storage_reserved / FDFS_ONE_MB;
+			break;
 		}
 
 		g_max_connections = iniGetIntValue(NULL, "max_connections", \
@@ -885,18 +829,6 @@ int tracker_load_from_conf_file(const char *filename, \
 
 #endif
 
-		if (g_storage_reserved_space.flag == \
-				TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
-		{
-			sprintf(reserved_space_str, "%dMB", \
-				g_storage_reserved_space.rs.mb);
-		}
-		else
-		{
-			sprintf(reserved_space_str, "%.2f%%", \
-				g_storage_reserved_space.rs.ratio);
-		}
-	
 		logInfo("FastDFS v%d.%02d, base_path=%s, " \
 			"run_by_group=%s, run_by_user=%s, " \
 			"connect_timeout=%ds, "    \
@@ -932,7 +864,9 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_max_connections, g_work_threads, \
 			g_groups.store_lookup, g_groups.store_group, \
 			g_groups.store_server, g_groups.store_path, \
-			reserved_space_str, g_groups.download_server, \
+			fdfs_storage_reserved_space_to_string( \
+			    &g_storage_reserved_space, reserved_space_str), \
+			g_groups.download_server, \
 			g_allow_ip_count, g_sync_log_buff_interval, \
 			g_check_active_interval, g_thread_stack_size / 1024, \
 			g_storage_ip_changed_auto_adjust, \

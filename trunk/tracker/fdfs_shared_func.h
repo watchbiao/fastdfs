@@ -21,6 +21,12 @@ extern "C" {
 int fdfs_get_tracker_leader_index_ex(TrackerServerGroup *pServerGroup, \
 		const char *leaderIp, const int leaderPort);
 
+int fdfs_parse_storage_reserved_space(IniContext *pIniContext, \
+		FDFSStorageReservedSpace *pStorageReservedSpace);
+
+const char *fdfs_storage_reserved_space_to_string(FDFSStorageReservedSpace \
+			*pStorageReservedSpace, char *buff);
+
 #ifdef __cplusplus
 }
 #endif

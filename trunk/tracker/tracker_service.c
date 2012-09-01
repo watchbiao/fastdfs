@@ -601,18 +601,6 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
-
-	if (g_storage_reserved_space.flag == \
-			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
-	{
-		sprintf(reserved_space_str, "%dMB", \
-			g_storage_reserved_space.rs.mb);
-	}
-	else
-	{
-		sprintf(reserved_space_str, "%.2f%%", \
-			g_storage_reserved_space.rs.ratio);
-	}
 	
 	pTask->length = sizeof(TrackerHeader) + \
 	sprintf(pTask->data + sizeof(TrackerHeader), \
@@ -633,7 +621,8 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 		g_storage_ip_changed_auto_adjust, \
 		g_storage_sync_file_max_delay, \
 		g_groups.store_path, \
-		reserved_space_str, \
+		fdfs_storage_reserved_space_to_string( \
+			&g_storage_reserved_space, reserved_space_str), \
 		g_if_use_trunk_file, \
 		g_slot_min_size, \
 		g_slot_max_size, \

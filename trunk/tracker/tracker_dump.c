@@ -21,6 +21,7 @@
 #include "tracker_mem.h"
 #include "tracker_service.h"
 #include "tracker_relationship.h"
+#include "fdfs_shared_func.h"
 
 static int fdfs_dump_storage_stat(FDFSStorageDetail *pServer, 
 		char *buff, const int buffSize);
@@ -286,18 +287,6 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 {
 	int total_len;
 	char reserved_space_str[32];
-
-	if (g_storage_reserved_space.flag == \
-			TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
-	{
-		sprintf(reserved_space_str, "%dMB", \
-			g_storage_reserved_space.rs.mb);
-	}
-	else
-	{
-		sprintf(reserved_space_str, "%.2f%%", \
-			g_storage_reserved_space.rs.ratio);
-	}
 	
 	total_len = snprintf(buff, buffSize,
 		"g_fdfs_connect_timeout=%ds\n"
@@ -364,7 +353,8 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_check_active_interval
 		, g_storage_stat_chg_count
 		, g_storage_sync_time_chg_count
-		, reserved_space_str
+		, fdfs_storage_reserved_space_to_string( \
+		    &g_storage_reserved_space, reserved_space_str) \
 		, g_allow_ip_count
 		, g_run_by_group
 		, g_run_by_user

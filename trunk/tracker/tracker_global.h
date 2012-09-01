@@ -31,20 +31,9 @@
 #define TRACKER_MAX_PACKAGE_SIZE		(8 * 1024)
 #define TRACKER_SYNC_STATUS_FILE_INTERVAL	3600   //one hour
 
-#define TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB		0
-#define TRACKER_STORAGE_RESERVED_SPACE_FLAG_RATIO	1
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct {
-	char flag;
-	union {
-		int mb;
-		double ratio;
-	} rs;
-} FDFSStorageReservedSpace;
 
 extern bool g_continue_flag;
 extern int g_server_port;
