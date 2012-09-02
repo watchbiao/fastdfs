@@ -115,7 +115,7 @@ static int tracker_cmp_server_id(const void *p1, const void *p2)
 		(*((FDFSStorageIdInfo **)p2))->id);
 }
 
-FDFSStorageIdInfo *tracker_get_storage_id_info(const char *group_name, \
+FDFSStorageIdInfo *tracker_get_storage_id_by_ip(const char *group_name, \
 		const char *pIpAddr)
 {
 	FDFSStorageIdInfo target;
@@ -125,6 +125,26 @@ FDFSStorageIdInfo *tracker_get_storage_id_info(const char *group_name, \
 	return (FDFSStorageIdInfo *)bsearch(&target, g_storage_ids_by_ip, \
 		g_storage_id_count, sizeof(FDFSStorageIdInfo), \
 		tracker_cmp_group_name_and_ip);
+}
+
+int tracker_check_storage_id(const char *group_name, const char *id)
+{
+	FDFSStorageIdInfo target;
+	FDFSStorageIdInfo *pTarget;
+	FDFSStorageIdInfo **ppFound;
+
+	memset(&target, 0, sizeof(FDFSStorageIdInfo));
+	snprintf(target.id, sizeof(target.id), "%s", id);
+	pTarget = &target;
+	ppFound = (FDFSStorageIdInfo **)bsearch(&pTarget, g_storage_ids_by_id, \
+		g_storage_id_count, sizeof(FDFSStorageIdInfo *), \
+		tracker_cmp_server_id);
+	if (ppFound == NULL)
+	{
+		return ENOENT;
+	}
+
+	return strcmp((*ppFound)->group_name, group_name) == 0 ? 0 : EINVAL;
 }
 
 static int tracker_load_storage_ids(const char *filename, \
