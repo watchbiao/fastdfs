@@ -193,6 +193,7 @@ static int tracker_rename_mark_files(const char *old_ip_addr, \
 static void *tracker_report_thread_entrance(void *arg)
 {
 	TrackerServerInfo *pTrackerServer;
+	char my_server_id[FDFS_STORAGE_ID_MAX_SIZE];
 	char tracker_client_ip[IP_ADDRESS_SIZE];
 	char szFailPrompt[36];
 	bool sync_old_done;
@@ -436,8 +437,9 @@ static void *tracker_report_thread_entrance(void *arg)
 			if (k == g_tracker_group.server_count)
 			{ //src storage server already be deleted
 				int my_status;
-				if (tracker_get_storage_status(&g_tracker_group,
-                			g_group_name, g_tracker_client_ip, 
+				if (tracker_get_storage_max_status( \
+					&g_tracker_group, g_group_name, \
+					g_tracker_client_ip, my_server_id, \
 					&my_status) == 0)
 				{
 					tracker_sync_dest_query(pTrackerServer);
@@ -578,8 +580,8 @@ static bool tracker_insert_into_sorted_servers( \
 	ppEnd = g_sorted_storages + g_storage_count;
 	for (ppServer=ppEnd; ppServer > g_sorted_storages; ppServer--)
 	{
-		nCompare = strcmp(pInsertedServer->server.ip_addr, \
-			   	(*(ppServer-1))->server.ip_addr);
+		nCompare = strcmp(pInsertedServer->server.id, \
+			   	(*(ppServer-1))->server.id);
 		if (nCompare > 0)
 		{
 			*ppServer = pInsertedServer;
@@ -768,10 +770,14 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 
 		ppFound = (FDFSStorageServer **)bsearch(&pTargetServer, \
 			g_sorted_storages, g_storage_count, \
-			sizeof(FDFSStorageServer *), storage_cmp_by_ip_addr);
+			sizeof(FDFSStorageServer *), storage_cmp_by_server_id);
 		if (ppFound != NULL)
 		{
-			//logInfo("ip_addr=%s, local status: %d, tracker status: %d", pServer->ip_addr, (*ppFound)->server.status, pServer->status);
+			/*
+			//logInfo("ip_addr=%s, local status: %d, " \
+				"tracker status: %d", pServer->ip_addr, \
+				(*ppFound)->server.status, pServer->status);
+			*/
 			if ((*ppFound)->server.status == pServer->status)
 			{
 				continue;
@@ -920,7 +926,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 			continue;
 		}
 
-		res = strcmp(pServer->ip_addr, (*ppGlobalServer)->server.ip_addr);
+		res = strcmp(pServer->id, (*ppGlobalServer)->server.id);
 		if (res < 0)
 		{
 			if (pServer->status != FDFS_STORAGE_STATUS_DELETED
@@ -1274,7 +1280,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 		pStorageEnd = pBriefServers + server_count;
 		for (pStorage=pBriefServers; pStorage<pStorageEnd; pStorage++)
 		{
-			if (strcmp(pStorage->ip_addr, g_tracker_client_ip) == 0)
+			if (strcmp(pStorage->id, g_my_server_id) == 0)
 			{
 				continue;
 			}
@@ -1718,10 +1724,10 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 	memset(&targetServer, 0, sizeof(targetServer));
 	pTargetServer = &targetServer;
 
-	strcpy(targetServer.server.ip_addr, g_tracker_client_ip);
+	strcpy(targetServer.server.id, g_my_server_id);
 	ppFound = (FDFSStorageServer **)bsearch(&pTargetServer, \
 			g_sorted_storages, g_storage_count, \
-			sizeof(FDFSStorageServer *), storage_cmp_by_ip_addr);
+			sizeof(FDFSStorageServer *), storage_cmp_by_server_id);
 	if (ppFound != NULL)
 	{
 		pReqBody->status = (*ppFound)->server.status;

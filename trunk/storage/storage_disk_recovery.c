@@ -129,9 +129,9 @@ static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 		__LINE__);
 	while (g_continue_flag)
 	{
-		result = tracker_get_storage_status(&g_tracker_group, \
+		result = tracker_get_storage_max_status(&g_tracker_group, \
                 		g_group_name, g_tracker_client_ip, \
-				&saved_storage_status);
+				g_my_server_id, &saved_storage_status);
 		if (result == ENOENT)
 		{
 			logWarning("file: "__FILE__", line: %d, " \

@@ -661,8 +661,7 @@ static int tracker_deal_storage_replica_chg(struct fast_task_info *pTask)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip addr: %s, " \
-			"package size "PKG_LEN_PRINTF_FORMAT" " \
-			"is not correct", \
+			"package size %d is not correct", \
 			__LINE__, TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG, \
 			pTask->client_ip, nPkgLen);
 		pTask->length = sizeof(TrackerHeader);
@@ -908,6 +907,81 @@ static int tracker_deal_commit_next_leader(struct fast_task_info *pTask)
 			"the tracker leader is %s:%d", __LINE__, \
 			leader.ip_addr, leader.port);
 	}
+
+	return 0;
+}
+
+
+static int tracker_deal_server_get_storage_status(struct fast_task_info *pTask)
+{
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char ip_addr[IP_ADDRESS_SIZE];
+	FDFSGroupInfo *pGroup;
+	FDFSStorageDetail *pStorage;
+	FDFSStorageBrief *pDest;
+	int nPkgLen;
+
+	nPkgLen = pTask->length - sizeof(TrackerHeader);
+	if (nPkgLen < FDFS_GROUP_NAME_MAX_LEN)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip addr: %s, " \
+			"package size %d is not correct", __LINE__, \
+			TRACKER_PROTO_CMD_STORAGE_GET_STATUS, \
+			pTask->client_ip, nPkgLen);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	memcpy(group_name, pTask->data + sizeof(TrackerHeader), \
+			FDFS_GROUP_NAME_MAX_LEN);
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+	pGroup = tracker_mem_get_group(group_name);
+	if (pGroup == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid group_name: %s", \
+			__LINE__, pTask->client_ip, group_name);
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	if (nPkgLen == FDFS_GROUP_NAME_MAX_LEN)
+	{
+		strcpy(ip_addr, pTask->client_ip);
+	}
+	else
+	{
+		int ip_len;
+
+		ip_len = nPkgLen - FDFS_GROUP_NAME_MAX_LEN;
+		if (ip_len >= IP_ADDRESS_SIZE)
+		{
+			ip_len = IP_ADDRESS_SIZE - 1;
+		}
+		memcpy(ip_addr, pTask->data + sizeof(TrackerHeader) + \
+			FDFS_GROUP_NAME_MAX_LEN, ip_len);
+		*(ip_addr + ip_len) = '\0';
+	}
+
+	pStorage = tracker_mem_get_storage_by_ip(pGroup, ip_addr);
+	if (pStorage == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, group_name: %s, ip_addr: %s, " \
+			"storage server not exist", __LINE__, \
+			pTask->client_ip, group_name, ip_addr);
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	pTask->length = sizeof(TrackerHeader) + sizeof(FDFSStorageBrief);
+	pDest = (FDFSStorageBrief *)(pTask->data + sizeof(TrackerHeader));
+	memset(pDest, 0, sizeof(FDFSStorageBrief));
+	strcpy(pDest->id, pStorage->id);
+	strcpy(pDest->ip_addr, pStorage->ip_addr);
+	pDest->status = pStorage->status;
+	int2buff(pGroup->storage_port, pDest->port);
 
 	return 0;
 }
@@ -3242,6 +3316,9 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_REPORT_STATUS:
 			result = tracker_deal_storage_report_status(pTask);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_GET_STATUS:
+			result = tracker_deal_server_get_storage_status(pTask);
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG:
 			TRACKER_CHECK_LOGINED(pTask)

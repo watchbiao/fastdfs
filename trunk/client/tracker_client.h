@@ -117,14 +117,14 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 * params:
 *	pTrackerServer: tracker server
 *	szGroupName: group name to query
-*	szStorageIp: the storage ip address to query, can be NULL or empty
+*	szStorageId: the storage id to query, can be NULL or empty
 *	storage_infos: return storage info array
 *	max_storages: max storage count(storage array capacity)
 *	storage_count: return storage count
 * return: 0 success, !=0 fail, return the error code
 **/
 int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
-		const char *szGroupName, const char *szStorageIp, \
+		const char *szGroupName, const char *szStorageId, \
 		FDFSStorageInfo *storage_infos, const int max_storages, \
 		int *storage_count);
 
@@ -254,24 +254,39 @@ int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
 * params:
 *	pTrackerGroup: the tracker group
 *	group_name: the group name which the storage server belongs to
-*	ip_addr: the ip address of the storage server
+*	storage_id: the storage server id
 * return: 0 success, !=0 fail, return the error code
 **/
 int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
-		const char *group_name, const char *ip_addr);
+		const char *group_name, const char *storage_id);
 
+
+/**
+* get storage server highest level status from the tracker server
+* params:
+*	pTrackerServer: tracker server
+*	group_name: the group name which the storage server belongs to
+*	ip_addr: the ip addr of the storage server
+*	pDestBuff: return the storage server brief info
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_get_storage_status(TrackerServerInfo *pTrackerServer, \
+		const char *group_name, const char *ip_addr, \
+		FDFSStorageBrief *pDestBuff);
 
 /**
 * get storage server highest level status from all tracker servers
 * params:
 *	pTrackerGroup: the tracker group
 *	group_name: the group name which the storage server belongs to
-*	ip_addr: the ip address of the storage server
+*	ip_addr: the ip addr of the storage server
+*	storage_id: return the storage server id
 *	status: return the highest level status
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_get_storage_status(TrackerServerGroup *pTrackerGroup, \
-		const char *group_name, const char *ip_addr, int *status);
+int tracker_get_storage_max_status(TrackerServerGroup *pTrackerGroup, \
+		const char *group_name, const char *ip_addr, \
+		char *storage_id, int *status);
 
 #ifdef __cplusplus
 }

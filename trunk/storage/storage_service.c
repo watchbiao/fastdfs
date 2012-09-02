@@ -133,7 +133,7 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 	pTargetServer = &targetServer;
 	ppFound = (FDFSStorageServer **)bsearch(&pTargetServer, \
 		g_sorted_storages, g_storage_count, \
-		sizeof(FDFSStorageServer *), storage_cmp_by_ip_addr);
+		sizeof(FDFSStorageServer *), storage_cmp_by_server_id);
 	if (ppFound == NULL)
 	{
 		return NULL;

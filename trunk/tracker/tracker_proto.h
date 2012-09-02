@@ -31,6 +31,7 @@
 #define TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FREE 74  //storage report trunk free space
 #define TRACKER_PROTO_CMD_STORAGE_REPORT_TRUNK_FID  73  //storage report current trunk file id
 #define TRACKER_PROTO_CMD_STORAGE_FETCH_TRUNK_FID   72  //storage get current trunk file id
+#define TRACKER_PROTO_CMD_STORAGE_GET_STATUS	    71  //get storage status from tracker
 
 #define TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_START 61  //start of tracker get system data files
 #define TRACKER_PROTO_CMD_TRACKER_GET_SYS_FILES_END   62  //end of tracker get system data files
