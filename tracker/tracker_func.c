@@ -109,6 +109,12 @@ static int tracker_cmp_group_name_and_ip(const void *p1, const void *p2)
 		((FDFSStorageIdInfo *)p2)->ip_addr;
 }
 
+static int tracker_cmp_server_id(const void *p1, const void *p2)
+{
+	return strcmp((*((FDFSStorageIdInfo **)p1))->id, \
+		(*((FDFSStorageIdInfo **)p2))->id);
+}
+
 FDFSStorageIdInfo *tracker_get_storage_id_info(const char *group_name, \
 		const char *pIpAddr)
 {
@@ -116,7 +122,7 @@ FDFSStorageIdInfo *tracker_get_storage_id_info(const char *group_name, \
 	memset(&target, 0, sizeof(FDFSStorageIdInfo));
 	snprintf(target.group_name, sizeof(target.group_name), "%s", group_name);
 	target.ip_addr = getIpaddrByName(pIpAddr, NULL, 0);
-	return (FDFSStorageIdInfo *)bsearch(&target, g_storage_ids, \
+	return (FDFSStorageIdInfo *)bsearch(&target, g_storage_ids_by_ip, \
 		g_storage_id_count, sizeof(FDFSStorageIdInfo), \
 		tracker_cmp_group_name_and_ip);
 }
@@ -132,6 +138,8 @@ static int tracker_load_storage_ids(const char *filename, \
 	char *group_name;
 	char *pIpAddr;
 	FDFSStorageIdInfo *pStorageIdInfo;
+	FDFSStorageIdInfo **ppStorageIdInfo;
+	FDFSStorageIdInfo **ppStorageIdEnd;
 	int64_t file_size;
 	int alloc_bytes;
 	int result;
@@ -233,8 +241,8 @@ static int tracker_load_storage_ids(const char *filename, \
 		}
 
 		alloc_bytes = sizeof(FDFSStorageIdInfo) * g_storage_id_count;
-		g_storage_ids = (FDFSStorageIdInfo *)malloc(alloc_bytes);
-		if (g_storage_ids == NULL)
+		g_storage_ids_by_ip = (FDFSStorageIdInfo *)malloc(alloc_bytes);
+		if (g_storage_ids_by_ip == NULL)
 		{
 			result = errno != 0 ? errno : ENOMEM;
 			logError("file: "__FILE__", line: %d, " \
@@ -243,9 +251,23 @@ static int tracker_load_storage_ids(const char *filename, \
 				alloc_bytes, result, STRERROR(result));
 			break;
 		}
-		memset(g_storage_ids, 0, alloc_bytes);
+		memset(g_storage_ids_by_ip, 0, alloc_bytes);
 
-		pStorageIdInfo = g_storage_ids;
+		alloc_bytes = sizeof(FDFSStorageIdInfo *) * g_storage_id_count;
+		g_storage_ids_by_id = (FDFSStorageIdInfo **)malloc(alloc_bytes);
+		if (g_storage_ids_by_id == NULL)
+		{
+			result = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				alloc_bytes, result, STRERROR(result));
+			free(g_storage_ids_by_ip);
+			break;
+		}
+		memset(g_storage_ids_by_id, 0, alloc_bytes);
+
+		pStorageIdInfo = g_storage_ids_by_ip;
 		for (i=0; i<line_count; i++)
 		{
 			line = lines[i];
@@ -335,7 +357,7 @@ static int tracker_load_storage_ids(const char *filename, \
 	}
 
 	logInfo("g_storage_id_count: %d", g_storage_id_count);
-	pStorageIdInfo = g_storage_ids;
+	pStorageIdInfo = g_storage_ids_by_ip;
 	for (i=0; i<g_storage_id_count; i++)
 	{
 		char szIpAddr[IP_ADDRESS_SIZE];
@@ -348,8 +370,18 @@ static int tracker_load_storage_ids(const char *filename, \
 		pStorageIdInfo++;
 	}
 	
-	qsort(g_storage_ids, g_storage_id_count, sizeof(FDFSStorageIdInfo), \
-		tracker_cmp_group_name_and_ip);
+	ppStorageIdEnd = g_storage_ids_by_id + g_storage_id_count;
+	pStorageIdInfo = g_storage_ids_by_ip;
+	for (ppStorageIdInfo=g_storage_ids_by_id; ppStorageIdInfo < \
+		ppStorageIdEnd; ppStorageIdInfo++)
+	{
+		*ppStorageIdInfo = pStorageIdInfo++;
+	}
+
+	qsort(g_storage_ids_by_ip, g_storage_id_count, \
+		sizeof(FDFSStorageIdInfo), tracker_cmp_group_name_and_ip);
+	qsort(g_storage_ids_by_id, g_storage_id_count, \
+		sizeof(FDFSStorageIdInfo *), tracker_cmp_server_id);
 	return result;
 }
 

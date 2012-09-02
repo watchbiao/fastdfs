@@ -1514,6 +1514,15 @@ static int tracker_deal_storage_report_ip_changed(struct fast_task_info *pTask)
 	char *pOldIpAddr;
 	char *pNewIpAddr;
 	
+	if (g_use_storage_id)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, do NOT support ip changed adjust " \
+			"because cluster use server ID instead of " \
+			"IP address", __LINE__, pTask->client_ip);
+		return EOPNOTSUPP;
+	}
+
 	if (pTask->length - sizeof(TrackerHeader) != \
 			FDFS_GROUP_NAME_MAX_LEN + 2 * IP_ADDRESS_SIZE)
 	{

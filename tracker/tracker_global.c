@@ -37,7 +37,8 @@ char g_run_by_user[32] = {0};
 bool g_storage_ip_changed_auto_adjust = true;
 bool g_use_storage_id = false;  //if use storage ID instead of IP address
 
-FDFSStorageIdInfo *g_storage_ids = NULL;  //sorted by storage IP address and port
+FDFSStorageIdInfo *g_storage_ids_by_ip = NULL;  //sorted by group name and storage IP
+FDFSStorageIdInfo **g_storage_ids_by_id = NULL; //sorted by storage ID
 int g_storage_id_count = 0;
 
 int g_thread_stack_size = 64 * 1024;
