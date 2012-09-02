@@ -1303,7 +1303,7 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 {
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 			IP_ADDRESS_SIZE];
-	char sync_src_ip_addr[IP_ADDRESS_SIZE];
+	char sync_src_id[IP_ADDRESS_SIZE];
 	TrackerHeader *pHeader;
 	TrackerStorageSyncReqBody syncReqbody;
 	char *pBuff;
@@ -1356,10 +1356,10 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 		return EINVAL;
 	}
 
-	memcpy(sync_src_ip_addr, syncReqbody.src_ip_addr, IP_ADDRESS_SIZE);
-	sync_src_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
+	memcpy(sync_src_id, syncReqbody.src_id, IP_ADDRESS_SIZE);
+	sync_src_id[IP_ADDRESS_SIZE-1] = '\0';
 
-	pReader->need_sync_old = is_local_host_ip(sync_src_ip_addr);
+	pReader->need_sync_old = is_local_host_ip(sync_src_id);
        	pReader->until_timestamp = (time_t)buff2long( \
 					syncReqbody.until_timestamp);
 
@@ -1412,8 +1412,8 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 		return EINVAL;
 	}
 
-	memcpy(g_sync_src_ip_addr, syncReqbody.src_ip_addr, IP_ADDRESS_SIZE);
-	g_sync_src_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
+	memcpy(g_sync_src_id, syncReqbody.src_id, IP_ADDRESS_SIZE);
+	g_sync_src_id[IP_ADDRESS_SIZE-1] = '\0';
 
 	g_sync_until_timestamp = (time_t)buff2long(syncReqbody.until_timestamp);
 
@@ -1451,7 +1451,7 @@ static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer)
 
 	if (in_bytes == 0)
 	{
-		*g_sync_src_ip_addr = '\0';
+		*g_sync_src_id = '\0';
 		g_sync_until_timestamp = 0;
 		return result;
 	}
@@ -1468,8 +1468,8 @@ static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer)
 		return EINVAL;
 	}
 
-	memcpy(g_sync_src_ip_addr, syncReqbody.src_ip_addr, IP_ADDRESS_SIZE);
-	g_sync_src_ip_addr[IP_ADDRESS_SIZE-1] = '\0';
+	memcpy(g_sync_src_id, syncReqbody.src_id, IP_ADDRESS_SIZE);
+	g_sync_src_id[IP_ADDRESS_SIZE-1] = '\0';
 
 	g_sync_until_timestamp = (time_t)buff2long(syncReqbody.until_timestamp);
 	return 0;
@@ -1643,7 +1643,7 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 	memset(out_buff, 0, sizeof(out_buff));
 	long2buff((int)sizeof(TrackerStorageSyncReqBody), pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_NOTIFY;
-	strcpy(pReqBody->src_ip_addr, g_sync_src_ip_addr);
+	strcpy(pReqBody->src_id, g_sync_src_id);
 	long2buff(g_sync_until_timestamp, pReqBody->until_timestamp);
 
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
@@ -1809,7 +1809,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 		return EINVAL;
 	}
 
-	if (*(respBody.src_ip_addr) == '\0' && *g_sync_src_ip_addr != '\0')
+	if (*(respBody.src_id) == '\0' && *g_sync_src_id != '\0')
 	{
 		return tracker_sync_notify(pTrackerServer);
 	}
@@ -2204,9 +2204,9 @@ int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
 			{
 				tracker_unlink_mark_files(pOldIpAddr);
 
-				if (strcmp(g_sync_src_ip_addr, pOldIpAddr) == 0)
+				if (strcmp(g_sync_src_id, pOldIpAddr) == 0)
 				{
-					*g_sync_src_ip_addr = '\0';
+					*g_sync_src_id = '\0';
 					storage_write_to_sync_ini_file();
 				}
 			}
@@ -2214,10 +2214,10 @@ int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
 			{
 				tracker_rename_mark_files(pOldIpAddr, \
 					g_server_port, pNewIpAddr, g_server_port);
-				if (strcmp(g_sync_src_ip_addr, pOldIpAddr) == 0)
+				if (strcmp(g_sync_src_id, pOldIpAddr) == 0)
 				{
-					snprintf(g_sync_src_ip_addr, \
-						sizeof(g_sync_src_ip_addr), \
+					snprintf(g_sync_src_id, \
+						sizeof(g_sync_src_id), \
 						"%s", pNewIpAddr);
 					storage_write_to_sync_ini_file();
 				}

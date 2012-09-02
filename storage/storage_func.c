@@ -511,7 +511,7 @@ int storage_write_to_sync_ini_file()
 		"%s=%d\n", \
 		INIT_ITEM_STORAGE_JOIN_TIME, g_storage_join_time, \
 		INIT_ITEM_SYNC_OLD_DONE, g_sync_old_done, \
-		INIT_ITEM_SYNC_SRC_SERVER, g_sync_src_ip_addr, \
+		INIT_ITEM_SYNC_SRC_SERVER, g_sync_src_id, \
 		INIT_ITEM_SYNC_UNTIL_TIMESTAMP, g_sync_until_timestamp, \
 		INIT_ITEM_LAST_IP_ADDRESS, g_tracker_client_ip, \
 		INIT_ITEM_LAST_SERVER_PORT, g_last_server_port, \
@@ -600,7 +600,7 @@ static int storage_check_and_make_data_dirs()
 				INIT_ITEM_SYNC_SRC_SERVER);
 			return ENOENT;
 		}
-		snprintf(g_sync_src_ip_addr, sizeof(g_sync_src_ip_addr), \
+		snprintf(g_sync_src_id, sizeof(g_sync_src_id), \
 				"%s", pValue);
 
 		g_sync_until_timestamp = iniGetIntValue(NULL, \
@@ -654,7 +654,7 @@ static int storage_check_and_make_data_dirs()
 
 		/*
 		printf("g_sync_old_done = %d\n", g_sync_old_done);
-		printf("g_sync_src_ip_addr = %s\n", g_sync_src_ip_addr);
+		printf("g_sync_src_id = %s\n", g_sync_src_id);
 		printf("g_sync_until_timestamp = %d\n", g_sync_until_timestamp);
 		printf("g_last_storage_ip = %s\n", g_last_storage_ip);
 		printf("g_last_server_port = %d\n", g_last_server_port);

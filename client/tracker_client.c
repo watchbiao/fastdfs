@@ -307,8 +307,8 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 		pDest->status = pSrc->status;
 		memcpy(pDest->id, pSrc->id, FDFS_STORAGE_ID_MAX_SIZE - 1);
 		memcpy(pDest->ip_addr, pSrc->ip_addr, IP_ADDRESS_SIZE - 1);
-		memcpy(pDest->src_ip_addr, pSrc->src_ip_addr, \
-				IP_ADDRESS_SIZE - 1);
+		memcpy(pDest->src_id, pSrc->src_id, \
+			FDFS_STORAGE_ID_MAX_SIZE - 1);
 		strcpy(pDest->domain_name, pSrc->domain_name);
 		strcpy(pDest->version, pSrc->version);
 		pDest->join_time = buff2long(pSrc->sz_join_time);
