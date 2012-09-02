@@ -61,7 +61,8 @@ extern char g_run_by_user[32];
 extern bool g_storage_ip_changed_auto_adjust;
 extern bool g_use_storage_id;  //identify storage by ID instead of IP address
 
-extern FDFSStorageIdInfo *g_storage_ids;  //sorted by storage IP address and port
+extern FDFSStorageIdInfo *g_storage_ids_by_ip;  //sorted by group name and storage IP
+extern FDFSStorageIdInfo **g_storage_ids_by_id;  //sorted by storage ID
 extern int g_storage_id_count;		  //storage id count
 
 extern int g_thread_stack_size;

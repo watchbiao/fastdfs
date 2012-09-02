@@ -122,11 +122,12 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 		const bool save);
 
 static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
-	FDFSStorageDetail **ppStorageServer, const char *ip_addr, \
-	const bool bNeedSleep, bool *bInserted);
+	FDFSStorageDetail **ppStorageServer, const char *id, \
+	const char *ip_addr, const bool bNeedSleep, bool *bInserted);
 
 static int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
-		const char *ip_addr, const bool bNeedSleep, bool *bInserted);
+		const char *id, const char *ip_addr, \
+		const bool bNeedSleep, bool *bInserted);
 
 static int tracker_mem_add_group_ex(FDFSGroups *pGroups, \
 	TrackerClientInfo *pClientInfo, const char *group_name, \
@@ -870,7 +871,7 @@ static int tracker_load_storages_old(FDFSGroups *pGroups, const char *data_path)
 			break;
 		}
 
-		if ((result=tracker_mem_add_storage(&clientInfo, ip_addr, \
+		if ((result=tracker_mem_add_storage(&clientInfo, NULL, ip_addr, \
 				false, &bInserted)) != 0)
 		{
 			break;
@@ -1130,8 +1131,8 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 			break;
 		}
 
-		if ((result=tracker_mem_add_storage(&clientInfo, ip_addr, \
-				false, &bInserted)) != 0)
+		if ((result=tracker_mem_add_storage(&clientInfo, NULL, \
+				ip_addr, false, &bInserted)) != 0)
 		{
 			break;
 		}
@@ -2714,7 +2715,7 @@ FDFSStorageDetail *tracker_get_group_sync_src_server(FDFSGroupInfo *pGroup, \
 	ppServerEnd = pGroup->active_servers + pGroup->active_count;
 	for (ppServer=pGroup->active_servers; ppServer<ppServerEnd; ppServer++)
 	{
-		if (strcmp((*ppServer)->ip_addr, pDestServer->ip_addr) == 0)
+		if (strcmp((*ppServer)->id, pDestServer->id) == 0)
 		{
 			continue;
 		}
@@ -3088,8 +3089,8 @@ static int tracker_mem_add_group_ex(FDFSGroups *pGroups, \
 	return 0;
 }
 
-FDFSStorageDetail *tracker_mem_get_active_storage(FDFSGroupInfo *pGroup, \
-				const char *id)
+static FDFSStorageDetail *tracker_mem_get_active_storage_by_id( \
+		FDFSGroupInfo *pGroup, const char *id)
 {
 	FDFSStorageDetail target_storage;
 	FDFSStorageDetail *pTargetStorage;
@@ -3118,6 +3119,24 @@ FDFSStorageDetail *tracker_mem_get_active_storage(FDFSGroupInfo *pGroup, \
 	}
 }
 
+static FDFSStorageDetail *tracker_mem_get_active_storage_by_ip( \
+		FDFSGroupInfo *pGroup, const char *ip_addr)
+{
+	FDFSStorageIdInfo *pStorageId;
+
+	if (!g_use_storage_id)
+	{
+		return tracker_mem_get_active_storage_by_id(pGroup, ip_addr);
+	}
+
+	pStorageId = tracker_get_storage_id_info(pGroup->group_name, ip_addr);
+	if (pStorageId == NULL)
+	{
+		return NULL;
+	}
+	return tracker_mem_get_active_storage_by_id(pGroup, pStorageId->id);
+}
+
 #ifdef WITH_HTTPD
 static FDFSStorageDetail *tracker_mem_get_active_http_server( \
 			FDFSGroupInfo *pGroup, const char *ip_addr)
@@ -3127,7 +3146,21 @@ static FDFSStorageDetail *tracker_mem_get_active_http_server( \
 	FDFSStorageDetail **ppStorageServer;
 
 	memset(&target_storage, 0, sizeof(target_storage));
-	strcpy(target_storage.ip_addr, ip_addr);
+	if (!g_use_storage_id)
+	{
+		strcpy(target_storage.id, ip_addr);
+	}
+	else
+	{
+		FDFSStorageIdInfo *pStorageId;
+		pStorageId = tracker_get_storage_id_info( \
+				pGroup->group_name, ip_addr);
+		if (pStorageId == NULL)
+		{
+			return NULL;
+		}
+		strcpy(target_storage.id, pStorageId->id);
+	}
 	pTargetStorage = &target_storage;
 	ppStorageServer = (FDFSStorageDetail **)bsearch(&pTargetStorage, \
 			pGroup->http_servers, \
@@ -3197,13 +3230,13 @@ static void tracker_mem_clear_storage_fields(FDFSStorageDetail *pStorageServer)
 	memset(&(pStorageServer->stat), 0, sizeof(FDFSStorageStat));
 }
 
-int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
+int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *id)
 {
 	FDFSStorageDetail *pStorageServer;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppEnd;
 
-	pStorageServer = tracker_mem_get_storage(pGroup, ip_addr);
+	pStorageServer = tracker_mem_get_storage(pGroup, id);
 	if (pStorageServer == NULL || pStorageServer->status == \
 		FDFS_STORAGE_STATUS_IP_CHANGED)
 	{
@@ -3226,8 +3259,7 @@ int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *ip_addr)
 	for (ppServer=pGroup->all_servers; ppServer<ppEnd; ppServer++)
 	{
 		if ((*ppServer)->psync_src_server != NULL && \
-			strcmp((*ppServer)->psync_src_server->id, \
-			pStorageServer->id) == 0)
+			strcmp((*ppServer)->psync_src_server->id, id) == 0)
 		{
 			(*ppServer)->psync_src_server = NULL;
 		}
@@ -3249,6 +3281,15 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 	FDFSStorageDetail *pNewStorageServer;
 	int result;
 	bool bInserted;
+
+	if (g_use_storage_id)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, do NOT support ip changed adjust " \
+			"because cluster use server ID instead of " \
+			"IP address", __LINE__, new_storage_ip);
+		return EOPNOTSUPP;
+	}
 
 	pOldStorageServer = tracker_mem_get_storage(pGroup, old_storage_ip);
 	if (pOldStorageServer == NULL || pOldStorageServer->status == \
@@ -3289,8 +3330,8 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 		return EEXIST;
 	}
 
-	result = _tracker_mem_add_storage(pGroup, \
-		&pNewStorageServer, new_storage_ip, true, &bInserted);
+	result = _tracker_mem_add_storage(pGroup, &pNewStorageServer, \
+			new_storage_ip, new_storage_ip, true, &bInserted);
 	if (result != 0)
 	{
 		return result;
@@ -3307,9 +3348,13 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 	pthread_mutex_lock(&mem_thread_lock);
 
 	//exchange old and new storage server
+	snprintf(pOldStorageServer->id, sizeof(pOldStorageServer->id), \
+		"%s", new_storage_ip);
 	snprintf(pOldStorageServer->ip_addr, \
 		sizeof(pOldStorageServer->ip_addr), "%s", new_storage_ip);
 
+	snprintf(pNewStorageServer->id, sizeof(pNewStorageServer->id), \
+		"%s", old_storage_ip);
 	snprintf(pNewStorageServer->ip_addr, \
 		sizeof(pNewStorageServer->ip_addr), "%s", old_storage_ip);
 	pNewStorageServer->status = FDFS_STORAGE_STATUS_IP_CHANGED;
@@ -3328,14 +3373,15 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 }
 
 static int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
-		const char *ip_addr, const bool bNeedSleep, bool *bInserted)
+		const char *id, const char *ip_addr, \
+		const bool bNeedSleep, bool *bInserted)
 {
 	int result;
 	FDFSStorageDetail *pStorageServer;
 
 	pStorageServer = NULL;
 	result = _tracker_mem_add_storage(pClientInfo->pGroup, \
-			&pStorageServer, ip_addr, bNeedSleep, bInserted);
+			&pStorageServer, id, ip_addr, bNeedSleep, bInserted);
 	if (result == 0)
 	{
 		pClientInfo->pStorage = pStorageServer;
@@ -3345,11 +3391,10 @@ static int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 }
 
 static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
-	FDFSStorageDetail **ppStorageServer, const char *ip_addr, \
-	const bool bNeedSleep, bool *bInserted)
+	FDFSStorageDetail **ppStorageServer, const char *id, \
+	const char *ip_addr, const bool bNeedSleep, bool *bInserted)
 {
 	int result;
-	FDFSStorageIdInfo *pStorageIdInfo;
 	const char *storage_id;
 
 	if (*ip_addr == '\0')
@@ -3359,8 +3404,13 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 		return EINVAL;
 	}
 
-	if (g_use_storage_id)
+	if (id != NULL)
 	{
+		storage_id = id;
+	}
+	else if (g_use_storage_id)
+	{
+		FDFSStorageIdInfo *pStorageIdInfo;
 		pStorageIdInfo = tracker_get_storage_id_info( \
 				pGroup->group_name, ip_addr);
 		if (pStorageIdInfo == NULL)
@@ -4260,7 +4310,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 		}
 	}
 
-	if ((result=tracker_mem_add_storage(pClientInfo, ip_addr, \
+	if ((result=tracker_mem_add_storage(pClientInfo, storage_id, ip_addr, \
 			bNeedSleep, &bStorageInserted)) != 0)
 	{
 		return result;
@@ -4444,7 +4494,6 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 	FDFSStorageBrief *pEnd;
 	FDFSStorageDetail target_storage;
 	FDFSStorageDetail *pTargetStorage;
-	FDFSStorageDetail *pStorageServer;
 	FDFSStorageDetail **ppFound;
 
 	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
@@ -4459,22 +4508,12 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 	result = 0;
 	do
 	{
-		if (pGroup->count + server_count >= pGroup->alloc_size)
-		{
-			result = tracker_mem_realloc_store_servers( \
-					pGroup, server_count, true);
-			if (result != 0)
-			{
-				break;
-			}
-		}
-
 		memset(&target_storage, 0, sizeof(target_storage));
-		pStorageServer = *(pGroup->all_servers + pGroup->count);
 		pEnd = briefServers + server_count;
 		for (pServer=briefServers; pServer<pEnd; pServer++)
 		{
-			pServer->ip_addr[IP_ADDRESS_SIZE-1] = '\0';
+			pServer->ip_addr[IP_ADDRESS_SIZE - 1] = '\0';
+			pServer->id[FDFS_STORAGE_ID_MAX_SIZE - 1] = '\0';
 			if (pServer->status == FDFS_STORAGE_STATUS_NONE \
 			 || pServer->status == FDFS_STORAGE_STATUS_ACTIVE \
 			 || pServer->status == FDFS_STORAGE_STATUS_ONLINE)
@@ -4482,8 +4521,8 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 				continue;
 			}
 
-			memcpy(target_storage.ip_addr, pServer->ip_addr, \
-				IP_ADDRESS_SIZE);
+			memcpy(target_storage.id, pServer->id, \
+				FDFS_STORAGE_ID_MAX_SIZE);
 			pTargetStorage = &target_storage;
 			if ((ppFound=(FDFSStorageDetail **)bsearch( \
 				&pTargetStorage, \
@@ -4526,16 +4565,16 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 			}
 			else
 			{
-				pStorageServer->status = pServer->status;
-				memcpy(pStorageServer->ip_addr, \
-					pServer->ip_addr, IP_ADDRESS_SIZE);
+				FDFSStorageDetail *pStorageServer;
+				bool bInserted;
 
-				tracker_mem_insert_into_sorted_servers( \
-					pStorageServer, pGroup->sorted_servers,\
-					pGroup->count);
-
-				pStorageServer++;
-				pGroup->count++;
+				result = _tracker_mem_add_storage(pGroup, \
+					&pStorageServer, pServer->id, \
+					pServer->ip_addr, true, &bInserted);
+				if (result != 0)
+				{
+					pStorageServer->status = pServer->status;
+				}
 			}
 		}
 	} while (0);
@@ -5064,7 +5103,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 #ifdef WITH_HTTPD
 			if (download_type == FDFS_DOWNLOAD_TYPE_TCP)
 			{
-			pStoreSrcServer=tracker_mem_get_active_storage( \
+			pStoreSrcServer=tracker_mem_get_active_storage_by_ip( \
 				*ppGroup, inet_ntop(AF_INET, &ip_addr, \
 				szIpAddr, sizeof(szIpAddr)));
 			}
@@ -5075,7 +5114,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 				szIpAddr, sizeof(szIpAddr)));
 			}
 #else
-			pStoreSrcServer=tracker_mem_get_active_storage(\
+			pStoreSrcServer=tracker_mem_get_active_storage_by_ip(\
 				*ppGroup, inet_ntop(AF_INET, &ip_addr, \
 				szIpAddr, sizeof(szIpAddr)));
 #endif
@@ -5153,8 +5192,8 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 				}
 				else
 				{
-				pStoreSrcServer=tracker_mem_get_active_storage(
-				*ppGroup, pGroupStoreServer->ip_addr);
+				pStoreSrcServer=tracker_mem_get_active_storage_by_id(
+					*ppGroup, pGroupStoreServer->id);
 				if (pStoreSrcServer != NULL)
 				{
 					ppStoreServers[0] = pStoreSrcServer;
@@ -5198,7 +5237,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 #ifdef WITH_HTTPD
 				if (download_type == FDFS_DOWNLOAD_TYPE_TCP)
 				{
-				pStoreSrcServer=tracker_mem_get_active_storage(
+				pStoreSrcServer=tracker_mem_get_active_storage_by_ip(
 					*ppGroup, szIpAddr);
 				}
 				else //http
@@ -5207,7 +5246,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 					*ppGroup, szIpAddr);
 				}
 #else
-				pStoreSrcServer=tracker_mem_get_active_storage(
+				pStoreSrcServer=tracker_mem_get_active_storage_by_ip(
 					*ppGroup, szIpAddr);
 #endif
 				if (pStoreSrcServer != NULL)
@@ -5277,7 +5316,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 		{
 			memset(&ip_addr, 0, sizeof(ip_addr));
 			ip_addr.s_addr = storage_ip;
-			pStoreSrcServer=tracker_mem_get_active_storage(\
+			pStoreSrcServer=tracker_mem_get_active_storage_by_ip(\
 					*ppGroup, inet_ntop(AF_INET, &ip_addr, \
 					szIpAddr, sizeof(szIpAddr)));
 			if (pStoreSrcServer != NULL)
@@ -5328,7 +5367,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 		}
 		else
 		{
-			pStoreSrcServer = tracker_mem_get_active_storage( \
+			pStoreSrcServer = tracker_mem_get_active_storage_by_ip( \
 						*ppGroup, szIpAddr);
 			if (pStoreSrcServer != NULL)
 			{
