@@ -1,5 +1,5 @@
 
-Version 4.00  2012-08-31
+Version 4.00  2012-09-01
  * identify storage server by ID instead of IP address
  * tracker.conf: storage reserved space can use ratio such as 10%
 

@@ -68,7 +68,7 @@ int g_sync_change_count = 0;
 
 int g_storage_join_time = 0;
 bool g_sync_old_done = false;
-char g_sync_src_ip_addr[IP_ADDRESS_SIZE] = {0};
+char g_sync_src_id[IP_ADDRESS_SIZE] = {0};
 int g_sync_until_timestamp = 0;
 
 char g_tracker_client_ip[IP_ADDRESS_SIZE] = {0}; //storage ip as tracker client

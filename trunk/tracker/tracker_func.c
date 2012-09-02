@@ -147,6 +147,33 @@ int tracker_check_storage_id(const char *group_name, const char *id)
 	return strcmp((*ppFound)->group_name, group_name) == 0 ? 0 : EINVAL;
 }
 
+static bool _tracker_check_server_id(const char *id)
+{
+	long n;
+	char *endptr;
+	char buff[FDFS_STORAGE_ID_MAX_SIZE];
+
+	if (*id == '\0')
+	{
+		return false;
+	}
+
+	endptr = NULL;
+	n = strtol(id, &endptr, 10);
+	if (endptr != NULL && *endptr != '\0')
+	{
+		return false;
+	}
+
+	if (n <= 0 || n >= INT_MAX)
+	{
+		return false;
+	}
+
+	snprintf(buff, sizeof(buff), "%ld", n);
+	return strcmp(buff, id) == 0;
+}
+
 static int tracker_load_storage_ids(const char *filename, \
 		IniContext *pItemContext)
 {
@@ -355,6 +382,16 @@ static int tracker_load_storage_ids(const char *filename, \
 				logError("file: "__FILE__", line: %d, " \
 					"invalid host name: %s", \
 					__LINE__, pIpAddr);
+				result = EINVAL;
+				break;
+			}
+
+			if (!_tracker_check_server_id(id))
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"invalid server id: \"%s\", " \
+					"which must be an integer!", \
+					__LINE__, id);
 				result = EINVAL;
 				break;
 			}

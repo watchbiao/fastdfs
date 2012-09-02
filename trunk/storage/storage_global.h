@@ -110,7 +110,7 @@ extern int g_sync_change_count; //sync src timestamp change counter
 
 extern int g_storage_join_time;  //my join timestamp
 extern bool g_sync_old_done;     //if old files synced to me done
-extern char g_sync_src_ip_addr[IP_ADDRESS_SIZE]; //the source storage server ip
+extern char g_sync_src_id[IP_ADDRESS_SIZE]; //the source storage server ip
 extern int g_sync_until_timestamp;
 
 extern char g_tracker_client_ip[IP_ADDRESS_SIZE]; //storage ip as tracker client

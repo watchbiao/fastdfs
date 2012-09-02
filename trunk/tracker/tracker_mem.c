@@ -242,7 +242,7 @@ static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
 	tracker_mem_file_lock();
 
 	len = snprintf(buff, sizeof(buff), "%d %s %s %d %s\n", \
-		(int)time(NULL), pGroup->group_name, pStorage->ip_addr, \
+		(int)time(NULL), pGroup->group_name, pStorage->id, \
 		pStorage->status, pArg != NULL ? pArg : "");
 
 	if (write(changelog_fd, buff, len) != len)
@@ -1349,7 +1349,7 @@ static int tracker_load_sync_timestamps(FDFSGroups *pGroups, const char *data_pa
 	char szLine[512];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char previous_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char src_ip_addr[IP_ADDRESS_SIZE];
+	char src_storage_id[FDFS_STORAGE_ID_MAX_SIZE];
 	char *fields[STORAGE_SYNC_TIME_MAX_FIELDS];
 	FDFSGroupInfo **ppGroup;
 	FDFSGroupInfo **ppEnd;
@@ -1400,7 +1400,7 @@ static int tracker_load_sync_timestamps(FDFSGroups *pGroups, const char *data_pa
 	
 		snprintf(group_name, sizeof(group_name), \
 				"%s", trim(fields[0]));
-		snprintf(src_ip_addr, sizeof(src_ip_addr), \
+		snprintf(src_storage_id, sizeof(src_storage_id), \
 				"%s", trim(fields[1]));
 		if (strcmp(group_name, previous_group_name) != 0 || \
 			pGroup == NULL)
@@ -1434,16 +1434,16 @@ static int tracker_load_sync_timestamps(FDFSGroups *pGroups, const char *data_pa
 			break;
 		}
 
-		if (strcmp(pGroup->all_servers[src_index]->ip_addr, \
-			src_ip_addr) != 0)
+		if (strcmp(pGroup->all_servers[src_index]->id, \
+			src_storage_id) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"in data file: \"%s/%s\", " \
-				"group: %s, src server ip: %s != %s",\
+				"group: %s, src server id: %s != %s",\
 				__LINE__, data_path, \
 				STORAGE_SYNC_TIMESTAMP_FILENAME, \
-				group_name, src_ip_addr, \
-				pGroup->all_servers[src_index]->ip_addr);
+				group_name, src_storage_id, \
+				pGroup->all_servers[src_index]->id);
 			result = errno != 0 ? errno : EINVAL;
 			break;
 		}
@@ -2101,7 +2101,7 @@ int tracker_save_sync_timestamps()
 
 			len = sprintf(buff, "%s%c%s", (*ppGroup)->group_name, \
 				STORAGE_DATA_FIELD_SEPERATOR, \
-				(*ppGroup)->all_servers[i]->ip_addr);
+				(*ppGroup)->all_servers[i]->id);
 			for (k=0; k<(*ppGroup)->count; k++)
 			{
 				if ((*ppGroup)->all_servers[k]->status == \
@@ -3447,9 +3447,9 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 		if (pStorageIdInfo == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"get storage id info fail, group_name: %s, " \
-				"storage ip: %s", __LINE__, \
-				pGroup->group_name, ip_addr);
+				"get storage id info fail, " \
+				"group_name: %s, storage ip: %s", \
+				__LINE__, pGroup->group_name, ip_addr);
 			return ENOENT;
 		}
 		storage_id = pStorageIdInfo->id;
@@ -4543,8 +4543,8 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 		pEnd = briefServers + server_count;
 		for (pServer=briefServers; pServer<pEnd; pServer++)
 		{
-			pServer->ip_addr[IP_ADDRESS_SIZE - 1] = '\0';
 			pServer->id[FDFS_STORAGE_ID_MAX_SIZE - 1] = '\0';
+			pServer->ip_addr[IP_ADDRESS_SIZE - 1] = '\0';
 			if (pServer->status == FDFS_STORAGE_STATUS_NONE \
 			 || pServer->status == FDFS_STORAGE_STATUS_ACTIVE \
 			 || pServer->status == FDFS_STORAGE_STATUS_ONLINE)
@@ -5456,10 +5456,21 @@ int tracker_mem_check_alive(void *arg)
 	{
 		(*ppServer)->status = FDFS_STORAGE_STATUS_OFFLINE;
 		tracker_mem_deactive_store_server(*ppGroup, *ppServer);
-		logInfo("file: "__FILE__", line: %d, " \
-			"storage server %s:%d idle too long, " \
-			"status change to offline!", __LINE__, \
-			(*ppServer)->ip_addr, (*ppGroup)->storage_port);
+		if (g_use_storage_id)
+		{
+			logInfo("file: "__FILE__", line: %d, " \
+				"storage server %s(%s:%d) idle too long, " \
+				"status change to offline!", __LINE__, \
+				(*ppServer)->id, (*ppServer)->ip_addr, \
+				(*ppGroup)->storage_port);
+		}
+		else
+		{
+			logInfo("file: "__FILE__", line: %d, " \
+				"storage server %s:%d idle too long, " \
+				"status change to offline!", __LINE__, \
+				(*ppServer)->ip_addr, (*ppGroup)->storage_port);
+		}
 	}
 	}
 

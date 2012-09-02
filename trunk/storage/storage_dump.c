@@ -77,7 +77,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_sync_stat_file_interval=%ds\n"
 		"g_storage_join_time=%s\n"
 		"g_sync_old_done=%d\n"
-		"g_sync_src_ip_addr=%s\n"
+		"g_sync_src_id=%s\n"
 		"g_sync_until_timestamp=%s\n"
 		"g_tracker_client_ip=%s\n"
 		"g_last_storage_ip=%s\n"
@@ -167,7 +167,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, formatDatetime(g_storage_join_time, "%Y-%m-%d %H:%M:%S", 
 			szStorageJoinTime, sizeof(szStorageJoinTime))
 		, g_sync_old_done
-		, g_sync_src_ip_addr
+		, g_sync_src_id
 		, formatDatetime(g_sync_until_timestamp, "%Y-%m-%d %H:%M:%S", 
 			szSyncUntilTimestamp, sizeof(szSyncUntilTimestamp))
 		, g_tracker_client_ip
