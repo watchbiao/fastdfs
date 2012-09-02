@@ -27,7 +27,7 @@ static int list_all_groups(const char *group_name);
 static void usage(char *argv[])
 {
 	printf("Usage: %s <config_file> [-h <tracker_server>] [list|delete <group_name> " \
-		"[storage_ip]]\n", argv[0]);
+		"[storage_id]]\n", argv[0]);
 }
 
 int main(int argc, char *argv[])
@@ -178,26 +178,27 @@ int main(int argc, char *argv[])
 	}
 	else if (strcmp(op_type, "delete") == 0)
 	{
-		char *storage_ip;
+		char *storage_id;
 		if (arg_index >= argc)
 		{
 			usage(argv);
 			return 1;
 		}
 
-		storage_ip = argv[arg_index++];
+		storage_id = argv[arg_index++];
 
 		if ((result=tracker_delete_storage(&g_tracker_group, \
-				group_name, storage_ip)) == 0)
+				group_name, storage_id)) == 0)
 		{
 			printf("delete storage server %s::%s success\n", \
-				group_name, storage_ip);
+				group_name, storage_id);
 		}
 		else
 		{
 			printf("delete storage server %s::%s fail, " \
 				"error no: %d, error info: %s\n", \
-				group_name, storage_ip, result, STRERROR(result));
+				group_name, storage_id, \
+				result, STRERROR(result));
 		}
 	}
 	else

@@ -47,7 +47,6 @@ int g_storage_count = 0;
 FDFSStorageServer g_storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
 FDFSStorageServer *g_sorted_storages[FDFS_MAX_SERVERS_EACH_GROUP];
 
-char g_group_name[FDFS_GROUP_NAME_MAX_LEN + 1] = {0};
 int g_tracker_reporter_count = 0;
 int g_heart_beat_interval  = STORAGE_BEAT_DEF_INTERVAL;
 int g_stat_report_interval = STORAGE_REPORT_DEF_INTERVAL;
@@ -67,18 +66,20 @@ int g_stat_change_count = 1;
 int g_sync_change_count = 0;
 
 int g_storage_join_time = 0;
+int g_sync_until_timestamp = 0;
 bool g_sync_old_done = false;
 char g_sync_src_id[IP_ADDRESS_SIZE] = {0};
-int g_sync_until_timestamp = 0;
 
+char g_group_name[FDFS_GROUP_NAME_MAX_LEN + 1] = {0};
+char g_my_server_id[FDFS_STORAGE_ID_MAX_SIZE] = {0}; //my server id
 char g_tracker_client_ip[IP_ADDRESS_SIZE] = {0}; //storage ip as tracker client
 char g_last_storage_ip[IP_ADDRESS_SIZE] = {0};	 //the last storage ip address
 
-int g_allow_ip_count = 0;
-in_addr_t *g_allow_ip_addrs = NULL;
 bool g_check_file_duplicate = false;
 char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1] = {0};
 int g_namespace_len = 0;
+int g_allow_ip_count = 0;
+in_addr_t *g_allow_ip_addrs = NULL;
 
 gid_t g_run_by_gid;
 uid_t g_run_by_uid;
@@ -107,7 +108,7 @@ char g_exe_name[256] = {0};
 struct storage_nio_thread_data *g_nio_thread_data = NULL;
 struct storage_dio_thread_data *g_dio_thread_data = NULL;
 
-int storage_cmp_by_ip_addr(const void *p1, const void *p2)
+int storage_cmp_by_server_id(const void *p1, const void *p2)
 {
 	return strcmp((*((FDFSStorageServer **)p1))->server.ip_addr,
 		(*((FDFSStorageServer **)p2))->server.ip_addr);

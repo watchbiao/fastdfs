@@ -390,8 +390,8 @@ static int tracker_load_storage_ids(const char *filename, \
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"invalid server id: \"%s\", " \
-					"which must be an integer!", \
-					__LINE__, id);
+					"which must be a none zero start " \
+					"integer, such as 100001", __LINE__, id);
 				result = EINVAL;
 				break;
 			}

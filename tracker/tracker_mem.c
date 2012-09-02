@@ -3192,6 +3192,30 @@ static FDFSStorageDetail *tracker_mem_get_active_http_server( \
 }
 #endif
 
+FDFSStorageDetail *tracker_mem_get_storage_by_ip(FDFSGroupInfo *pGroup, \
+				const char *ip_addr)
+{
+	const char *storage_id;
+
+	if (g_use_storage_id)
+	{
+		FDFSStorageIdInfo *pStorageIdInfo;
+		pStorageIdInfo = tracker_get_storage_id_by_ip( \
+				pGroup->group_name, ip_addr);
+		if (pStorageIdInfo == NULL)
+		{
+			return NULL;
+		}
+		storage_id = pStorageIdInfo->id;
+	}
+	else
+	{
+		storage_id = ip_addr;
+	}
+
+	return tracker_mem_get_storage(pGroup, storage_id);
+}
+
 FDFSStorageDetail *tracker_mem_get_storage(FDFSGroupInfo *pGroup, \
 				const char *id)
 {
