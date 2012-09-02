@@ -51,6 +51,7 @@
 #define STORAGE_ITEM_STORAGE_COUNT             "storage_count"
 
 #define STORAGE_ITEM_GROUP_NAME                "group_name"
+#define STORAGE_ITEM_SERVER_ID                 "id"
 #define STORAGE_ITEM_IP_ADDR                   "ip_addr"
 #define STORAGE_ITEM_STATUS                    "status"
 #define STORAGE_ITEM_DOMAIN_NAME               "domain_name"
@@ -1016,6 +1017,7 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 {
 	IniContext iniContext;
 	char *group_name;
+	char *storage_id;
 	char *ip_addr;
 	char *psync_src_id;
 	char *pValue;
@@ -1093,6 +1095,9 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 			break;
 		}
 
+		storage_id = iniGetStrValue(section_name, \
+				STORAGE_ITEM_SERVER_ID, &iniContext);
+
 		ip_addr = iniGetStrValue(section_name, \
 				STORAGE_ITEM_IP_ADDR, &iniContext);
 		if (ip_addr == NULL)
@@ -1131,7 +1136,7 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 			break;
 		}
 
-		if ((result=tracker_mem_add_storage(&clientInfo, NULL, \
+		if ((result=tracker_mem_add_storage(&clientInfo, storage_id, \
 				ip_addr, false, &bInserted)) != 0)
 		{
 			break;
@@ -1764,6 +1769,7 @@ int tracker_save_storages()
 	char tmpFilename[MAX_PATH_SIZE];
 	char trueFilename[MAX_PATH_SIZE];
 	char buff[4096];
+	char id_buff[128];
 	int fd;
 	int len;
 	FDFSGroupInfo **ppGroup;
@@ -1790,6 +1796,7 @@ int tracker_save_storages()
 		return errno != 0 ? errno : ENOENT;
 	}
 
+	*id_buff = '\0';
 	count = 0;
 	result = 0;
 	ppGroupEnd = g_groups.sorted_groups + g_groups.count;
@@ -1807,10 +1814,17 @@ int tracker_save_storages()
 				continue;
 			}
 
+			if (g_use_storage_id)
+			{
+				sprintf(id_buff, "\t%s=%s\n", \
+					STORAGE_ITEM_SERVER_ID, pStorage->id);
+			}
+
 			count++;
 			len = sprintf(buff, \
 				"# storage %s:%d\n" \
 				"[%s"STORAGE_SECTION_NO_FORMAT"]\n" \
+				"%s" \
 				"\t%s=%s\n" \
 				"\t%s=%s\n" \
 				"\t%s=%d\n" \
@@ -1864,7 +1878,7 @@ int tracker_save_storages()
 				"\t%s=%d\n" \
 				"\t%s="INT64_PRINTF_FORMAT"\n\n", \
 				pStorage->ip_addr, pStorage->storage_port, \
-				STORAGE_SECTION_NAME_PREFIX, count, \
+				STORAGE_SECTION_NAME_PREFIX, count, id_buff, \
 				STORAGE_ITEM_GROUP_NAME, \
 				(*ppGroup)->group_name, \
 				STORAGE_ITEM_IP_ADDR, pStorage->ip_addr, \
@@ -3129,7 +3143,7 @@ static FDFSStorageDetail *tracker_mem_get_active_storage_by_ip( \
 		return tracker_mem_get_active_storage_by_id(pGroup, ip_addr);
 	}
 
-	pStorageId = tracker_get_storage_id_info(pGroup->group_name, ip_addr);
+	pStorageId = tracker_get_storage_id_by_ip(pGroup->group_name, ip_addr);
 	if (pStorageId == NULL)
 	{
 		return NULL;
@@ -3153,7 +3167,7 @@ static FDFSStorageDetail *tracker_mem_get_active_http_server( \
 	else
 	{
 		FDFSStorageIdInfo *pStorageId;
-		pStorageId = tracker_get_storage_id_info( \
+		pStorageId = tracker_get_storage_id_by_ip( \
 				pGroup->group_name, ip_addr);
 		if (pStorageId == NULL)
 		{
@@ -3406,12 +3420,29 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 
 	if (id != NULL)
 	{
+		if (g_use_storage_id)
+		{
+			result = tracker_check_storage_id( \
+					pGroup->group_name, id);
+			if (result != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"check storage id fail, " \
+					"group_name: %s, id: %s, " \
+					"storage ip: %s, errno: %d, " \
+					"error info: %s", __LINE__, \
+					pGroup->group_name, id, ip_addr, \
+					result, STRERROR(result));
+				return result;
+			}
+		}
+
 		storage_id = id;
 	}
 	else if (g_use_storage_id)
 	{
 		FDFSStorageIdInfo *pStorageIdInfo;
-		pStorageIdInfo = tracker_get_storage_id_info( \
+		pStorageIdInfo = tracker_get_storage_id_by_ip( \
 				pGroup->group_name, ip_addr);
 		if (pStorageIdInfo == NULL)
 		{
@@ -4137,7 +4168,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 
 	if (g_use_storage_id)
 	{
-		pStorageIdInfo = tracker_get_storage_id_info( \
+		pStorageIdInfo = tracker_get_storage_id_by_ip( \
 				pClientInfo->pGroup->group_name, ip_addr);
 		if (pStorageIdInfo == NULL)
 		{
