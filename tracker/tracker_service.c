@@ -616,6 +616,7 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 	
 	pTask->length = sizeof(TrackerHeader) + \
 	sprintf(pTask->data + sizeof(TrackerHeader), \
+		"use_storage_id=%d\n" \
 		"storage_ip_changed_auto_adjust=%d\n" \
 		"storage_sync_file_max_delay=%d\n" \
 		"store_path=%d\n" \
@@ -630,16 +631,13 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 		"trunk_create_file_space_threshold="INT64_PRINTF_FORMAT"\n" \
 		"trunk_init_check_occupying=%d\n"     \
 		"trunk_init_reload_from_binlog=%d\n", \
-		g_storage_ip_changed_auto_adjust, \
-		g_storage_sync_file_max_delay, \
-		g_groups.store_path, \
+		g_use_storage_id, g_storage_ip_changed_auto_adjust, \
+		g_storage_sync_file_max_delay, g_groups.store_path, \
 		fdfs_storage_reserved_space_to_string( \
 			&g_storage_reserved_space, reserved_space_str), \
 		g_if_use_trunk_file, \
-		g_slot_min_size, \
-		g_slot_max_size, \
-		g_trunk_file_size, \
-		g_trunk_create_file_advance, \
+		g_slot_min_size, g_slot_max_size, \
+		g_trunk_file_size, g_trunk_create_file_advance, \
 		g_trunk_create_file_time_base.hour, \
 		g_trunk_create_file_time_base.minute, \
 		g_trunk_create_file_interval, \

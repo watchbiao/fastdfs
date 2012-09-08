@@ -669,13 +669,13 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 }
 
 /**
-IP_ADDRESS_SIZE bytes: tracker client ip address
+FDFS_STORAGE_ID_MAX_SIZE bytes: my server id
 **/
-static int storage_report_client_ip(TrackerServerInfo *pStorageServer)
+static int storage_report_my_server_id(TrackerServerInfo *pStorageServer)
 {
 	int result;
 	TrackerHeader *pHeader;
-	char out_buff[sizeof(TrackerHeader)+IP_ADDRESS_SIZE];
+	char out_buff[sizeof(TrackerHeader) + FDFS_STORAGE_ID_MAX_SIZE];
 	char in_buff[1];
 	char *pBuff;
 	int64_t in_bytes;
@@ -684,10 +684,10 @@ static int storage_report_client_ip(TrackerServerInfo *pStorageServer)
 	memset(out_buff, 0, sizeof(out_buff));
 	
 	long2buff(IP_ADDRESS_SIZE, pHeader->pkg_len);
-	pHeader->cmd = STORAGE_PROTO_CMD_REPORT_CLIENT_IP;
-	strcpy(out_buff + sizeof(TrackerHeader), g_tracker_client_ip);
+	pHeader->cmd = STORAGE_PROTO_CMD_REPORT_SERVER_ID;
+	strcpy(out_buff + sizeof(TrackerHeader), g_my_server_id);
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
-		sizeof(TrackerHeader) + IP_ADDRESS_SIZE, \
+		sizeof(TrackerHeader) + FDFS_STORAGE_ID_MAX_SIZE, \
 		g_fdfs_network_timeout)) != 0)
 	{
 		logError("FILE: "__FILE__", line: %d, " \
@@ -2752,16 +2752,12 @@ static void* storage_sync_thread_entrance(void* arg)
 			break;
 		}
 
-		if (*g_tracker_client_ip != '\0' && \
-			strcmp(local_ip_addr, g_tracker_client_ip) != 0)
+		if (storage_report_my_server_id(&storage_server) != 0)
 		{
-			if (storage_report_client_ip(&storage_server) != 0)
-			{
-				close(storage_server.sock);
-				storage_reader_destroy(&reader);
-				sleep(1);
-				continue;
-			}
+			close(storage_server.sock);
+			storage_reader_destroy(&reader);
+			sleep(1);
+			continue;
 		}
 
 		if (pStorage->status == FDFS_STORAGE_STATUS_WAIT_SYNC)

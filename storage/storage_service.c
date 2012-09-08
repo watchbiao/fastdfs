@@ -121,14 +121,14 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 static int storage_set_link_file_meta(struct fast_task_info *pTask, \
 		const SourceFileInfo *pSrcFileInfo, const char *link_filename);
 
-static FDFSStorageServer *get_storage_server(const char *ip_addr)
+static FDFSStorageServer *get_storage_server(const char *storage_server_id)
 {
 	FDFSStorageServer targetServer;
 	FDFSStorageServer *pTargetServer;
 	FDFSStorageServer **ppFound;
 
 	memset(&targetServer, 0, sizeof(targetServer));
-	strcpy(targetServer.server.ip_addr, ip_addr);
+	strcpy(targetServer.server.id, storage_server_id);
 
 	pTargetServer = &targetServer;
 	ppFound = (FDFSStorageServer **)bsearch(&pTargetServer, \
@@ -150,7 +150,7 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 		if (pClientInfo->pSrcStorage == NULL) \
 		{ \
 			pClientInfo->pSrcStorage = get_storage_server( \
-					pClientInfo->tracker_client_ip); \
+					pClientInfo->storage_server_id); \
 		} \
 		if (pClientInfo->pSrcStorage != NULL) \
 		{ \
@@ -170,7 +170,7 @@ static FDFSStorageServer *get_storage_server(const char *ip_addr)
 		if (pClientInfo->pSrcStorage == NULL) \
 		{ \
 			pClientInfo->pSrcStorage = get_storage_server( \
-					pClientInfo->tracker_client_ip); \
+					pClientInfo->storage_server_id); \
 		} \
 		if (pClientInfo->pSrcStorage != NULL) \
 		{ \
@@ -1648,7 +1648,6 @@ void storage_accept_loop(int server_sock)
 		pThreadData = g_nio_thread_data + pClientInfo->nio_thread_index;
 
 		strcpy(pTask->client_ip, szClientIp);
-		strcpy(pClientInfo->tracker_client_ip, szClientIp);
 
 		task_addr = (long)pTask;
 		if (write(pThreadData->pipe_fds[1], &task_addr, \
@@ -3049,34 +3048,34 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 /**
 IP_ADDRESS_SIZE bytes: tracker client ip address
 **/
-static int storage_server_report_client_ip(struct fast_task_info *pTask)
+static int storage_server_report_server_id(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
-	char *tracker_client_ip;
+	char *storage_server_id;
 	int64_t nInPackLen;
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
-	if (nInPackLen != IP_ADDRESS_SIZE)
+	if (nInPackLen != FDFS_STORAGE_ID_MAX_SIZE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
 			INT64_PRINTF_FORMAT" is not correct, " \
 			"expect length: %d", __LINE__, \
-			STORAGE_PROTO_CMD_REPORT_CLIENT_IP, \
-			pTask->client_ip,  \
-			nInPackLen, IP_ADDRESS_SIZE);
+			STORAGE_PROTO_CMD_REPORT_SERVER_ID, \
+			pTask->client_ip,  nInPackLen, \
+			FDFS_STORAGE_ID_MAX_SIZE);
 		return EINVAL;
 	}
 
-	tracker_client_ip = pTask->data + sizeof(TrackerHeader);
-	*(tracker_client_ip + (IP_ADDRESS_SIZE - 1)) = '\0';
-	strcpy(pClientInfo->tracker_client_ip, tracker_client_ip);
+	storage_server_id = pTask->data + sizeof(TrackerHeader);
+	*(storage_server_id + (FDFS_STORAGE_ID_MAX_SIZE - 1)) = '\0';
+	strcpy(pClientInfo->storage_server_id, storage_server_id);
 
-	logInfo("file: "__FILE__", line: %d, " \
-			"client ip: %s, tracker client ip is %s", \
-			__LINE__, pTask->client_ip, tracker_client_ip);
+	logDebug("file: "__FILE__", line: %d, " \
+			"client ip: %s, storage server id: %s", \
+			__LINE__, pTask->client_ip, storage_server_id);
 
 	return 0;
 }
@@ -7682,8 +7681,8 @@ int storage_deal_task(struct fast_task_info *pTask)
 		case FDFS_PROTO_CMD_ACTIVE_TEST:
 			result = storage_deal_active_test(pTask);
 			break;
-		case STORAGE_PROTO_CMD_REPORT_CLIENT_IP:
-			result = storage_server_report_client_ip(pTask);
+		case STORAGE_PROTO_CMD_REPORT_SERVER_ID:
+			result = storage_server_report_server_id(pTask);
 			break;
 		case STORAGE_PROTO_CMD_TRUNK_ALLOC_SPACE:
 			result = storage_server_trunk_alloc_space(pTask);

@@ -110,12 +110,14 @@ extern int g_sync_change_count; //sync src timestamp change counter
 extern int g_storage_join_time;  //my join timestamp
 extern int g_sync_until_timestamp;
 extern bool g_sync_old_done;     //if old files synced to me done
-extern char g_sync_src_id[IP_ADDRESS_SIZE]; //the source storage server ip
+extern char g_sync_src_id[FDFS_STORAGE_ID_MAX_SIZE]; //the source storage server id
 
 extern char g_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 extern char g_my_server_id[FDFS_STORAGE_ID_MAX_SIZE]; //my server id
 extern char g_tracker_client_ip[IP_ADDRESS_SIZE]; //storage ip as tracker client
 extern char g_last_storage_ip[IP_ADDRESS_SIZE];	//the last storage ip address
+
+extern bool g_use_storage_id;  //identify storage by ID instead of IP address
 
 extern bool g_check_file_duplicate;  //if check file content duplicate
 extern char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1];

@@ -68,12 +68,14 @@ int g_sync_change_count = 0;
 int g_storage_join_time = 0;
 int g_sync_until_timestamp = 0;
 bool g_sync_old_done = false;
-char g_sync_src_id[IP_ADDRESS_SIZE] = {0};
+char g_sync_src_id[FDFS_STORAGE_ID_MAX_SIZE] = {0};
 
 char g_group_name[FDFS_GROUP_NAME_MAX_LEN + 1] = {0};
 char g_my_server_id[FDFS_STORAGE_ID_MAX_SIZE] = {0}; //my server id
 char g_tracker_client_ip[IP_ADDRESS_SIZE] = {0}; //storage ip as tracker client
 char g_last_storage_ip[IP_ADDRESS_SIZE] = {0};	 //the last storage ip address
+
+bool g_use_storage_id = false;  //identify storage by ID instead of IP address
 
 bool g_check_file_duplicate = false;
 char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1] = {0};
@@ -110,7 +112,7 @@ struct storage_dio_thread_data *g_dio_thread_data = NULL;
 
 int storage_cmp_by_server_id(const void *p1, const void *p2)
 {
-	return strcmp((*((FDFSStorageServer **)p1))->server.ip_addr,
-		(*((FDFSStorageServer **)p2))->server.ip_addr);
+	return strcmp((*((FDFSStorageServer **)p1))->server.id,
+		(*((FDFSStorageServer **)p2))->server.id);
 }
 

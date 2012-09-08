@@ -79,6 +79,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_sync_old_done=%d\n"
 		"g_sync_src_id=%s\n"
 		"g_sync_until_timestamp=%s\n"
+		"g_my_server_id=%s\n"
 		"g_tracker_client_ip=%s\n"
 		"g_last_storage_ip=%s\n"
 		"g_check_file_duplicate=%d\n"
@@ -95,6 +96,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_binlog_fd=%d\n"
 		"g_binlog_index=%d\n"
 		"g_storage_sync_thread_count=%d\n"
+		"g_use_storage_id=%d\n"
 		"g_if_use_trunk_file=%d\n"
 		"g_if_trunker_self=%d\n"
 		"g_slot_min_size=%d\n"
@@ -170,6 +172,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_sync_src_id
 		, formatDatetime(g_sync_until_timestamp, "%Y-%m-%d %H:%M:%S", 
 			szSyncUntilTimestamp, sizeof(szSyncUntilTimestamp))
+                , g_my_server_id
 		, g_tracker_client_ip
 		, g_last_storage_ip
 		, g_check_file_duplicate
@@ -187,6 +190,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_binlog_fd
 		, g_binlog_index
 		, g_storage_sync_thread_count
+		, g_use_storage_id
 		, g_if_use_trunk_file
 		, g_if_trunker_self
 		, g_slot_min_size

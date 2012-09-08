@@ -114,7 +114,7 @@ typedef struct
 	int nio_thread_index;  //nio thread index
 	int sock;
 	char stage;  //nio stage, send or recv
-	char tracker_client_ip[IP_ADDRESS_SIZE];
+	char storage_server_id[FDFS_STORAGE_ID_MAX_SIZE];
 
 	StorageFileContext file_context;
 
