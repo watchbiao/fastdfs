@@ -147,7 +147,7 @@ int tracker_check_storage_id(const char *group_name, const char *id)
 	return strcmp((*ppFound)->group_name, group_name) == 0 ? 0 : EINVAL;
 }
 
-static bool _tracker_check_server_id(const char *id)
+bool tracker_is_server_id_valid(const char *id)
 {
 	long n;
 	char *endptr;
@@ -386,7 +386,7 @@ static int tracker_load_storage_ids(const char *filename, \
 				break;
 			}
 
-			if (!_tracker_check_server_id(id))
+			if (!tracker_is_server_id_valid(id))
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"invalid server id: \"%s\", " \

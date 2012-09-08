@@ -23,6 +23,7 @@ int tracker_load_from_conf_file(const char *filename, \
 FDFSStorageIdInfo *tracker_get_storage_id_by_ip(const char *group_name, \
 		const char *pIpAddr);
 
+bool tracker_is_server_id_valid(const char *id);
 int tracker_check_storage_id(const char *group_name, const char *id);
 
 #ifdef __cplusplus
