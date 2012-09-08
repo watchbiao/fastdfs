@@ -190,6 +190,28 @@ static int tracker_rename_mark_files(const char *old_ip_addr, \
 	return result;
 }
 
+static int tracker_get_my_server_id(TrackerServerInfo *pTrackerServer)
+{
+	FDFSStorageBrief storageBrief;
+	int result;
+
+	if ((result=tracker_get_storage_status(pTrackerServer, \
+                g_group_name, g_tracker_client_ip, &storageBrief)) == 0)
+	{
+		if (*(storageBrief.id) == '\0')
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"tracker server %s:%d response " \
+				"server id is empty!", __LINE__, \
+				pTrackerServer->ip_addr, pTrackerServer->port);
+			return EINVAL;
+		}
+
+		strcpy(g_my_server_id, storageBrief.id);
+	}
+	return result;
+}
+
 static void *tracker_report_thread_entrance(void *arg)
 {
 	TrackerServerInfo *pTrackerServer;
@@ -331,10 +353,19 @@ static void *tracker_report_thread_entrance(void *arg)
 
 		insert_into_local_host_ip(tracker_client_ip);
 
+		if (*g_my_server_id == '\0')
+		{
+			if (tracker_get_my_server_id(pTrackerServer) != 0)
+			{
+				sleep(g_heart_beat_interval);
+				continue;
+			}
+		}
+
 		/*
 		//printf("file: "__FILE__", line: %d, " \
-			"tracker_client_ip: %s\n", \
-			__LINE__, tracker_client_ip);
+			"tracker_client_ip: %s, g_my_server_id: %s\n", \
+			__LINE__, tracker_client_ip, g_my_server_id);
 		//print_local_host_ip_addrs();
 		*/
 
@@ -1828,7 +1859,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer, \
 		bool *bServerPortChanged)
 {
-	char out_buff[sizeof(TrackerHeader) + (IP_ADDRESS_SIZE + 4) * \
+	char out_buff[sizeof(TrackerHeader) + (FDFS_STORAGE_ID_MAX_SIZE + 4) * \
 			FDFS_MAX_SERVERS_EACH_GROUP];
 	char *p;
 	TrackerHeader *pHeader;
@@ -1846,15 +1877,15 @@ static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer, \
 	pHeader = (TrackerHeader *)out_buff;
 	p = out_buff + sizeof(TrackerHeader);
 
-	body_len = (IP_ADDRESS_SIZE + 4) * g_storage_count;
+	body_len = (FDFS_STORAGE_ID_MAX_SIZE + 4) * g_storage_count;
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_REPORT;
 	long2buff(body_len, pHeader->pkg_len);
 
 	pEnd = g_storage_servers + g_storage_count;
 	for (pServer=g_storage_servers; pServer<pEnd; pServer++)
 	{
-		memcpy(p, pServer->server.ip_addr, IP_ADDRESS_SIZE);
-		p += IP_ADDRESS_SIZE;
+		memcpy(p, pServer->server.id, FDFS_STORAGE_ID_MAX_SIZE);
+		p += FDFS_STORAGE_ID_MAX_SIZE;
 		int2buff(pServer->last_sync_src_timestamp, p);
 		p += 4;
 	}

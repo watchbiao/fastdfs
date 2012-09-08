@@ -55,7 +55,7 @@
 #define TRACKER_PROTO_CMD_RESP					100
 #define FDFS_PROTO_CMD_ACTIVE_TEST				111  //active test, tracker and storage both support since V1.28
 
-#define STORAGE_PROTO_CMD_REPORT_CLIENT_IP	 9   //ip as tracker client
+#define STORAGE_PROTO_CMD_REPORT_SERVER_ID	9  
 #define STORAGE_PROTO_CMD_UPLOAD_FILE		11
 #define STORAGE_PROTO_CMD_DELETE_FILE		12
 #define STORAGE_PROTO_CMD_SET_METADATA		13
