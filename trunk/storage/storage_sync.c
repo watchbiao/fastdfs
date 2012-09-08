@@ -1538,12 +1538,21 @@ int storage_open_readable_binlog(StorageBinLogReader *pReader, \
 	return 0;
 }
 
-static char *get_mark_filename_by_ip_and_port(const char *ip_addr, \
+static char *get_mark_filename_by_id_and_port(const char *storage_id, \
 		const int port, char *full_filename, const int filename_size)
 {
-	snprintf(full_filename, filename_size, \
+	if (g_use_storage_id)
+	{
+		snprintf(full_filename, filename_size, \
+			"%s/data/"SYNC_DIR_NAME"/%s%s", g_fdfs_base_path, \
+			storage_id, SYNC_MARK_FILE_EXT);
+	}
+	else
+	{
+		snprintf(full_filename, filename_size, \
 			"%s/data/"SYNC_DIR_NAME"/%s_%d%s", g_fdfs_base_path, \
-			ip_addr, port, SYNC_MARK_FILE_EXT);
+			storage_id, port, SYNC_MARK_FILE_EXT);
+	}
 	return full_filename;
 }
 
@@ -1558,14 +1567,14 @@ char *get_mark_filename_by_reader(const void *pArg, char *full_filename)
 		full_filename = buff;
 	}
 
-	return get_mark_filename_by_ip_and_port(pReader->ip_addr, \
+	return get_mark_filename_by_id_and_port(pReader->storage_id, \
 			g_server_port, full_filename, MAX_PATH_SIZE);
 }
 
-static char *get_mark_filename_by_ip(const char *ip_addr, char *full_filename, \
-		const int filename_size)
+static char *get_mark_filename_by_id(const char *storage_id, \
+		char *full_filename, const int filename_size)
 {
-	return get_mark_filename_by_ip_and_port(ip_addr, g_server_port, \
+	return get_mark_filename_by_id_and_port(storage_id, g_server_port, \
 				full_filename, filename_size);
 }
 
@@ -1855,11 +1864,11 @@ int storage_reader_init(FDFSStorageBrief *pStorage, StorageBinLogReader *pReader
 
 	if (pStorage == NULL)
 	{
-		strcpy(pReader->ip_addr, "0.0.0.0");
+		strcpy(pReader->storage_id, "0.0.0.0");
 	}
 	else
 	{
-		strcpy(pReader->ip_addr, pStorage->ip_addr);
+		strcpy(pReader->storage_id, pStorage->id);
 	}
 	get_mark_filename_by_reader(pReader, full_filename);
 
@@ -2368,7 +2377,7 @@ static int storage_binlog_reader_skip(StorageBinLogReader *pReader)
 	return result;
 }
 
-int storage_unlink_mark_file(const char *ip_addr)
+int storage_unlink_mark_file(const char *storage_id)
 {
 	char old_filename[MAX_PATH_SIZE];
 	char new_filename[MAX_PATH_SIZE];
@@ -2378,7 +2387,7 @@ int storage_unlink_mark_file(const char *ip_addr)
 	t = time(NULL);
 	localtime_r(&t, &tm);
 
-	get_mark_filename_by_ip(ip_addr, old_filename, sizeof(old_filename));
+	get_mark_filename_by_id(storage_id, old_filename, sizeof(old_filename));
 	if (!fileExists(old_filename))
 	{
 		return ENOENT;
@@ -2407,14 +2416,14 @@ int storage_rename_mark_file(const char *old_ip_addr, const int old_port, \
 	char old_filename[MAX_PATH_SIZE];
 	char new_filename[MAX_PATH_SIZE];
 
-	get_mark_filename_by_ip_and_port(old_ip_addr, old_port, \
+	get_mark_filename_by_id_and_port(old_ip_addr, old_port, \
 			old_filename, sizeof(old_filename));
 	if (!fileExists(old_filename))
 	{
 		return ENOENT;
 	}
 
-	get_mark_filename_by_ip_and_port(new_ip_addr, new_port, \
+	get_mark_filename_by_id_and_port(new_ip_addr, new_port, \
 			new_filename, sizeof(new_filename));
 	if (fileExists(new_filename))
 	{
@@ -2941,11 +2950,19 @@ int storage_sync_thread_start(const FDFSStorageBrief *pStorage)
 	    pStorage->status == FDFS_STORAGE_STATUS_IP_CHANGED || \
 	    pStorage->status == FDFS_STORAGE_STATUS_NONE)
 	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"storage id: %s 's status: %d is invalid, " \
+			"can't start sync thread!", __LINE__, \
+			pStorage->id, pStorage->status);
 		return 0;
 	}
 
-	if (is_local_host_ip(pStorage->ip_addr)) //can't self sync to self
+	if (storage_server_is_myself(pStorage) || \
+		is_local_host_ip(pStorage->ip_addr)) //can't self sync to self
 	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"storage id: %s is myself, can't start sync thread!", \
+			__LINE__, pStorage->id);
 		return 0;
 	}
 

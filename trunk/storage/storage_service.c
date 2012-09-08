@@ -3071,6 +3071,14 @@ static int storage_server_report_server_id(struct fast_task_info *pTask)
 
 	storage_server_id = pTask->data + sizeof(TrackerHeader);
 	*(storage_server_id + (FDFS_STORAGE_ID_MAX_SIZE - 1)) = '\0';
+	if (*storage_server_id == '\0')
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, storage server id is empty!", \
+			__LINE__, pTask->client_ip);
+		return EINVAL;
+	}
+
 	strcpy(pClientInfo->storage_server_id, storage_server_id);
 
 	logDebug("file: "__FILE__", line: %d, " \
@@ -3587,13 +3595,13 @@ static int storage_server_trunk_delete_binlog_marks(struct fast_task_info *pTask
 	for (pStorageServer=g_storage_servers; pStorageServer<pServerEnd; 
 		pStorageServer++)
 	{
-		if (is_local_host_ip(pStorageServer->server.ip_addr))
+		if (storage_server_is_myself(&(pStorageServer->server)))
 		{
 			continue;
 		}
 
-		trunk_get_mark_filename_by_ip_and_port(
-			pStorageServer->server.ip_addr, g_server_port, 
+		trunk_get_mark_filename_by_id_and_port(
+			pStorageServer->server.id, g_server_port, 
 			full_filename, sizeof(full_filename));
 		if (unlink(full_filename) != 0)
 		{

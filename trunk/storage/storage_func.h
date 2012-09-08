@@ -28,6 +28,10 @@ int storage_write_to_stat_file();
 
 int storage_write_to_sync_ini_file();
 
+bool storage_server_is_myself(const FDFSStorageBrief *pStorageBrief);
+
+bool storage_id_is_myself(const char *storage_id);
+
 #define STORAGE_CHOWN(path, current_uid, current_gid) \
 	if (!(g_run_by_gid == current_gid && g_run_by_uid == current_uid)) \
 	{ \

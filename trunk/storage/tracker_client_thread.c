@@ -168,12 +168,12 @@ static void thracker_report_thread_exit(TrackerServerInfo *pTrackerServer)
 		__LINE__, pTrackerServer->ip_addr, pTrackerServer->port);
 }
 
-static int tracker_unlink_mark_files(const char *ip_addr)
+static int tracker_unlink_mark_files(const char *storage_id)
 {
 	int result;
 
-	result = storage_unlink_mark_file(ip_addr);
-	result += trunk_unlink_mark_file(ip_addr);
+	result = storage_unlink_mark_file(storage_id);
+	result += trunk_unlink_mark_file(storage_id);
 
 	return result;
 }
@@ -1304,21 +1304,25 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 
 	if (*bServerPortChanged)
 	{
-		FDFSStorageBrief *pStorageEnd;
-		FDFSStorageBrief *pStorage;
-
-		*bServerPortChanged = false;
-		pStorageEnd = pBriefServers + server_count;
-		for (pStorage=pBriefServers; pStorage<pStorageEnd; pStorage++)
+		if (!g_use_storage_id)
 		{
-			if (strcmp(pStorage->id, g_my_server_id) == 0)
-			{
-				continue;
-			}
+			FDFSStorageBrief *pStorageEnd;
+			FDFSStorageBrief *pStorage;
 
-			tracker_rename_mark_files(pStorage->ip_addr, \
+			*bServerPortChanged = false;
+			pStorageEnd = pBriefServers + server_count;
+			for (pStorage=pBriefServers; pStorage<pStorageEnd; 
+				pStorage++)
+			{
+				if (strcmp(pStorage->id, g_my_server_id) == 0)
+				{
+					continue;
+				}
+
+				tracker_rename_mark_files(pStorage->ip_addr, \
 					g_last_server_port, pStorage->ip_addr, \
 					g_server_port);
+			}
 		}
 
 		if (g_server_port != g_last_server_port)
@@ -1339,8 +1343,8 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 			StorageBinLogReader *pReader)
 {
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
-			IP_ADDRESS_SIZE];
-	char sync_src_id[IP_ADDRESS_SIZE];
+			FDFS_STORAGE_ID_MAX_SIZE];
+	char sync_src_id[FDFS_STORAGE_ID_MAX_SIZE];
 	TrackerHeader *pHeader;
 	TrackerStorageSyncReqBody syncReqbody;
 	char *pBuff;
@@ -1349,11 +1353,12 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 
 	memset(out_buff, 0, sizeof(out_buff));
 	pHeader = (TrackerHeader *)out_buff;
-	long2buff(FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE, pHeader->pkg_len);
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + FDFS_STORAGE_ID_MAX_SIZE, \
+		pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_SYNC_SRC_REQ;
 	strcpy(out_buff + sizeof(TrackerHeader), g_group_name);
 	strcpy(out_buff + sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
-		pReader->ip_addr);
+		pReader->storage_id);
 	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
 	{
@@ -1393,10 +1398,10 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 		return EINVAL;
 	}
 
-	memcpy(sync_src_id, syncReqbody.src_id, IP_ADDRESS_SIZE);
-	sync_src_id[IP_ADDRESS_SIZE-1] = '\0';
+	memcpy(sync_src_id, syncReqbody.src_id, FDFS_STORAGE_ID_MAX_SIZE);
+	sync_src_id[FDFS_STORAGE_ID_MAX_SIZE - 1] = '\0';
 
-	pReader->need_sync_old = is_local_host_ip(sync_src_id);
+	pReader->need_sync_old = storage_id_is_myself(sync_src_id);
        	pReader->until_timestamp = (time_t)buff2long( \
 					syncReqbody.until_timestamp);
 
@@ -1449,8 +1454,8 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 		return EINVAL;
 	}
 
-	memcpy(g_sync_src_id, syncReqbody.src_id, IP_ADDRESS_SIZE);
-	g_sync_src_id[IP_ADDRESS_SIZE-1] = '\0';
+	memcpy(g_sync_src_id, syncReqbody.src_id, FDFS_STORAGE_ID_MAX_SIZE);
+	g_sync_src_id[FDFS_STORAGE_ID_MAX_SIZE - 1] = '\0';
 
 	g_sync_until_timestamp = (time_t)buff2long(syncReqbody.until_timestamp);
 
@@ -1505,8 +1510,8 @@ static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer)
 		return EINVAL;
 	}
 
-	memcpy(g_sync_src_id, syncReqbody.src_id, IP_ADDRESS_SIZE);
-	g_sync_src_id[IP_ADDRESS_SIZE-1] = '\0';
+	memcpy(g_sync_src_id, syncReqbody.src_id, FDFS_STORAGE_ID_MAX_SIZE);
+	g_sync_src_id[FDFS_STORAGE_ID_MAX_SIZE - 1] = '\0';
 
 	g_sync_until_timestamp = (time_t)buff2long(syncReqbody.until_timestamp);
 	return 0;
@@ -2174,8 +2179,8 @@ int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
 	char *pLineEnd;
 	char *cols[FDFS_CHANGELOG_FIELDS + 1];
 	char *pGroupName;
-	char *pOldIpAddr;
-	char *pNewIpAddr;
+	char *pOldStorageId;
+	char *pNewStorageId;
 	char szLine[256];
 	int server_status;
 	int col_count;
@@ -2233,15 +2238,15 @@ int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
 				break;
 			}
 
-			pOldIpAddr = cols[2];
+			pOldStorageId = cols[2];
 			server_status = atoi(cols[3]);
-			pNewIpAddr = cols[4];
+			pNewStorageId = cols[4];
 
 			if (server_status == FDFS_STORAGE_STATUS_DELETED)
 			{
-				tracker_unlink_mark_files(pOldIpAddr);
+				tracker_unlink_mark_files(pOldStorageId);
 
-				if (strcmp(g_sync_src_id, pOldIpAddr) == 0)
+				if (strcmp(g_sync_src_id, pOldStorageId) == 0)
 				{
 					*g_sync_src_id = '\0';
 					storage_write_to_sync_ini_file();
@@ -2249,14 +2254,17 @@ int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
 			}
 			else if (server_status == FDFS_STORAGE_STATUS_IP_CHANGED)
 			{
-				tracker_rename_mark_files(pOldIpAddr, \
-					g_server_port, pNewIpAddr, g_server_port);
-				if (strcmp(g_sync_src_id, pOldIpAddr) == 0)
+				if (!g_use_storage_id)
 				{
-					snprintf(g_sync_src_id, \
-						sizeof(g_sync_src_id), \
-						"%s", pNewIpAddr);
-					storage_write_to_sync_ini_file();
+					tracker_rename_mark_files(pOldStorageId, \
+					g_server_port, pNewStorageId, g_server_port);
+					if (strcmp(g_sync_src_id, pOldStorageId) == 0)
+					{
+						snprintf(g_sync_src_id, \
+							sizeof(g_sync_src_id), \
+							"%s", pNewStorageId);
+						storage_write_to_sync_ini_file();
+					}
 				}
 			}
 			else

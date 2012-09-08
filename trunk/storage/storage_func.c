@@ -1627,6 +1627,30 @@ int storage_func_destroy()
 	return close_ret;
 }
 
+bool storage_server_is_myself(const FDFSStorageBrief *pStorageBrief)
+{
+	if (g_use_storage_id)
+	{
+		return strcmp(pStorageBrief->id, g_my_server_id) == 0;
+	}
+	else
+	{
+		return is_local_host_ip(pStorageBrief->ip_addr);
+	}
+}
+
+bool storage_id_is_myself(const char *storage_id)
+{
+	if (g_use_storage_id)
+	{
+		return strcmp(storage_id, g_my_server_id) == 0;
+	}
+	else
+	{
+		return is_local_host_ip(storage_id);
+	}
+}
+
 /*
 int write_serialized(int fd, const char *buff, size_t count, const bool bSync)
 {

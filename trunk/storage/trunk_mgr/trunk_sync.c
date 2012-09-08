@@ -462,12 +462,22 @@ int trunk_open_readable_binlog(TrunkBinLogReader *pReader, \
 	return 0;
 }
 
-char *trunk_get_mark_filename_by_ip_and_port(const char *ip_addr, \
+char *trunk_get_mark_filename_by_id_and_port(const char *storage_id, \
 		const int port, char *full_filename, const int filename_size)
 {
-	snprintf(full_filename, filename_size, \
+	if (g_use_storage_id)
+	{
+		snprintf(full_filename, filename_size, \
+			"%s/data/"TRUNK_DIR_NAME"/%s%s", g_fdfs_base_path, \
+			storage_id, TRUNK_SYNC_MARK_FILE_EXT);
+	}
+	else
+	{
+		snprintf(full_filename, filename_size, \
 			"%s/data/"TRUNK_DIR_NAME"/%s_%d%s", g_fdfs_base_path, \
-			ip_addr, port, TRUNK_SYNC_MARK_FILE_EXT);
+			storage_id, port, TRUNK_SYNC_MARK_FILE_EXT);
+	}
+
 	return full_filename;
 }
 
@@ -482,14 +492,14 @@ char *trunk_mark_filename_by_reader(const void *pArg, char *full_filename)
 		full_filename = buff;
 	}
 
-	return trunk_get_mark_filename_by_ip_and_port(pReader->ip_addr, \
+	return trunk_get_mark_filename_by_id_and_port(pReader->storage_id, \
 			g_server_port, full_filename, MAX_PATH_SIZE);
 }
 
-static char *trunk_get_mark_filename_by_ip(const char *ip_addr, char *full_filename, \
-		const int filename_size)
+static char *trunk_get_mark_filename_by_id(const char *storage_id, 
+	char *full_filename, const int filename_size)
 {
-	return trunk_get_mark_filename_by_ip_and_port(ip_addr, g_server_port, \
+	return trunk_get_mark_filename_by_id_and_port(storage_id, g_server_port, \
 				full_filename, filename_size);
 }
 
@@ -522,11 +532,11 @@ int trunk_reader_init(FDFSStorageBrief *pStorage, TrunkBinLogReader *pReader)
 
 	if (pStorage == NULL)
 	{
-		strcpy(pReader->ip_addr, "0.0.0.0");
+		strcpy(pReader->storage_id, "0.0.0.0");
 	}
 	else
 	{
-		strcpy(pReader->ip_addr, pStorage->ip_addr);
+		strcpy(pReader->storage_id, pStorage->id);
 	}
 	trunk_mark_filename_by_reader(pReader, full_filename);
 
@@ -809,7 +819,7 @@ int trunk_binlog_read(TrunkBinLogReader *pReader, \
 	return 0;
 }
 
-int trunk_unlink_mark_file(const char *ip_addr)
+int trunk_unlink_mark_file(const char *storage_id)
 {
 	char old_filename[MAX_PATH_SIZE];
 	char new_filename[MAX_PATH_SIZE];
@@ -819,7 +829,8 @@ int trunk_unlink_mark_file(const char *ip_addr)
 	t = time(NULL);
 	localtime_r(&t, &tm);
 
-	trunk_get_mark_filename_by_ip(ip_addr, old_filename, sizeof(old_filename));
+	trunk_get_mark_filename_by_id(storage_id, old_filename, \
+		sizeof(old_filename));
 	if (!fileExists(old_filename))
 	{
 		return ENOENT;
@@ -848,14 +859,14 @@ int trunk_rename_mark_file(const char *old_ip_addr, const int old_port, \
 	char old_filename[MAX_PATH_SIZE];
 	char new_filename[MAX_PATH_SIZE];
 
-	trunk_get_mark_filename_by_ip_and_port(old_ip_addr, old_port, \
+	trunk_get_mark_filename_by_id_and_port(old_ip_addr, old_port, \
 			old_filename, sizeof(old_filename));
 	if (!fileExists(old_filename))
 	{
 		return ENOENT;
 	}
 
-	trunk_get_mark_filename_by_ip_and_port(new_ip_addr, new_port, \
+	trunk_get_mark_filename_by_id_and_port(new_ip_addr, new_port, \
 			new_filename, sizeof(new_filename));
 	if (fileExists(new_filename))
 	{
