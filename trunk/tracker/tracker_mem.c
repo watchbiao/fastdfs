@@ -527,6 +527,20 @@ static int tracker_load_groups_old(FDFSGroups *pGroups, const char *data_path)
 	return result;
 }
 
+static int tracker_mem_get_storage_id(const char *group_name, \
+		const char *pIpAddr, char *storage_id)
+{
+	FDFSStorageIdInfo *pStorageIdInfo;
+	pStorageIdInfo = tracker_get_storage_id_by_ip(group_name, pIpAddr);
+	if (pStorageIdInfo == NULL)
+	{
+		return ENOENT;
+	}
+
+	strcpy(storage_id, pStorageIdInfo->id);
+	return 0;
+}
+
 static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path, 
 		FDFSStorageSync **ppTrunkServers, int *nTrunkServerCount)
 {
@@ -638,7 +652,23 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path,
 		if (pValue != NULL)
 		{
 			snprintf(pGroup->last_trunk_server_id, 
-				sizeof(pGroup->last_trunk_server_id), "%s", pValue);
+				sizeof(pGroup->last_trunk_server_id), \
+				"%s", pValue);
+			if (g_use_storage_id && (*pValue != '\0' && \
+				!tracker_is_server_id_valid(pValue)))
+			{
+				if (tracker_mem_get_storage_id( \
+					pGroup->group_name, pValue, \
+					pGroup->last_trunk_server_id) != 0)
+				{
+					logWarning("file: "__FILE__", line: %d,"\
+						"server id of group name: %s " \
+						"and last trunk ip address: %s"\
+						" NOT exist", __LINE__, \
+						pGroup->group_name, pValue);
+					*pGroup->last_trunk_server_id = '\0';
+				}
+			}
 		}
 
 		pValue = iniGetStrValue(section_name, \
@@ -666,6 +696,20 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path,
 			clientInfo.pGroup->group_name);
 		snprintf((*ppTrunkServers)[*nTrunkServerCount].id, \
 			FDFS_STORAGE_ID_MAX_SIZE, "%s", pValue);
+		if (g_use_storage_id && !tracker_is_server_id_valid(pValue))
+		{
+			if ((result=tracker_mem_get_storage_id( \
+				clientInfo.pGroup->group_name, pValue, \
+				(*ppTrunkServers)[*nTrunkServerCount].id)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"server id of group name: %s and " \
+					"trunk server ip address: %s NOT " \
+					"exist", __LINE__, \
+					clientInfo.pGroup->group_name, pValue);
+				break;
+			}
+		}
 
 		(*nTrunkServerCount)++;
 		}
@@ -1318,6 +1362,23 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 		strcpy(pStorageSyncs[nStorageSyncCount].id, pStorage->id);
 		snprintf(pStorageSyncs[nStorageSyncCount].sync_src_id, \
 			FDFS_STORAGE_ID_MAX_SIZE, "%s", psync_src_id);
+		if (g_use_storage_id && !tracker_is_server_id_valid( \
+						psync_src_id))
+		{
+			if ((result=tracker_mem_get_storage_id( \
+				clientInfo.pGroup->group_name, psync_src_id, \
+				pStorageSyncs[nStorageSyncCount].sync_src_id))\
+				 != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"server id of group name: %s and " \
+					"src storage ip address: %s NOT " \
+					"exist", __LINE__, \
+					clientInfo.pGroup->group_name, \
+					psync_src_id);
+				break;
+			}
+		}
 
 		nStorageSyncCount++;
 	}
@@ -1432,6 +1493,22 @@ static int tracker_load_sync_timestamps(FDFSGroups *pGroups, const char *data_pa
 				group_name, src_index+1, pGroup->count);
 			result = errno != 0 ? errno : EINVAL;
 			break;
+		}
+
+		if (g_use_storage_id && !tracker_is_server_id_valid( \
+						src_storage_id))
+		{
+			if ((result=tracker_mem_get_storage_id( \
+				group_name, src_storage_id, \
+				src_storage_id)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"server id of group name: %s and " \
+					"storage ip address: %s NOT " \
+					"exist", __LINE__, \
+					group_name, src_storage_id);
+				break;
+			}
 		}
 
 		if (strcmp(pGroup->all_servers[src_index]->id, \
