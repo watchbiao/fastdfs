@@ -250,8 +250,7 @@ static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 		for (pStorageStat=storageStats; pStorageStat<pStorageEnd; \
 			pStorageStat++)
 		{
-			if (strcmp(pStorageStat->ip_addr, \
-				g_tracker_client_ip) == 0)
+			if (strcmp(pStorageStat->id, g_my_server_id) == 0)
 			{
 				continue;
 			}
@@ -768,8 +767,8 @@ int storage_disk_recovery_restore(const char *pBasePath)
 
 	while (g_continue_flag)
 	{
-		if (storage_report_storage_status(g_tracker_client_ip, \
-				saved_storage_status) == 0)
+		if (storage_report_storage_status(g_my_server_id, \
+			g_tracker_client_ip, saved_storage_status) == 0)
 		{
 			break;
 		}
@@ -1053,8 +1052,8 @@ int storage_disk_recovery_start(const int store_path_index)
 
 	while (g_continue_flag)
 	{
-		if (storage_report_storage_status(g_tracker_client_ip, \
-				FDFS_STORAGE_STATUS_RECOVERY) == 0)
+		if (storage_report_storage_status(g_my_server_id, \
+			g_tracker_client_ip, FDFS_STORAGE_STATUS_RECOVERY) == 0)
 		{
 			break;
 		}

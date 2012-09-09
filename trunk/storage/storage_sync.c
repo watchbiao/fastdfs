@@ -1,5 +1,4 @@
-/**
-* Copyright (C) 2008 Happy Fish / YuQing
+/** * Copyright (C) 2008 Happy Fish / YuQing
 *
 * FastDFS may be copied only under the terms of the GNU General
 * Public License V3, which may be found in the FastDFS source kit.
@@ -1578,7 +1577,8 @@ static char *get_mark_filename_by_id(const char *storage_id, \
 				full_filename, filename_size);
 }
 
-int storage_report_storage_status(const char *ip_addr, const char status)
+int storage_report_storage_status(const char *storage_id, \
+		const char *ip_addr, const char status)
 {
 	FDFSStorageBrief briefServer;
 	TrackerServerInfo trackerServer;
@@ -1590,6 +1590,8 @@ int storage_report_storage_status(const char *ip_addr, const char status)
 	int success_count;
 	int i;
 
+	memset(&briefServer, 0, sizeof(FDFSStorageBrief));
+	strcpy(briefServer.id, storage_id);
 	strcpy(briefServer.ip_addr, ip_addr);
 	briefServer.status = status;
 
@@ -2772,8 +2774,8 @@ static void* storage_sync_thread_entrance(void* arg)
 		if (pStorage->status == FDFS_STORAGE_STATUS_WAIT_SYNC)
 		{
 			pStorage->status = FDFS_STORAGE_STATUS_SYNCING;
-			storage_report_storage_status(pStorage->ip_addr, \
-				pStorage->status);
+			storage_report_storage_status(pStorage->id, \
+				pStorage->ip_addr, pStorage->status);
 		}
 
 		if (pStorage->status == FDFS_STORAGE_STATUS_SYNCING)
@@ -2781,7 +2783,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			if (reader.need_sync_old && reader.sync_old_done)
 			{
 				pStorage->status = FDFS_STORAGE_STATUS_OFFLINE;
-				storage_report_storage_status(  \
+				storage_report_storage_status(pStorage->id, \
 					pStorage->ip_addr, \
 					pStorage->status);
 			}
@@ -2825,7 +2827,8 @@ static void* storage_sync_thread_entrance(void* arg)
 				{
 					pStorage->status = \
 						FDFS_STORAGE_STATUS_OFFLINE;
-					storage_report_storage_status(  \
+					storage_report_storage_status( \
+						pStorage->id, \
 						pStorage->ip_addr, \
 						pStorage->status);
 				}
