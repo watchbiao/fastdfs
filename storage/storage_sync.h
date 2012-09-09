@@ -99,7 +99,8 @@ int storage_open_readable_binlog(StorageBinLogReader *pReader, \
 int storage_reader_init(FDFSStorageBrief *pStorage, StorageBinLogReader *pReader);
 void storage_reader_destroy(StorageBinLogReader *pReader);
 
-int storage_report_storage_status(const char *ip_addr, const char status);
+int storage_report_storage_status(const char *storage_id, \
+		const char *ip_addr, const char status);
 
 #ifdef __cplusplus
 }
