@@ -71,7 +71,8 @@ static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
 	{
 		return 0;
 	}
-	else if (in_bytes % (FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE) != 0)
+	else if (in_bytes % (FDFS_GROUP_NAME_MAX_LEN + \
+			FDFS_STORAGE_ID_MAX_SIZE) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server ip: %s, invalid body length: " \
@@ -85,7 +86,8 @@ static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
 	memset(trunk_server_id, 0, sizeof(trunk_server_id));
 
 	pEnd = in_buff + in_bytes;
-	for (p=in_buff; p<pEnd; p += FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE)
+	for (p=in_buff; p<pEnd; p += FDFS_GROUP_NAME_MAX_LEN + \
+					FDFS_STORAGE_ID_MAX_SIZE)
 	{
 		memcpy(group_name, p, FDFS_GROUP_NAME_MAX_LEN);
 		memcpy(trunk_server_id, p + FDFS_GROUP_NAME_MAX_LEN, \

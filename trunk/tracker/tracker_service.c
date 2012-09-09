@@ -1209,7 +1209,7 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 static int tracker_deal_server_delete_storage(struct fast_task_info *pTask)
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	char *pIpAddr;
+	char *pStorageId;
 	FDFSGroupInfo *pGroup;
 	int nPkgLen;
 
@@ -1225,7 +1225,7 @@ static int tracker_deal_server_delete_storage(struct fast_task_info *pTask)
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
-	if (nPkgLen >= FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE)
+	if (nPkgLen >= FDFS_GROUP_NAME_MAX_LEN + FDFS_STORAGE_ID_MAX_SIZE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
@@ -1233,7 +1233,7 @@ static int tracker_deal_server_delete_storage(struct fast_task_info *pTask)
 			"expect length < %d", __LINE__, \
 			TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE, \
 			pTask->client_ip, nPkgLen, \
-			FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE);
+			FDFS_GROUP_NAME_MAX_LEN + FDFS_STORAGE_ID_MAX_SIZE);
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -1243,7 +1243,9 @@ static int tracker_deal_server_delete_storage(struct fast_task_info *pTask)
 	memcpy(group_name, pTask->data + sizeof(TrackerHeader), \
 			FDFS_GROUP_NAME_MAX_LEN);
 	group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
-	pIpAddr = pTask->data + sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN;
+	pStorageId = pTask->data + sizeof(TrackerHeader) + \
+			FDFS_GROUP_NAME_MAX_LEN;
+	*(pStorageId + FDFS_STORAGE_ID_MAX_SIZE - 1) = '\0';
 	pGroup = tracker_mem_get_group(group_name);
 	if (pGroup == NULL)
 	{
@@ -1255,7 +1257,7 @@ static int tracker_deal_server_delete_storage(struct fast_task_info *pTask)
 	}
 
 	pTask->length = sizeof(TrackerHeader);
-	return tracker_mem_delete_storage(pGroup, pIpAddr);
+	return tracker_mem_delete_storage(pGroup, pStorageId);
 }
 
 static int tracker_deal_active_test(struct fast_task_info *pTask)
@@ -1314,7 +1316,8 @@ static int tracker_deal_ping_leader(struct fast_task_info *pTask)
 		return 0;
 	}
 
-	body_len = (FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE) * g_groups.count;
+	body_len = (FDFS_GROUP_NAME_MAX_LEN + FDFS_STORAGE_ID_MAX_SIZE) * \
+			g_groups.count;
 	if (body_len + sizeof(TrackerHeader) > pTask->size)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1788,7 +1791,7 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 
 	nPkgLen = pTask->length - sizeof(TrackerHeader);
 	if (nPkgLen < FDFS_GROUP_NAME_MAX_LEN || \
-		nPkgLen >= FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE)
+		nPkgLen >= FDFS_GROUP_NAME_MAX_LEN + FDFS_STORAGE_ID_MAX_SIZE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip: %s, package size " \
@@ -1797,7 +1800,7 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 				TRACKER_PROTO_CMD_SERVER_LIST_STORAGE, \
 				pTask->client_ip,  \
 				nPkgLen, FDFS_GROUP_NAME_MAX_LEN, \
-				FDFS_GROUP_NAME_MAX_LEN + IP_ADDRESS_SIZE);
+				FDFS_GROUP_NAME_MAX_LEN + FDFS_STORAGE_ID_MAX_SIZE);
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -1834,7 +1837,8 @@ static int tracker_deal_server_list_group_storages(struct fast_task_info *pTask)
 
 	memset(pTask->data + sizeof(TrackerHeader), 0, \
 			pTask->size - sizeof(TrackerHeader));
-	pDest = pStart = (TrackerStorageStat *)(pTask->data + sizeof(TrackerHeader));
+	pDest = pStart = (TrackerStorageStat *)(pTask->data + \
+					sizeof(TrackerHeader));
 	ppEnd = pGroup->sorted_servers + pGroup->count;
 	for (ppServer=pGroup->sorted_servers; ppServer<ppEnd; \
 			ppServer++)
@@ -2720,7 +2724,6 @@ static int tracker_deal_storage_sync_dest_req(struct fast_task_info *pTask)
 
 	pBody=(TrackerStorageSyncReqBody *)(pTask->data+sizeof(TrackerHeader));
 	strcpy(pBody->src_id, pSrcStorage->id);
-
 	long2buff(sync_until_timestamp, pBody->until_timestamp);
 
 	} while (0);
@@ -2981,7 +2984,7 @@ static int tracker_deal_storage_sync_report(struct fast_task_info *pTask)
 		if (min_synced_timestamp > 0)
 		{
 			pClientInfo->pStorage->stat.last_synced_timestamp = \
-							    min_synced_timestamp;
+						   min_synced_timestamp;
 		}
 	}
 	else
