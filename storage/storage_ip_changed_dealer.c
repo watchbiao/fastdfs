@@ -31,19 +31,22 @@
 
 static int storage_do_changelog_req(TrackerServerInfo *pTrackerServer)
 {
-	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN];
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+			FDFS_STORAGE_ID_MAX_SIZE];
 	TrackerHeader *pHeader;
 	int result;
 
 	memset(out_buff, 0, sizeof(out_buff));
 	pHeader = (TrackerHeader *)out_buff;
 
-	long2buff(FDFS_GROUP_NAME_MAX_LEN, pHeader->pkg_len);
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + FDFS_STORAGE_ID_MAX_SIZE, \
+		pHeader->pkg_len);
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ;
 	strcpy(out_buff + sizeof(TrackerHeader), g_group_name);
+	strcpy(out_buff + sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
+		g_my_server_id);
 	if((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
-		sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
-		g_fdfs_network_timeout)) != 0)
+		sizeof(out_buff), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"tracker server %s:%d, send data fail, " \
@@ -418,7 +421,7 @@ int storage_check_ip_changed()
 {
 	int result;
 
-	if (!g_storage_ip_changed_auto_adjust)
+	if ((!g_storage_ip_changed_auto_adjust) || g_use_storage_id)
 	{
 		return 0;
 	}
