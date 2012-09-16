@@ -234,3 +234,30 @@ bool fdfs_check_reserved_space_path(const int64_t total_mb, \
 	}
 }
 
+bool tracker_is_server_id_valid(const char *id)
+{
+	long n;
+	char *endptr;
+	char buff[FDFS_STORAGE_ID_MAX_SIZE];
+
+	if (*id == '\0')
+	{
+		return false;
+	}
+
+	endptr = NULL;
+	n = strtol(id, &endptr, 10);
+	if (endptr != NULL && *endptr != '\0')
+	{
+		return false;
+	}
+
+	if (n <= 0 || n >= INT_MAX)
+	{
+		return false;
+	}
+
+	snprintf(buff, sizeof(buff), "%ld", n);
+	return strcmp(buff, id) == 0;
+}
+
