@@ -3576,6 +3576,12 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 		*ppStorageServer = tracker_mem_get_storage(pGroup, storage_id);
 		if (*ppStorageServer != NULL)
 		{
+			if (g_use_storage_id)
+			{
+				memcpy ((*ppStorageServer)->ip_addr, ip_addr, \
+					IP_ADDRESS_SIZE);
+			}
+
 			if ((*ppStorageServer)->status==FDFS_STORAGE_STATUS_DELETED \
 			 || (*ppStorageServer)->status==FDFS_STORAGE_STATUS_IP_CHANGED)
 			{

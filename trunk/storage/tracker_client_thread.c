@@ -880,7 +880,10 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 		}
 		else
 		{
-			//logInfo("ip_addr=%s, tracker status: %d", pServer->ip_addr, pServer->status);
+			/*
+			//logInfo("ip_addr=%s, tracker status: %d", 
+				pServer->ip_addr, pServer->status);
+			*/
 
 			if ((res=pthread_mutex_lock( \
 				 &reporter_thread_lock)) != 0)

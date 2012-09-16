@@ -1555,6 +1555,15 @@ static char *get_mark_filename_by_id_and_port(const char *storage_id, \
 	return full_filename;
 }
 
+static char *get_mark_filename_by_ip_and_port(const char *ip_addr, \
+		const int port, char *full_filename, const int filename_size)
+{
+	snprintf(full_filename, filename_size, \
+		"%s/data/"SYNC_DIR_NAME"/%s_%d%s", g_fdfs_base_path, \
+		ip_addr, port, SYNC_MARK_FILE_EXT);
+	return full_filename;
+}
+
 char *get_mark_filename_by_reader(const void *pArg, char *full_filename)
 {
 	const StorageBinLogReader *pReader;
@@ -1885,6 +1894,26 @@ int storage_reader_init(FDFSStorageBrief *pStorage, StorageBinLogReader *pReader
 	else
 	{
 		bFileExist = fileExists(full_filename);
+		if (!bFileExist && (g_use_storage_id && pStorage != NULL))
+		{
+			char old_mark_filename[MAX_PATH_SIZE];
+			get_mark_filename_by_ip_and_port(pStorage->ip_addr, \
+				g_server_port, old_mark_filename, \
+				sizeof(old_mark_filename));
+			if (fileExists(old_mark_filename))
+			{
+				if (rename(old_mark_filename, full_filename)!=0)
+				{
+					logError("file: "__FILE__", line: %d, "\
+						"rename file %s to %s fail" \
+						", errno: %d, error info: %s", \
+						__LINE__, old_mark_filename, \
+						full_filename, errno, \
+						STRERROR(errno));
+					return errno != 0 ? errno : EACCES;
+				}
+			}
+		}
 	}
 
 	if (pStorage != NULL && !bFileExist)
@@ -2744,6 +2773,7 @@ static void* storage_sync_thread_entrance(void* arg)
 
 		getSockIpaddr(storage_server.sock, \
 			local_ip_addr, IP_ADDRESS_SIZE);
+		insert_into_local_host_ip(local_ip_addr);
 
 		/*
 		//printf("file: "__FILE__", line: %d, " \
@@ -2752,8 +2782,8 @@ static void* storage_sync_thread_entrance(void* arg)
 			__LINE__, storage_server.ip_addr, local_ip_addr);
 		*/
 
-		if (strcmp(local_ip_addr, storage_server.ip_addr) == 0)
-		{
+		if (is_local_host_ip(storage_server.ip_addr))
+		{  //can't self sync to self
 			logError("file: "__FILE__", line: %d, " \
 				"ip_addr %s belong to the local host," \
 				" sync thread exit.", \
