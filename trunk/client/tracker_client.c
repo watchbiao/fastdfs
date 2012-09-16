@@ -1262,6 +1262,90 @@ int tracker_get_storage_status(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
+int tracker_get_storage_id(TrackerServerInfo *pTrackerServer, \
+		const char *group_name, const char *ip_addr, \
+		char *storage_id)
+{
+	TrackerHeader *pHeader;
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+			IP_ADDRESS_SIZE];
+	char *p;
+	int result;
+	int ip_len;
+	int64_t in_bytes;
+
+	if (storage_id == NULL)
+	{
+		return EINVAL;
+	}
+
+	if (pTrackerServer->sock < 0)
+	{
+		if ((result=tracker_connect_server(pTrackerServer)) != 0)
+		{
+			return result;
+		}
+	}
+	
+	if (ip_addr == NULL)
+	{
+		ip_len = 0;
+	}
+	else
+	{
+		ip_len = strlen(ip_addr);
+	}
+
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+	p = out_buff + sizeof(TrackerHeader);
+	snprintf(p, sizeof(out_buff) - sizeof(TrackerHeader), "%s", group_name);
+	p += FDFS_GROUP_NAME_MAX_LEN;
+	if (ip_len > 0)
+	{
+		memcpy(p, ip_addr, ip_len);
+		p += ip_len;
+	}
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_GET_SERVER_ID;
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + ip_len, pHeader->pkg_len);
+	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+			p - out_buff, g_fdfs_network_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"send data to tracker server %s:%d fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pTrackerServer->ip_addr, \
+			pTrackerServer->port, \
+			result, STRERROR(result));
+	}
+	else
+	{
+		result = fdfs_recv_response(pTrackerServer, \
+			&storage_id, FDFS_STORAGE_ID_MAX_SIZE, &in_bytes);
+	}
+
+	if (result != 0)
+	{
+		close(pTrackerServer->sock);
+		pTrackerServer->sock = -1;
+
+		return result;
+	}
+
+	if (in_bytes == 0 || in_bytes >= FDFS_STORAGE_ID_MAX_SIZE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"tracker server %s:%d response data " \
+			"length: "INT64_PRINTF_FORMAT" is invalid", \
+			__LINE__, pTrackerServer->ip_addr, \
+			pTrackerServer->port, in_bytes);
+		return EINVAL;
+	}
+
+	*(storage_id + in_bytes) = '\0';
+	return 0;
+}
+
 int tracker_get_storage_max_status(TrackerServerGroup *pTrackerGroup, \
 		const char *group_name, const char *ip_addr, \
 		char *storage_id, int *status)

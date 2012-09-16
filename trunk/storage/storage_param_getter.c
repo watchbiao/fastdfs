@@ -36,7 +36,6 @@ static int storage_convert_src_server_id()
 	TrackerServerInfo *pTrackerServer;
 	TrackerServerInfo *pServerEnd;
 	TrackerServerInfo tracker_server;
-	FDFSStorageBrief storage_brief;
 	int result;
 
 	result = ENOENT;
@@ -52,12 +51,11 @@ static int storage_convert_src_server_id()
 			continue;
 		}
 
-		result = tracker_get_storage_status(&tracker_server, \
-			g_group_name, g_sync_src_id, &storage_brief);
+		result = tracker_get_storage_id(&tracker_server, \
+			g_group_name, g_sync_src_id, g_sync_src_id);
 		tracker_disconnect_server(&tracker_server);
 		if (result == 0)
 		{
-			strcpy(g_sync_src_id, storage_brief.id);
 			return 0;
 		}
 	}
