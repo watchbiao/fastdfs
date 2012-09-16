@@ -29,6 +29,7 @@
 #include "tracker_types.h"
 #include "tracker_global.h"
 #include "tracker_mem.h"
+#include "tracker_func.h"
 #include "tracker_proto.h"
 #include "tracker_nio.h"
 #include "tracker_relationship.h"
@@ -980,6 +981,78 @@ static int tracker_deal_server_get_storage_status(struct fast_task_info *pTask)
 	strcpy(pDest->ip_addr, pStorage->ip_addr);
 	pDest->status = pStorage->status;
 	int2buff(pGroup->storage_port, pDest->port);
+
+	return 0;
+}
+
+static int tracker_deal_server_get_storage_id(struct fast_task_info *pTask)
+{
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char ip_addr[IP_ADDRESS_SIZE];
+	FDFSStorageIdInfo *FDFSStorageIdInfo;
+	char *storage_id;
+	int nPkgLen;
+	int id_len;
+
+	nPkgLen = pTask->length - sizeof(TrackerHeader);
+	if (nPkgLen < FDFS_GROUP_NAME_MAX_LEN)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip addr: %s, " \
+			"package size %d is not correct", __LINE__, \
+			TRACKER_PROTO_CMD_STORAGE_GET_SERVER_ID, \
+			pTask->client_ip, nPkgLen);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	memcpy(group_name, pTask->data + sizeof(TrackerHeader), \
+			FDFS_GROUP_NAME_MAX_LEN);
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
+
+	if (nPkgLen == FDFS_GROUP_NAME_MAX_LEN)
+	{
+		strcpy(ip_addr, pTask->client_ip);
+	}
+	else
+	{
+		int ip_len;
+
+		ip_len = nPkgLen - FDFS_GROUP_NAME_MAX_LEN;
+		if (ip_len >= IP_ADDRESS_SIZE)
+		{
+			ip_len = IP_ADDRESS_SIZE - 1;
+		}
+		memcpy(ip_addr, pTask->data + sizeof(TrackerHeader) + \
+			FDFS_GROUP_NAME_MAX_LEN, ip_len);
+		*(ip_addr + ip_len) = '\0';
+	}
+
+	if (g_use_storage_id)
+	{
+		FDFSStorageIdInfo = tracker_get_storage_id_by_ip(group_name, \
+						ip_addr);
+		if (FDFSStorageIdInfo == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"cmd=%d, client ip addr: %s, " \
+				"group_name: %s, storage ip: %s not exist", \
+				__LINE__, TRACKER_PROTO_CMD_STORAGE_GET_SERVER_ID, \
+				pTask->client_ip, group_name, ip_addr);
+			pTask->length = sizeof(TrackerHeader);
+			return ENOENT;
+		}
+
+		storage_id = FDFSStorageIdInfo->id;
+	}
+	else
+	{
+		storage_id = ip_addr;
+	}
+
+	id_len = strlen(storage_id);
+	pTask->length = sizeof(TrackerHeader) + id_len; 
+	memcpy(pTask->data + sizeof(TrackerHeader), storage_id, id_len);
 
 	return 0;
 }
@@ -3320,6 +3393,9 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_GET_STATUS:
 			result = tracker_deal_server_get_storage_status(pTask);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_GET_SERVER_ID:
+			result = tracker_deal_server_get_storage_id(pTask);
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG:
 			TRACKER_CHECK_LOGINED(pTask)

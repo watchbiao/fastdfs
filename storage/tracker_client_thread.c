@@ -192,24 +192,17 @@ static int tracker_rename_mark_files(const char *old_ip_addr, \
 
 static int tracker_get_my_server_id(TrackerServerInfo *pTrackerServer)
 {
-	FDFSStorageBrief storageBrief;
-	int result;
-
-	if ((result=tracker_get_storage_status(pTrackerServer, \
-                g_group_name, g_tracker_client_ip, &storageBrief)) == 0)
+	if (g_use_storage_id)
 	{
-		if (*(storageBrief.id) == '\0')
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"tracker server %s:%d response " \
-				"server id is empty!", __LINE__, \
-				pTrackerServer->ip_addr, pTrackerServer->port);
-			return EINVAL;
-		}
-
-		strcpy(g_my_server_id, storageBrief.id);
+		return tracker_get_storage_id(pTrackerServer, \
+			g_group_name, g_tracker_client_ip, g_my_server_id);
 	}
-	return result;
+	else
+	{
+		snprintf(g_my_server_id, sizeof(g_my_server_id), "%s", \
+			g_tracker_client_ip);
+		return 0;
+	}
 }
 
 static void *tracker_report_thread_entrance(void *arg)
@@ -759,6 +752,11 @@ int tracker_report_storage_status(TrackerServerInfo *pTrackerServer, \
 static int tracker_start_sync_threads(const FDFSStorageBrief *pStorage)
 {
 	int result;
+
+	if (strcmp(pStorage->id, g_my_server_id) == 0)
+	{
+		return 0;
+	}
 
 	result = storage_sync_thread_start(pStorage);
 	if (result == 0)

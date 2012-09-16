@@ -262,7 +262,7 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 
 
 /**
-* get storage server highest level status from the tracker server
+* get storage server status from the tracker server
 * params:
 *	pTrackerServer: tracker server
 *	group_name: the group name which the storage server belongs to
@@ -273,6 +273,20 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 int tracker_get_storage_status(TrackerServerInfo *pTrackerServer, \
 		const char *group_name, const char *ip_addr, \
 		FDFSStorageBrief *pDestBuff);
+
+
+/**
+* get storage server id from the tracker server
+* params:
+*	pTrackerServer: tracker server
+*	group_name: the group name which the storage server belongs to
+*	ip_addr: the ip addr of the storage server
+*	storage_id: return the storage server id
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_get_storage_id(TrackerServerInfo *pTrackerServer, \
+		const char *group_name, const char *ip_addr, \
+		char *storage_id);
 
 /**
 * get storage server highest level status from all tracker servers
