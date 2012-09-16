@@ -24,10 +24,46 @@
 #include "fdfs_global.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
+#include "tracker_client.h"
+#include "fdfs_shared_func.h"
 #include "storage_global.h"
 #include "storage_param_getter.h"
 #include "trunk_mem.h"
 #include "trunk_sync.h"
+
+static int storage_convert_src_server_id()
+{
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pServerEnd;
+	TrackerServerInfo tracker_server;
+	FDFSStorageBrief storage_brief;
+	int result;
+
+	result = ENOENT;
+	pServerEnd = g_tracker_group.servers + g_tracker_group.server_count;
+	for (pTrackerServer=g_tracker_group.servers; \
+		pTrackerServer<pServerEnd; pTrackerServer++)
+	{
+		memcpy(&tracker_server, pTrackerServer, \
+			sizeof(TrackerServerInfo));
+		tracker_server.sock = -1;
+                if ((result=tracker_connect_server(&tracker_server)) != 0)
+		{
+			continue;
+		}
+
+		result = tracker_get_storage_status(&tracker_server, \
+			g_group_name, g_sync_src_id, &storage_brief);
+		tracker_disconnect_server(&tracker_server);
+		if (result == 0)
+		{
+			strcpy(g_sync_src_id, storage_brief.id);
+			return 0;
+		}
+	}
+
+	return result;
+}
 
 int storage_get_params_from_tracker()
 {
@@ -138,6 +174,27 @@ int storage_get_params_from_tracker()
 		(int)(g_trunk_create_file_space_threshold / \
 		(FDFS_ONE_MB * 1024)), g_trunk_init_check_occupying, \
 		g_trunk_init_reload_from_binlog);
+
+	if (g_use_storage_id && *g_sync_src_id != '\0' && \
+		!tracker_is_server_id_valid(g_sync_src_id))
+	{
+		if ((result=storage_convert_src_server_id()) == 0)
+		{
+			storage_write_to_sync_ini_file();
+		}
+		else
+		{
+			if (result == ENOENT)
+			{
+				*g_sync_src_id = '\0';
+				storage_write_to_sync_ini_file();
+			}
+			else
+			{
+				return result;
+			}
+		}
+	}
 
 	return 0;
 }

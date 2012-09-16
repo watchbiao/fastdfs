@@ -148,33 +148,6 @@ int tracker_check_storage_id(const char *group_name, const char *id)
 	return strcmp((*ppFound)->group_name, group_name) == 0 ? 0 : EINVAL;
 }
 
-bool tracker_is_server_id_valid(const char *id)
-{
-	long n;
-	char *endptr;
-	char buff[FDFS_STORAGE_ID_MAX_SIZE];
-
-	if (*id == '\0')
-	{
-		return false;
-	}
-
-	endptr = NULL;
-	n = strtol(id, &endptr, 10);
-	if (endptr != NULL && *endptr != '\0')
-	{
-		return false;
-	}
-
-	if (n <= 0 || n >= INT_MAX)
-	{
-		return false;
-	}
-
-	snprintf(buff, sizeof(buff), "%ld", n);
-	return strcmp(buff, id) == 0;
-}
-
 static int tracker_load_storage_ids(const char *filename, \
 		IniContext *pItemContext)
 {
