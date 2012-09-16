@@ -3549,7 +3549,6 @@ static int storage_server_trunk_delete_binlog_marks(struct fast_task_info *pTask
 	TrackerHeader *pHeader;
 	FDFSStorageServer *pStorageServer;
 	FDFSStorageServer *pServerEnd;
-	char full_filename[MAX_PATH_SIZE];
 	int64_t nInPackLen;
 	int result;
 
@@ -3600,21 +3599,11 @@ static int storage_server_trunk_delete_binlog_marks(struct fast_task_info *pTask
 			continue;
 		}
 
-		trunk_get_mark_filename_by_id_and_port(
-			pStorageServer->server.id, g_server_port, 
-			full_filename, sizeof(full_filename));
-		if (unlink(full_filename) != 0)
+		if ((result=trunk_unlink_mark_file( \
+			pStorageServer->server.id)) != 0)
 		{
-			result = errno != 0 ? errno : ENOENT;
 			if (result != ENOENT)
 			{
-				logError("file: "__FILE__", line: %d, " \
-					"cmd=%d, client ip: %s, " \
-					"unlink trunk mark file: %s fail, " \
-					"errno: %d, error info: %s", \
-					 __LINE__, pHeader->cmd, \
-					pTask->client_ip, full_filename, \
-					result, STRERROR(result));
 				return result;
 			}
 		}
