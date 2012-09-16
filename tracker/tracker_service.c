@@ -328,7 +328,7 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 			TrackerServerInfo *pTServer;
 			pTServer = g_tracker_servers.servers + leader_index;
 			snprintf(pDestServer->id, FDFS_STORAGE_ID_MAX_SIZE, \
-				pTServer->ip_addr);
+				"%s", pTServer->ip_addr);
 			memcpy(pDestServer->ip_addr, pTServer->ip_addr, \
 				IP_ADDRESS_SIZE);
 			int2buff(pTServer->port, pDestServer->port);
