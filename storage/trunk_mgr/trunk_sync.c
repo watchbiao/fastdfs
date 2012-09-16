@@ -576,6 +576,7 @@ int trunk_reader_init(FDFSStorageBrief *pStorage, TrunkBinLogReader *pReader)
 						STRERROR(errno));
 					return errno != 0 ? errno : EACCES;
 				}
+				bFileExist = true;
 			}
 		}
 	}

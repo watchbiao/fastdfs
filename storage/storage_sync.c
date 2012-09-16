@@ -1912,6 +1912,7 @@ int storage_reader_init(FDFSStorageBrief *pStorage, StorageBinLogReader *pReader
 						STRERROR(errno));
 					return errno != 0 ? errno : EACCES;
 				}
+				bFileExist = true;
 			}
 		}
 	}
