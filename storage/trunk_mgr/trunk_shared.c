@@ -647,7 +647,7 @@ bool fdfs_is_trunk_file(const char *remote_filename, const int filename_len)
 		buff, &buff_len);
 
 	file_size = buff2long(buff + sizeof(int) * 2);
-	return (file_size & FDFS_TRUNK_FILE_MARK_SIZE) ? true : false;
+	return IS_TRUNK_FILE(file_size);
 }
 
 int fdfs_decode_trunk_info(const int store_path_index, \
