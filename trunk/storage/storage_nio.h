@@ -121,8 +121,10 @@ typedef struct
 
 	StorageFileContext file_context;
 
-	int64_t total_length;   //pkg total length
-	int64_t total_offset;   //pkg current offset
+	int64_t total_length;   //pkg total length for req and request
+	int64_t total_offset;   //pkg current offset for req and request
+
+	int64_t request_length;   //request pkg length for access log
 
 	FDFSStorageServer *pSrcStorage;
 	TaskDealFunc deal_func;  //function pointer to deal this task

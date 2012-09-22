@@ -46,6 +46,18 @@
 #include "trunk_sync.h"
 #include "trunk_client.h"
 
+//storage access log actions
+#define ACCESS_LOG_ACTION_UPLOAD_FILE    "upload"
+#define ACCESS_LOG_ACTION_DOWNLOAD_FILE  "download"
+#define ACCESS_LOG_ACTION_DELETE_FILE    "delete"
+#define ACCESS_LOG_ACTION_GET_METADATA   "get_metadata"
+#define ACCESS_LOG_ACTION_SET_METADATA   "set_metadata"
+#define ACCESS_LOG_ACTION_MODIFY_FILE    "modify"
+#define ACCESS_LOG_ACTION_APPEND_FILE    "append"
+#define ACCESS_LOG_ACTION_TRUNCATE_FILE  "truncate"
+#define ACCESS_LOG_ACTION_QUERY_FILE     "status"
+
+
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
 LogContext g_access_log_context = {LOG_INFO, STDERR_FILENO, NULL};
@@ -222,6 +234,60 @@ static FDFSStorageServer *get_storage_server(const char *storage_server_id)
 		success_bytes += bytes; \
 		++g_stat_change_count;  \
 		pthread_mutex_unlock(&stat_count_thread_lock);
+
+static void storage_log_access_log(struct fast_task_info *pTask, \
+		const char *action, const int status)
+{
+	StorageClientInfo *pClientInfo;
+	struct timeval tv_end;
+	int time_used;
+
+	pClientInfo = (StorageClientInfo *)pTask->arg;
+	gettimeofday(&tv_end, NULL);
+	time_used = (tv_end.tv_sec - pClientInfo->file_context. \
+			tv_deal_start.tv_sec) * 1000
+		  + (tv_end.tv_usec - pClientInfo->file_context. \
+			tv_deal_start.tv_usec) / 1000;
+	logAccess(&g_access_log_context, &(pClientInfo->file_context. \
+		tv_deal_start), "%s %s %s %d %d "INT64_PRINTF_FORMAT" " \
+		INT64_PRINTF_FORMAT, pTask->client_ip, action, \
+		pClientInfo->file_context.fname2log, status, time_used, \
+		pClientInfo->request_length, pClientInfo->total_length);
+}
+
+#define STORAGE_ACCESS_STRCPY_FNAME2LOG(filename, filename_len, pClientInfo) \
+	do \
+	{ \
+		if (g_use_access_log) \
+		{ \
+			if (filename_len < sizeof(pClientInfo-> \
+				file_context.fname2log)) \
+			{ \
+				memcpy(pClientInfo->file_context.fname2log, \
+					filename, filename_len + 1); \
+			} \
+			else \
+			{ \
+				memcpy(pClientInfo->file_context.fname2log, \
+					filename, sizeof(pClientInfo-> \
+					file_context.fname2log)); \
+				*(pClientInfo->file_context.fname2log + \
+					sizeof(pClientInfo->file_context. \
+					fname2log) - 1) = '\0'; \
+			} \
+		} \
+	} while (0)
+	
+
+#define STORAGE_ACCESS_LOG(pTask, action, status) \
+	do \
+	{ \
+		if (g_use_access_log && (status != STORAGE_STATUE_DEAL_FILE)) \
+		{ \
+			storage_log_access_log(pTask, action, status); \
+		} \
+	} while (0)
+
 
 static int storage_delete_file_auto(StorageFileContext *pFileContext)
 {
@@ -576,6 +642,9 @@ static void storage_get_metadata_done_callback(struct fast_task_info *pTask, \
 {
 	TrackerHeader *pHeader;
 
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_GET_METADATA, \
+		err_no);
+
 	if (err_no != 0)
 	{
 		pthread_mutex_lock(&stat_count_thread_lock);
@@ -603,11 +672,14 @@ static void storage_get_metadata_done_callback(struct fast_task_info *pTask, \
 	}
 }
 
-static void storage_download_file_done_callback(struct fast_task_info *pTask, \
-			const int err_no)
+static void storage_download_file_done_callback( \
+		struct fast_task_info *pTask, const int err_no)
 {
 	StorageFileContext *pFileContext;
 	TrackerHeader *pHeader;
+
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_DOWNLOAD_FILE, \
+		err_no);
 
 	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
 	if (err_no != 0)
@@ -942,6 +1014,8 @@ static void storage_delete_fdfs_file_done_callback( \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_DELETE_FILE, err_no);
+
 	if (err_no == 0)
 	{
 		if (pFileContext->extra_info.upload.file_type & \
@@ -1205,6 +1279,8 @@ static void storage_append_file_done_callback(struct fast_task_info *pTask, \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_APPEND_FILE, err_no);
+
 	if (err_no == 0)
 	{
 		sprintf(extra, INT64_PRINTF_FORMAT" "INT64_PRINTF_FORMAT, \
@@ -1260,6 +1336,8 @@ static void storage_modify_file_done_callback(struct fast_task_info *pTask, \
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
+
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_MODIFY_FILE, err_no);
 
 	if (err_no == 0)
 	{
@@ -1317,6 +1395,9 @@ static void storage_do_truncate_file_done_callback(struct fast_task_info *pTask,
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_TRUNCATE_FILE, \
+		err_no);
+
 	if (err_no == 0)
 	{
 		sprintf(extra, INT64_PRINTF_FORMAT" "INT64_PRINTF_FORMAT, \
@@ -1357,8 +1438,8 @@ static void storage_do_truncate_file_done_callback(struct fast_task_info *pTask,
 	storage_nio_notify(pTask);
 }
 
-static void storage_set_metadata_done_callback(struct fast_task_info *pTask, \
-			const int err_no)
+static void storage_set_metadata_done_callback( \
+		struct fast_task_info *pTask, const int err_no)
 {
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
@@ -1367,6 +1448,8 @@ static void storage_set_metadata_done_callback(struct fast_task_info *pTask, \
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
+
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_SET_METADATA, err_no);
 
 	if (err_no == 0)
 	{
@@ -3019,6 +3102,9 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 	*(filename + filename_len) = '\0';
 	p += filename_len;
 
+	STORAGE_ACCESS_STRCPY_FNAME2LOG(filename, filename_len, \
+		pClientInfo);
+
 	true_filename_len = filename_len;
 	if ((result=storage_split_filename_ex(filename, \
 		&true_filename_len, true_filename, &store_path_index)) != 0)
@@ -3206,21 +3292,26 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-	if (nInPackLen >= pTask->size)
+	filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
+	if (filename_len >= sizeof(pClientInfo->file_context.fname2log))
 	{
 		logError("file: "__FILE__", line: %d, " \
-			"cmd=%d, client ip: %s, package size " \
-			INT64_PRINTF_FORMAT" is not correct, " \
-			"expect length < %d", __LINE__, \
+			"cmd=%d, client ip: %s, filename length: %d" \
+			" is not correct, expect length < %d", __LINE__, \
 			STORAGE_PROTO_CMD_QUERY_FILE_INFO, \
-			pTask->client_ip, nInPackLen, (int)pTask->size);
+			pTask->client_ip, filename_len, \
+			(int)sizeof(pClientInfo->file_context.fname2log));
 		return EINVAL;
 	}
 
-	filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
+	in_buff = pTask->data + sizeof(TrackerHeader);
+	filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
+	*(filename + filename_len) = '\0';
+
+	STORAGE_ACCESS_STRCPY_FNAME2LOG(filename, filename_len, \
+			pClientInfo);
 
 	bSilence = ((TrackerHeader *)pTask->data)->status != 0;
-	in_buff = pTask->data + sizeof(TrackerHeader);
 	memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
 	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
 	if (strcmp(group_name, g_group_name) != 0)
@@ -3232,9 +3323,6 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 			group_name, g_group_name);
 		return EINVAL;
 	}
-
-	filename = in_buff + FDFS_GROUP_NAME_MAX_LEN;
-	*(filename + filename_len) = '\0';
 
 	true_filename_len = filename_len;
 	if ((result=storage_split_filename_ex(filename, &true_filename_len, \
@@ -4346,8 +4434,11 @@ static int storage_append_file(struct fast_task_info *pTask)
 	memcpy(appender_filename, p, appender_filename_len);
 	*(appender_filename + appender_filename_len) = '\0';
 	p += appender_filename_len;
-
 	filename_len = appender_filename_len;
+
+	STORAGE_ACCESS_STRCPY_FNAME2LOG(appender_filename, \
+			appender_filename_len, pClientInfo);
+
 	if ((result=storage_split_filename_ex(appender_filename, \
 		&filename_len, true_filename, &store_path_index)) != 0)
 	{
@@ -4539,8 +4630,11 @@ static int storage_modify_file(struct fast_task_info *pTask)
 	memcpy(appender_filename, p, appender_filename_len);
 	*(appender_filename + appender_filename_len) = '\0';
 	p += appender_filename_len;
-
 	filename_len = appender_filename_len;
+
+	STORAGE_ACCESS_STRCPY_FNAME2LOG(appender_filename, \
+		appender_filename_len, pClientInfo);
+
 	if ((result=storage_split_filename_ex(appender_filename, \
 		&filename_len, true_filename, &store_path_index)) != 0)
 	{
@@ -4725,8 +4819,11 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 	memcpy(appender_filename, p, appender_filename_len);
 	*(appender_filename + appender_filename_len) = '\0';
 	p += appender_filename_len;
-
 	filename_len = appender_filename_len;
+
+	STORAGE_ACCESS_STRCPY_FNAME2LOG(appender_filename, \
+		appender_filename_len, pClientInfo);
+
 	if ((result=storage_split_filename_ex(appender_filename, \
 		&filename_len, true_filename, &store_path_index)) != 0)
 	{
@@ -4991,6 +5088,16 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
+
+	if (g_use_access_log)
+	{
+		snprintf(pFileContext->fname2log, \
+			sizeof(pFileContext->fname2log), \
+			"%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
+			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
+			store_path_index, filename);
+	}
+
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
 		"%s/data/%s", g_fdfs_store_paths[store_path_index], filename);
 	if (fileExists(pFileContext->filename))
@@ -6428,6 +6535,10 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 	filename = p;
 	filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
 	*(filename + filename_len) = '\0';
+
+	STORAGE_ACCESS_STRCPY_FNAME2LOG(filename, filename_len, \
+			pClientInfo);
+
 	if ((result=storage_split_filename_ex(filename, \
 		&filename_len, true_filename, &store_path_index)) != 0)
 	{
@@ -6582,6 +6693,9 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 	filename = p;
 	filename_len = nInPackLen - (16 + FDFS_GROUP_NAME_MAX_LEN);
 	*(filename + filename_len) = '\0';
+
+	STORAGE_ACCESS_STRCPY_FNAME2LOG(filename, filename_len, \
+			pClientInfo);
 
 	if ((result=storage_split_filename_ex(filename, \
 		&filename_len, true_filename, &store_path_index)) != 0)
@@ -6982,6 +7096,9 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 	filename = p;
 	filename_len = nInPackLen - FDFS_GROUP_NAME_MAX_LEN;
 	*(filename + filename_len) = '\0';
+
+	STORAGE_ACCESS_STRCPY_FNAME2LOG(filename, filename_len, \
+		pClientInfo);
 
 	true_filename_len = filename_len;
 	if ((result=storage_split_filename_ex(filename, \
@@ -7630,11 +7747,15 @@ int fdfs_stat_file_sync_func(void *args)
 	}
 }
 
-#define GET_DEAL_START_TIME() \
+#define ACCESS_LOG_INIT_FIELDS() \
 	do \
 	{ \
 		if (g_use_access_log) \
 		{ \
+			*(pClientInfo->file_context.fname2log) = '-'; \
+			*(pClientInfo->file_context.fname2log+1)='\0';\
+			pClientInfo->request_length = \
+				pClientInfo->total_length; \
 			gettimeofday(&(pClientInfo->file_context. \
 				tv_deal_start), NULL); \
 		} \
@@ -7652,52 +7773,84 @@ int storage_deal_task(struct fast_task_info *pTask)
 	switch(pHeader->cmd)
 	{
 		case STORAGE_PROTO_CMD_DOWNLOAD_FILE:
-			GET_DEAL_START_TIME();
+			ACCESS_LOG_INIT_FIELDS();
 			result = storage_server_download_file(pTask);
+			STORAGE_ACCESS_LOG(pTask, \
+				ACCESS_LOG_ACTION_DOWNLOAD_FILE, \
+				result);
 			break;
 		case STORAGE_PROTO_CMD_GET_METADATA:
-			GET_DEAL_START_TIME();
+			ACCESS_LOG_INIT_FIELDS();
 			result = storage_server_get_metadata(pTask);
+			STORAGE_ACCESS_LOG(pTask, \
+				ACCESS_LOG_ACTION_GET_METADATA, \
+				result);
 			break;
 		case STORAGE_PROTO_CMD_UPLOAD_FILE:
-			GET_DEAL_START_TIME();
+			ACCESS_LOG_INIT_FIELDS();
 			result = storage_upload_file(pTask, false);
+			STORAGE_ACCESS_LOG(pTask, \
+				ACCESS_LOG_ACTION_UPLOAD_FILE, \
+				result);
 			break;
 		case STORAGE_PROTO_CMD_UPLOAD_APPENDER_FILE:
-			GET_DEAL_START_TIME();
+			ACCESS_LOG_INIT_FIELDS();
 			result = storage_upload_file(pTask, true);
+			STORAGE_ACCESS_LOG(pTask, \
+				ACCESS_LOG_ACTION_UPLOAD_FILE, \
+				result);
 			break;
 		case STORAGE_PROTO_CMD_APPEND_FILE:
-			GET_DEAL_START_TIME();
+			ACCESS_LOG_INIT_FIELDS();
 			result = storage_append_file(pTask);
+			STORAGE_ACCESS_LOG(pTask, \
+				ACCESS_LOG_ACTION_APPEND_FILE, \
+				result);
 			break;
 		case STORAGE_PROTO_CMD_MODIFY_FILE:
-			GET_DEAL_START_TIME();
+			ACCESS_LOG_INIT_FIELDS();
 			result = storage_modify_file(pTask);
+			STORAGE_ACCESS_LOG(pTask, \
+				ACCESS_LOG_ACTION_MODIFY_FILE, \
+				result);
 			break;
 		case STORAGE_PROTO_CMD_TRUNCATE_FILE:
-			GET_DEAL_START_TIME();
+			ACCESS_LOG_INIT_FIELDS();
 			result = storage_do_truncate_file(pTask);
+			STORAGE_ACCESS_LOG(pTask, \
+				ACCESS_LOG_ACTION_TRUNCATE_FILE, \
+				result);
 			break;
 		case STORAGE_PROTO_CMD_UPLOAD_SLAVE_FILE:
-			GET_DEAL_START_TIME();
+			ACCESS_LOG_INIT_FIELDS();
 			result = storage_upload_slave_file(pTask);
+			STORAGE_ACCESS_LOG(pTask, \
+				ACCESS_LOG_ACTION_UPLOAD_FILE, \
+				result);
 			break;
 		case STORAGE_PROTO_CMD_DELETE_FILE:
-			GET_DEAL_START_TIME();
+			ACCESS_LOG_INIT_FIELDS();
 			result = storage_server_delete_file(pTask);
-			break;
-		case STORAGE_PROTO_CMD_CREATE_LINK:
-			GET_DEAL_START_TIME();
-			result = storage_create_link(pTask);
+			STORAGE_ACCESS_LOG(pTask, \
+				ACCESS_LOG_ACTION_DELETE_FILE, \
+				result);
 			break;
 		case STORAGE_PROTO_CMD_SET_METADATA:
-			GET_DEAL_START_TIME();
+			ACCESS_LOG_INIT_FIELDS();
 			result = storage_server_set_metadata(pTask);
+			STORAGE_ACCESS_LOG(pTask, \
+				ACCESS_LOG_ACTION_SET_METADATA, \
+				result);
 			break;
 		case STORAGE_PROTO_CMD_QUERY_FILE_INFO:
-			GET_DEAL_START_TIME();
+			ACCESS_LOG_INIT_FIELDS();
 			result = storage_server_query_file_info(pTask);
+			STORAGE_ACCESS_LOG(pTask, \
+				ACCESS_LOG_ACTION_QUERY_FILE, \
+				result);
+			break;
+		case STORAGE_PROTO_CMD_CREATE_LINK:
+			result = storage_create_link(pTask);
 			break;
 		case STORAGE_PROTO_CMD_SYNC_CREATE_FILE:
 			result = storage_sync_copy_file(pTask, pHeader->cmd);
