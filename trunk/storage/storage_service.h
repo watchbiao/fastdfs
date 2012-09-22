@@ -20,6 +20,7 @@
 #define STORAGE_DELETE_FLAG_LINK  2
 
 #include <event.h>
+#include "logger.h"
 #include "fdfs_define.h"
 #include "fast_task_queue.h"
 
@@ -29,6 +30,7 @@ extern "C" {
 
 extern int g_storage_thread_count;
 extern pthread_mutex_t g_storage_thread_lock;
+extern LogContext g_access_log_context;
 
 int storage_service_init();
 void storage_service_destroy();

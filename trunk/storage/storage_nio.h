@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <event.h>
 #include "tracker_types.h"
 #include "storage_func.h"
@@ -107,6 +108,8 @@ typedef struct
 	int64_t offset; //file current offset
 	FileDealDoneCallback done_callback;
 	DeleteFileLogCallback log_callback;
+
+	struct timeval tv_deal_start; //task deal start tv
 } StorageFileContext;
 
 typedef struct

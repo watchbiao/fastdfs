@@ -3,6 +3,7 @@ Version 4.00  2012-09-22
  * identify storage server by ID instead of IP address
  * tracker.conf: storage reserved space can use ratio such as 10%
  * appender file and trunk file also use rand number in file id
+ * storage server support access log
 
 Version 3.11  2012-08-04
  * setsockopt set linger.l_linger to micro-seconds in FreeBSD and seconds 
