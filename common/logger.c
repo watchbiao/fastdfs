@@ -66,9 +66,11 @@ int log_init_ex(LogContext *pContext)
 {
 	int result;
 
+	memset(pContext, 0, sizeof(LogContext));
 	pContext->log_level = LOG_INFO;
 	pContext->log_fd = STDERR_FILENO;
 	pContext->log_to_cache = false;
+	pContext->rotate_immediately = false;
 	pContext->time_precision = LOG_TIME_PRECISION_SECOND;
 
 	pContext->log_buff = (char *)malloc(LOG_BUFF_SIZE);
@@ -89,26 +91,14 @@ int log_init_ex(LogContext *pContext)
 	return 0;
 }
 
-int log_set_prefix_ex(LogContext *pContext, const char *base_path, \
-		const char *filename_prefix)
+static int log_open(LogContext *pContext)
 {
-	int result;
-	char logfile[MAX_PATH_SIZE];
-
-	if ((result=check_and_mk_log_dir(base_path)) != 0)
-	{
-		return result;
-	}
-
-	snprintf(logfile, MAX_PATH_SIZE, "%s/logs/%s.log", \
-		base_path, filename_prefix);
-
-	if ((pContext->log_fd = open(logfile, O_WRONLY | O_CREAT | O_APPEND, \
-					0644)) < 0)
+	if ((pContext->log_fd = open(pContext->log_filename, O_WRONLY | \
+				O_CREAT | O_APPEND, 0644)) < 0)
 	{
 		fprintf(stderr, "open log file \"%s\" to write fail, " \
 			"errno: %d, error info: %s", \
-			logfile, errno, STRERROR(errno));
+			pContext->log_filename, errno, STRERROR(errno));
 		pContext->log_fd = STDERR_FILENO;
 		return errno != 0 ? errno : EACCES;
 	}
@@ -116,19 +106,26 @@ int log_set_prefix_ex(LogContext *pContext, const char *base_path, \
 	return 0;
 }
 
-int log_set_filename_ex(LogContext *pContext, const char *log_filename)
+int log_set_prefix_ex(LogContext *pContext, const char *base_path, \
+		const char *filename_prefix)
 {
-	if ((pContext->log_fd = open(log_filename, O_WRONLY | O_CREAT | \
-				O_APPEND, 0644)) < 0)
+	int result;
+
+	if ((result=check_and_mk_log_dir(base_path)) != 0)
 	{
-		fprintf(stderr, "open log file \"%s\" to write fail, " \
-			"errno: %d, error info: %s", \
-			log_filename, errno, STRERROR(errno));
-		pContext->log_fd = STDERR_FILENO;
-		return errno != 0 ? errno : EACCES;
+		return result;
 	}
 
-	return 0;
+	snprintf(pContext->log_filename, MAX_PATH_SIZE, "%s/logs/%s.log", \
+		base_path, filename_prefix);
+
+	return log_open(pContext);
+}
+
+int log_set_filename_ex(LogContext *pContext, const char *log_filename)
+{
+	snprintf(pContext->log_filename, MAX_PATH_SIZE, "%s", log_filename);
+	return log_open(pContext);
 }
 
 void log_set_cache_ex(LogContext *pContext, const bool bLogCache)
@@ -171,27 +168,107 @@ int log_sync_func(void *args)
 	return log_fsync((LogContext *)args, true);
 }
 
+int log_notify_rotate(void *args)
+{
+	if (args == NULL)
+	{
+		return EINVAL;
+	}
+
+	((LogContext *)args)->rotate_immediately = true;
+	return 0;
+}
+
+static int log_rotate(LogContext *pContext)
+{
+	struct tm tm;
+	time_t current_time;
+	char new_filename[MAX_PATH_SIZE + 32];
+
+	if (*(pContext->log_filename) == '\0')
+	{
+		return ENOENT;
+	}
+
+	close(pContext->log_fd);
+
+	current_time = time(NULL);
+	localtime_r(&current_time, &tm);
+	sprintf(new_filename, "%s.%04d%02d%02d_%02d%02d%02d", \
+			pContext->log_filename, \
+			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
+			tm.tm_hour, tm.tm_min, tm.tm_sec);
+	if (rename(pContext->log_filename, new_filename) != 0)
+	{
+		fprintf(stderr, "file: "__FILE__", line: %d, " \
+			"rename %s to %s fail, errno: %d, error info: %s", \
+			__LINE__, pContext->log_filename, new_filename, \
+			errno, STRERROR(errno));
+	}
+
+	return log_open(pContext);
+}
+
+static int log_check_rotate(LogContext *pContext, const bool bNeedLock)
+{
+	int result;
+
+	if (bNeedLock)
+	{
+		pthread_mutex_lock(&(pContext->log_thread_lock));
+	}
+
+	result = 0;
+	do
+	{
+		if (!pContext->rotate_immediately)
+		{
+			break;
+		}
+
+		result = log_rotate(pContext);
+		pContext->rotate_immediately = false;
+	} while (0);
+
+	if (bNeedLock)
+	{
+		pthread_mutex_unlock(&(pContext->log_thread_lock));
+	}
+
+	return result;
+}
+
 static int log_fsync(LogContext *pContext, const bool bNeedLock)
 {
 	int result;
+	int lock_res;
 	int write_bytes;
 
 	write_bytes = pContext->pcurrent_buff - pContext->log_buff;
 	if (write_bytes == 0)
 	{
-		return 0;
+		if (!pContext->rotate_immediately)
+		{
+			return 0;
+		}
+		else
+		{
+			return log_check_rotate(pContext, bNeedLock);
+		}
 	}
 
-	result = 0;
-	if (bNeedLock && ((result=pthread_mutex_lock( \
+	if (bNeedLock && ((lock_res=pthread_mutex_lock( \
 			&(pContext->log_thread_lock))) != 0))
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, STRERROR(result));
+			__LINE__, lock_res, STRERROR(lock_res));
 	}
 
+	result = 0;
+	do
+	{
 	write_bytes = pContext->pcurrent_buff - pContext->log_buff;
 	if (write(pContext->log_fd, pContext->log_buff, write_bytes) != \
 		write_bytes)
@@ -200,6 +277,7 @@ static int log_fsync(LogContext *pContext, const bool bNeedLock)
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call write fail, errno: %d, error info: %s\n",\
 			 __LINE__, result, STRERROR(result));
+		break;
 	}
 
 	if (pContext->log_fd != STDERR_FILENO)
@@ -210,17 +288,24 @@ static int log_fsync(LogContext *pContext, const bool bNeedLock)
 			fprintf(stderr, "file: "__FILE__", line: %d, " \
 				"call fsync fail, errno: %d, error info: %s\n",\
 				 __LINE__, result, STRERROR(result));
+			break;
 		}
 	}
 
+	if (pContext->rotate_immediately)
+	{
+		result = log_check_rotate(pContext, false);
+	}
+	} while (0);
+
 	pContext->pcurrent_buff = pContext->log_buff;
-	if (bNeedLock && ((result=pthread_mutex_unlock( \
+	if (bNeedLock && ((lock_res=pthread_mutex_unlock( \
 			&(pContext->log_thread_lock))) != 0))
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
 			"call pthread_mutex_unlock fail, " \
 			"errno: %d, error info: %s", \
-			__LINE__, result, STRERROR(result));
+			__LINE__, lock_res, STRERROR(lock_res));
 	}
 
 	return result;

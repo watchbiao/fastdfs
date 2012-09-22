@@ -1014,8 +1014,6 @@ static void storage_delete_fdfs_file_done_callback( \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
-	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_DELETE_FILE, err_no);
-
 	if (err_no == 0)
 	{
 		if (pFileContext->extra_info.upload.file_type & \
@@ -1082,6 +1080,8 @@ static void storage_delete_fdfs_file_done_callback( \
 	long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
 			pHeader->pkg_len);
 
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_DELETE_FILE, result);
+
 	storage_nio_notify(pTask);
 }
 
@@ -1109,7 +1109,7 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 	{
 		result = err_no;
 	}
-	
+
 	if (result == 0)
 	{
 		result = storage_service_upload_file_done(pTask);
@@ -1163,6 +1163,8 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 
 		pClientInfo->total_length = sizeof(TrackerHeader);
 	}
+
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_UPLOAD_FILE, result);
 
 	pClientInfo->total_offset = 0;
 	pTask->length = pClientInfo->total_length;
@@ -1279,8 +1281,6 @@ static void storage_append_file_done_callback(struct fast_task_info *pTask, \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
-	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_APPEND_FILE, err_no);
-
 	if (err_no == 0)
 	{
 		sprintf(extra, INT64_PRINTF_FORMAT" "INT64_PRINTF_FORMAT, \
@@ -1322,6 +1322,8 @@ static void storage_append_file_done_callback(struct fast_task_info *pTask, \
 	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
 	long2buff(0, pHeader->pkg_len);
 
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_APPEND_FILE, result);
+
 	storage_nio_notify(pTask);
 }
 
@@ -1336,8 +1338,6 @@ static void storage_modify_file_done_callback(struct fast_task_info *pTask, \
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
-
-	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_MODIFY_FILE, err_no);
 
 	if (err_no == 0)
 	{
@@ -1380,6 +1380,8 @@ static void storage_modify_file_done_callback(struct fast_task_info *pTask, \
 	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
 	long2buff(0, pHeader->pkg_len);
 
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_MODIFY_FILE, result);
+
 	storage_nio_notify(pTask);
 }
 
@@ -1394,9 +1396,6 @@ static void storage_do_truncate_file_done_callback(struct fast_task_info *pTask,
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
-
-	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_TRUNCATE_FILE, \
-		err_no);
 
 	if (err_no == 0)
 	{
@@ -1435,6 +1434,8 @@ static void storage_do_truncate_file_done_callback(struct fast_task_info *pTask,
 	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
 	long2buff(0, pHeader->pkg_len);
 
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_TRUNCATE_FILE, result);
+
 	storage_nio_notify(pTask);
 }
 
@@ -1448,8 +1449,6 @@ static void storage_set_metadata_done_callback( \
 
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
-
-	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_SET_METADATA, err_no);
 
 	if (err_no == 0)
 	{
@@ -1490,6 +1489,8 @@ static void storage_set_metadata_done_callback( \
 	pHeader->cmd = STORAGE_PROTO_CMD_RESP;
 	long2buff(pClientInfo->total_length - sizeof(TrackerHeader), \
 			pHeader->pkg_len);
+
+	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_SET_METADATA, result);
 
 	storage_nio_notify(pTask);
 }

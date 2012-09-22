@@ -1446,6 +1446,14 @@ int storage_func_init(const char *filename, \
 
 		g_use_access_log = iniGetBoolValue(NULL, "use_access_log", \
 					&iniContext, false);
+		g_rotate_access_log = iniGetBoolValue(NULL, "rotate_access_log",\
+					&iniContext, false);
+		if ((result=get_time_item_from_conf(&iniContext, \
+			"access_log_rotate_time", &g_access_log_rotate_time, \
+			0, 0)) != 0)
+		{
+			break;
+		}
 
 #ifdef WITH_HTTPD
 		{
@@ -1499,7 +1507,9 @@ int storage_func_init(const char *filename, \
 			"check_file_duplicate=%d, FDHT group count=%d, " \
 			"FDHT server count=%d, FDHT key_namespace=%s, " \
 			"FDHT keep_alive=%d, HTTP server port=%d, " \
-			"domain name=%s, use_access_log=%d", \
+			"domain name=%s, use_access_log=%d, " \
+			"rotate_access_log=%d, " \
+			"access_log_rotate_time=%02d:%02d", \
 			g_fdfs_version.major, g_fdfs_version.minor, \
 			g_fdfs_base_path, g_fdfs_path_count, g_subdir_count_per_path,\
 			g_group_name, g_run_by_group, g_run_by_user, \
@@ -1523,7 +1533,9 @@ int storage_func_init(const char *filename, \
 			g_if_alias_prefix, g_check_file_duplicate, \
 			g_group_array.group_count, g_group_array.server_count, \
 			g_key_namespace, g_keep_alive, \
-			g_http_port, g_http_domain, g_use_access_log);
+			g_http_port, g_http_domain, g_use_access_log, \
+			g_rotate_access_log, g_access_log_rotate_time.hour, \
+			g_access_log_rotate_time.minute);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)
