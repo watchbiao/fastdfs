@@ -264,7 +264,7 @@ static bool storage_is_slave_file(const char *remote_filename, \
 		buff, &buff_len);
 
 	file_size = buff2long(buff + sizeof(int) * 2);
-	if (file_size & FDFS_TRUNK_FILE_MARK_SIZE)
+	if (IS_TRUNK_FILE(file_size))
 	{
 		return filename_len > FDFS_TRUNK_LOGIC_FILENAME_LENGTH;
 	}
@@ -1818,6 +1818,15 @@ void storage_get_store_path(const char *filename, const int filename_len, \
 	}
 }
 
+#define COMBINE_RAND_FILE_SIZE(file_size, masked_file_size) \
+	do \
+	{ \
+		int r; \
+		r = (rand() & 0x007FFFFF) | 0x80000000; \
+		masked_file_size = (((int64_t)r) << 32 ) | file_size; \
+	} while (0)
+
+
 static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 		const int64_t file_size, const int crc32, \
 		const char *szFormattedExt, const int ext_name_len, \
@@ -1827,7 +1836,6 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 	char encoded[sizeof(int) * 8 + 1];
 	char szStorageIp[IP_ADDRESS_SIZE];
 	int len;
-	int r;
 	in_addr_t server_ip;
 	int64_t masked_file_size;
 	FDFSTrunkFullInfo *pTrunkInfo;
@@ -1844,15 +1852,7 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 	}
 	else
 	{
-		r = rand();
-		if ((r & 0x80000000) == 0)
-		{
-			r |= 0x80000000;
-		}
-
-		masked_file_size = ((((int64_t)r) << 32 ) | file_size) & \
-					(~(FDFS_TRUNK_FILE_MARK_SIZE | \
-					FDFS_APPENDER_FILE_SIZE));
+		COMBINE_RAND_FILE_SIZE(file_size, masked_file_size);
 	}
 	long2buff(masked_file_size, buff+sizeof(int)*2);
 	int2buff(crc32, buff+sizeof(int)*4);
@@ -2118,12 +2118,14 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_APPENDER)
 	{
 		end_time = time(NULL);
-		file_size_in_name = FDFS_APPENDER_FILE_SIZE;
+		COMBINE_RAND_FILE_SIZE(0, file_size_in_name);
+		file_size_in_name |= FDFS_APPENDER_FILE_SIZE;
 	}
 	else if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_TRUNK)
 	{
 		end_time = pFileContext->extra_info.upload.start_time;
-		file_size_in_name = FDFS_TRUNK_FILE_MARK_SIZE | file_size;
+		COMBINE_RAND_FILE_SIZE(file_size, file_size_in_name);
+		file_size_in_name |= FDFS_TRUNK_FILE_MARK_SIZE;
 	}
 	else
 	{

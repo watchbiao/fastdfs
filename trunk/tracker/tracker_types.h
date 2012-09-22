@@ -101,7 +101,7 @@
 #define FDFS_CHANGE_FLAG_TRUNK_SERVER	2  //trunk server changed
 #define FDFS_CHANGE_FLAG_GROUP_SERVER	4  //group server changed
 
-#define IS_APPENDER_FILE(file_size)   (file_size == FDFS_APPENDER_FILE_SIZE)
+#define IS_APPENDER_FILE(file_size)   ((file_size & FDFS_APPENDER_FILE_SIZE)!=0)
 #define IS_TRUNK_FILE(file_size)     ((file_size&FDFS_TRUNK_FILE_MARK_SIZE)!=0)
 
 #define IS_SLAVE_FILE(filename_len, file_size) \
@@ -110,7 +110,7 @@
 	 !IS_TRUNK_FILE(file_size)))
 
 #define FDFS_TRUNK_FILE_TRUE_SIZE(file_size) \
-	(file_size & (~(FDFS_TRUNK_FILE_MARK_SIZE)))
+	(file_size & 0xFFFFFFFF)
 
 #define FDFS_STORAGE_ID_MAX_SIZE	16
 
