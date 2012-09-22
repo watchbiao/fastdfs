@@ -75,7 +75,7 @@ static void sigSegvHandler(int signum, siginfo_t *info, void *ptr);
 static void sigDumpHandler(int sig);
 #endif
 
-#define SCHEDULE_ENTRIES_COUNT 5
+#define SCHEDULE_ENTRIES_MAX_COUNT 6
 
 int main(int argc, char *argv[])
 {
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 	int sock;
 	pthread_t schedule_tid;
 	struct sigaction act;
-	ScheduleEntry scheduleEntries[SCHEDULE_ENTRIES_COUNT];
+	ScheduleEntry scheduleEntries[SCHEDULE_ENTRIES_MAX_COUNT];
 	ScheduleArray scheduleArray;
 
 	if (argc < 2)
@@ -319,6 +319,20 @@ int main(int argc, char *argv[])
 		scheduleEntries[scheduleArray.count].func_args = \
 					&g_access_log_context;
 		scheduleArray.count++;
+
+		if (g_rotate_access_log)
+		{
+			scheduleEntries[scheduleArray.count].id = 6;
+			scheduleEntries[scheduleArray.count].time_base = \
+					g_access_log_rotate_time;
+			scheduleEntries[scheduleArray.count].interval = \
+					24 * 3600;
+			scheduleEntries[scheduleArray.count].task_func = \
+					log_notify_rotate;
+			scheduleEntries[scheduleArray.count].func_args = \
+					&g_access_log_context;
+			scheduleArray.count++;
+		}
 	}
 
 	if ((result=sched_start(&scheduleArray, &schedule_tid, \

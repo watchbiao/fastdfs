@@ -44,8 +44,14 @@ typedef struct log_context
 	   default value is false (no cache) */
 	bool log_to_cache;
 
+	/* if rotate the access log */
+	bool rotate_immediately;
+
 	/* time precision */
 	char time_precision;
+
+	/* save the log filename */
+	char log_filename[MAX_PATH_SIZE];
 } LogContext;
 
 extern LogContext g_log_context;
@@ -143,6 +149,13 @@ void log_it_ex1(LogContext *pContext, const int priority, \
  *  return: error no, 0 for success, != 0 fail
 */
 int log_sync_func(void *args);
+
+/** set rotate flag to true
+ *  parameters:
+ *           args: should be (LogContext *)
+ *  return: error no, 0 for success, != 0 fail
+*/
+int log_notify_rotate(void *args);
 
 void logEmergEx(LogContext *pContext, const char *format, ...);
 void logCritEx(LogContext *pContext, const char *format, ...);

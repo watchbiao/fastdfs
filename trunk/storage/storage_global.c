@@ -75,14 +75,17 @@ char g_my_server_id[FDFS_STORAGE_ID_MAX_SIZE] = {0}; //my server id
 char g_tracker_client_ip[IP_ADDRESS_SIZE] = {0}; //storage ip as tracker client
 char g_last_storage_ip[IP_ADDRESS_SIZE] = {0};	 //the last storage ip address
 
-bool g_use_access_log = false;  //if log to access log
-bool g_use_storage_id = false;  //identify storage by ID instead of IP address
+bool g_use_access_log = false;    //if log to access log
+bool g_rotate_access_log = false; //if rotate the access log every day
+bool g_use_storage_id = false;    //identify storage by ID instead of IP address
 
 bool g_check_file_duplicate = false;
 char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1] = {0};
 int g_namespace_len = 0;
 int g_allow_ip_count = 0;
 in_addr_t *g_allow_ip_addrs = NULL;
+
+TimeInfo g_access_log_rotate_time = {0, 0}; //rotate access log time base
 
 gid_t g_run_by_gid;
 uid_t g_run_by_uid;
