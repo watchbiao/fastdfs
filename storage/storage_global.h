@@ -118,6 +118,7 @@ extern char g_tracker_client_ip[IP_ADDRESS_SIZE]; //storage ip as tracker client
 extern char g_last_storage_ip[IP_ADDRESS_SIZE];	//the last storage ip address
 
 extern bool g_use_storage_id;  //identify storage by ID instead of IP address
+extern bool g_use_access_log;  //if log to access log
 
 extern bool g_check_file_duplicate;  //if check file content duplicate
 extern char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1];

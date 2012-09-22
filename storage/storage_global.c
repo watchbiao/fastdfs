@@ -75,6 +75,7 @@ char g_my_server_id[FDFS_STORAGE_ID_MAX_SIZE] = {0}; //my server id
 char g_tracker_client_ip[IP_ADDRESS_SIZE] = {0}; //storage ip as tracker client
 char g_last_storage_ip[IP_ADDRESS_SIZE] = {0};	 //the last storage ip address
 
+bool g_use_access_log = false;  //if log to access log
 bool g_use_storage_id = false;  //identify storage by ID instead of IP address
 
 bool g_check_file_duplicate = false;

@@ -69,6 +69,7 @@ int log_init_ex(LogContext *pContext)
 	pContext->log_level = LOG_INFO;
 	pContext->log_fd = STDERR_FILENO;
 	pContext->log_to_cache = false;
+	pContext->time_precision = LOG_TIME_PRECISION_SECOND;
 
 	pContext->log_buff = (char *)malloc(LOG_BUFF_SIZE);
 	if (pContext->log_buff == NULL)
@@ -133,6 +134,11 @@ int log_set_filename_ex(LogContext *pContext, const char *log_filename)
 void log_set_cache_ex(LogContext *pContext, const bool bLogCache)
 {
 	pContext->log_to_cache = bLogCache;
+}
+
+void log_set_time_precision(LogContext *pContext, const int time_precision)
+{
+	pContext->time_precision = time_precision;
 }
 
 void log_destroy_ex(LogContext *pContext)
@@ -220,16 +226,32 @@ static int log_fsync(LogContext *pContext, const bool bNeedLock)
 	return result;
 }
 
-static void doLog(LogContext *pContext, const char *caption, \
-		const char *text, const int text_len, const bool bNeedSync)
+static void doLogEx(LogContext *pContext, struct timeval *tv, \
+		const char *caption, const char *text, const int text_len, \
+		const bool bNeedSync)
 {
-	time_t t;
 	struct tm tm;
+	int time_fragment;
 	int buff_len;
 	int result;
 
-	t = time(NULL);
-	localtime_r(&t, &tm);
+	if (pContext->time_precision == LOG_TIME_PRECISION_SECOND)
+	{
+		time_fragment = 0;
+	}
+	else
+	{
+		if (pContext->time_precision == LOG_TIME_PRECISION_MSECOND)
+		{
+			time_fragment = tv->tv_usec / 1000;
+		}
+		else
+		{
+			time_fragment = tv->tv_usec;
+		}
+	}
+
+	localtime_r(&tv->tv_sec, &tm);
 	if ((result=pthread_mutex_lock(&pContext->log_thread_lock)) != 0)
 	{
 		fprintf(stderr, "file: "__FILE__", line: %d, " \
@@ -253,11 +275,27 @@ static void doLog(LogContext *pContext, const char *caption, \
 		log_fsync(pContext, false);
 	}
 
-	buff_len = sprintf(pContext->pcurrent_buff, \
-			"[%04d-%02d-%02d %02d:%02d:%02d] %s - ", \
+	if (pContext->time_precision == LOG_TIME_PRECISION_SECOND)
+	{
+		buff_len = sprintf(pContext->pcurrent_buff, \
+			"[%04d-%02d-%02d %02d:%02d:%02d] ", \
 			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
-			tm.tm_hour, tm.tm_min, tm.tm_sec, caption);
+			tm.tm_hour, tm.tm_min, tm.tm_sec);
+	}
+	else
+	{
+		buff_len = sprintf(pContext->pcurrent_buff, \
+			"[%04d-%02d-%02d %02d:%02d:%02d.%d] ", \
+			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
+			tm.tm_hour, tm.tm_min, tm.tm_sec, time_fragment);
+	}
 	pContext->pcurrent_buff += buff_len;
+
+	if (caption != NULL)
+	{
+		buff_len = sprintf(pContext->pcurrent_buff, "%s - ", caption);
+		pContext->pcurrent_buff += buff_len;
+	}
 	memcpy(pContext->pcurrent_buff, text, text_len);
 	pContext->pcurrent_buff += text_len;
 	*pContext->pcurrent_buff++ = '\n';
@@ -274,6 +312,24 @@ static void doLog(LogContext *pContext, const char *caption, \
 			"errno: %d, error info: %s", \
 			__LINE__, result, STRERROR(result));
 	}
+}
+
+static void doLog(LogContext *pContext, const char *caption, \
+		const char *text, const int text_len, const bool bNeedSync)
+{
+	struct timeval tv;
+
+	if (pContext->time_precision == LOG_TIME_PRECISION_SECOND)
+	{
+		tv.tv_sec = time(NULL);
+		tv.tv_usec = 0;
+	}
+	else
+	{
+		gettimeofday(&tv, NULL);
+	}
+
+	doLogEx(pContext, &tv, caption, text, text_len, bNeedSync);
 }
 
 void log_it_ex1(LogContext *pContext, const int priority, \
@@ -432,12 +488,26 @@ void logNoticeEx(LogContext *pContext, const char *format, ...)
 
 void logInfoEx(LogContext *pContext, const char *format, ...)
 {
-	_DO_LOG(pContext, LOG_INFO, "INFO", true)
+	_DO_LOG(pContext, LOG_INFO, "INFO", false)
 }
 
 void logDebugEx(LogContext *pContext, const char *format, ...)
 {
-	_DO_LOG(pContext, LOG_DEBUG, "DEBUG", true)
+	_DO_LOG(pContext, LOG_DEBUG, "DEBUG", false)
+}
+
+void logAccess(LogContext *pContext, struct timeval *tvStart, \
+		const char *format, ...)
+{
+	char text[LINE_MAX];
+	int len;
+	va_list ap;
+
+	va_start(ap, format);
+	len = vsnprintf(text, sizeof(text), format, ap);
+	va_end(ap);
+
+	doLogEx(pContext, tvStart, NULL, text, len, false);
 }
 
 #ifndef LOG_FORMAT_CHECK

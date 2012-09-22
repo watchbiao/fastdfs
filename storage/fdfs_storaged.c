@@ -75,7 +75,7 @@ static void sigSegvHandler(int signum, siginfo_t *info, void *ptr);
 static void sigDumpHandler(int sig);
 #endif
 
-#define SCHEDULE_ENTRIES_COUNT 4
+#define SCHEDULE_ENTRIES_COUNT 5
 
 int main(int argc, char *argv[])
 {
@@ -295,20 +295,30 @@ int main(int argc, char *argv[])
 	scheduleEntries[2].task_func = fdfs_stat_file_sync_func;
 	scheduleEntries[2].func_args = NULL;
 
+	scheduleArray.count = 3;
 	if (g_if_use_trunk_file)
 	{
-		scheduleArray.count = SCHEDULE_ENTRIES_COUNT;
-
-		scheduleEntries[3].id = 4;
-		scheduleEntries[3].time_base.hour = TIME_NONE;
-		scheduleEntries[3].time_base.minute = TIME_NONE;
-		scheduleEntries[3].interval = 1;
-		scheduleEntries[3].task_func = trunk_binlog_sync_func;
-		scheduleEntries[3].func_args = NULL;
+		scheduleEntries[scheduleArray.count].id = 4;
+		scheduleEntries[scheduleArray.count].time_base.hour = TIME_NONE;
+		scheduleEntries[scheduleArray.count].time_base.minute=TIME_NONE;
+		scheduleEntries[scheduleArray.count].interval = 1;
+		scheduleEntries[scheduleArray.count].task_func = \
+					trunk_binlog_sync_func;
+		scheduleEntries[scheduleArray.count].func_args = NULL;
+		scheduleArray.count++;
 	}
-	else
+
+	if (g_use_access_log)
 	{
-		scheduleArray.count = SCHEDULE_ENTRIES_COUNT - 1;
+		scheduleEntries[scheduleArray.count].id = 5;
+		scheduleEntries[scheduleArray.count].time_base.hour = TIME_NONE;
+		scheduleEntries[scheduleArray.count].time_base.minute=TIME_NONE;
+		scheduleEntries[scheduleArray.count].interval = \
+					g_sync_log_buff_interval;
+		scheduleEntries[scheduleArray.count].task_func = log_sync_func;
+		scheduleEntries[scheduleArray.count].func_args = \
+					&g_access_log_context;
+		scheduleArray.count++;
 	}
 
 	if ((result=sched_start(&scheduleArray, &schedule_tid, \

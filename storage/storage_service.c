@@ -48,6 +48,8 @@
 
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
+LogContext g_access_log_context = {LOG_INFO, STDERR_FILENO, NULL};
+
 static int last_stat_change_count = 1;  //for sync to stat file
 static int64_t temp_file_sequence = 0;
 
@@ -1520,12 +1522,37 @@ int storage_service_init()
 
 	//DO NOT support direct IO !!!
 	//g_extra_open_file_flags = g_disk_rw_direct ? O_DIRECT : 0;
+	
+	if (result != 0)
+	{
+		return result;
+	}
 
+	if (g_use_access_log)
+	{
+		result = log_init_ex(&g_access_log_context);
+		if (result != 0)
+		{
+			return result;
+		}
+
+		log_set_time_precision(&g_access_log_context, \
+				LOG_TIME_PRECISION_MSECOND);
+		log_set_cache_ex(&g_access_log_context, true);
+		result = log_set_prefix_ex(&g_access_log_context, \
+				g_fdfs_base_path, "storage_access");
+	}
+	
 	return result;
 }
 
 void storage_service_destroy()
 {
+	if (g_use_access_log)
+	{
+		log_destroy_ex(&g_access_log_context);
+	}
+
 	pthread_mutex_destroy(&g_storage_thread_lock);
 	pthread_mutex_destroy(&path_index_thread_lock);
 	pthread_mutex_destroy(&stat_count_thread_lock);
@@ -7603,6 +7630,16 @@ int fdfs_stat_file_sync_func(void *args)
 	}
 }
 
+#define GET_DEAL_START_TIME() \
+	do \
+	{ \
+		if (g_use_access_log) \
+		{ \
+			gettimeofday(&(pClientInfo->file_context. \
+				tv_deal_start), NULL); \
+		} \
+	} while (0)
+
 int storage_deal_task(struct fast_task_info *pTask)
 {
 	TrackerHeader *pHeader;
@@ -7615,34 +7652,52 @@ int storage_deal_task(struct fast_task_info *pTask)
 	switch(pHeader->cmd)
 	{
 		case STORAGE_PROTO_CMD_DOWNLOAD_FILE:
+			GET_DEAL_START_TIME();
 			result = storage_server_download_file(pTask);
 			break;
 		case STORAGE_PROTO_CMD_GET_METADATA:
+			GET_DEAL_START_TIME();
 			result = storage_server_get_metadata(pTask);
 			break;
 		case STORAGE_PROTO_CMD_UPLOAD_FILE:
+			GET_DEAL_START_TIME();
 			result = storage_upload_file(pTask, false);
 			break;
 		case STORAGE_PROTO_CMD_UPLOAD_APPENDER_FILE:
+			GET_DEAL_START_TIME();
 			result = storage_upload_file(pTask, true);
 			break;
 		case STORAGE_PROTO_CMD_APPEND_FILE:
+			GET_DEAL_START_TIME();
 			result = storage_append_file(pTask);
 			break;
 		case STORAGE_PROTO_CMD_MODIFY_FILE:
+			GET_DEAL_START_TIME();
 			result = storage_modify_file(pTask);
 			break;
 		case STORAGE_PROTO_CMD_TRUNCATE_FILE:
+			GET_DEAL_START_TIME();
 			result = storage_do_truncate_file(pTask);
 			break;
 		case STORAGE_PROTO_CMD_UPLOAD_SLAVE_FILE:
+			GET_DEAL_START_TIME();
 			result = storage_upload_slave_file(pTask);
 			break;
 		case STORAGE_PROTO_CMD_DELETE_FILE:
+			GET_DEAL_START_TIME();
 			result = storage_server_delete_file(pTask);
 			break;
 		case STORAGE_PROTO_CMD_CREATE_LINK:
+			GET_DEAL_START_TIME();
 			result = storage_create_link(pTask);
+			break;
+		case STORAGE_PROTO_CMD_SET_METADATA:
+			GET_DEAL_START_TIME();
+			result = storage_server_set_metadata(pTask);
+			break;
+		case STORAGE_PROTO_CMD_QUERY_FILE_INFO:
+			GET_DEAL_START_TIME();
+			result = storage_server_query_file_info(pTask);
 			break;
 		case STORAGE_PROTO_CMD_SYNC_CREATE_FILE:
 			result = storage_sync_copy_file(pTask, pHeader->cmd);
@@ -7664,12 +7719,6 @@ int storage_deal_task(struct fast_task_info *pTask)
 			break;
 		case STORAGE_PROTO_CMD_SYNC_CREATE_LINK:
 			result = storage_sync_link_file(pTask);
-			break;
-		case STORAGE_PROTO_CMD_SET_METADATA:
-			result = storage_server_set_metadata(pTask);
-			break;
-		case STORAGE_PROTO_CMD_QUERY_FILE_INFO:
-			result = storage_server_query_file_info(pTask);
 			break;
 		case STORAGE_PROTO_CMD_FETCH_ONE_PATH_BINLOG:
 			result = storage_server_fetch_one_path_binlog(pTask);
