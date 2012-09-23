@@ -802,6 +802,11 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 			sizeof(FDFSStorageServer *), storage_cmp_by_server_id);
 		if (ppFound != NULL)
 		{
+			if (g_use_storage_id)
+			{
+			strcpy((*ppFound)->server.ip_addr, pServer->ip_addr);
+			}
+
 			/*
 			//logInfo("ip_addr=%s, local status: %d, " \
 				"tracker status: %d", pServer->ip_addr, \
@@ -902,10 +907,14 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 						pInsertedServer))
 				{
 					g_storage_count++;
-				}
 
-				result = tracker_start_sync_threads( \
-					&(pInsertedServer->server));
+					result = tracker_start_sync_threads( \
+						&(pInsertedServer->server));
+				}
+				else
+				{
+					result = 0;
+				}
 			}
 			else
 			{
