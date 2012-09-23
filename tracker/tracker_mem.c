@@ -24,6 +24,7 @@
 #include "fdfs_global.h"
 #include "shared_func.h"
 #include "pthread_func.h"
+#include "fdfs_shared_func.h"
 #include "tracker_global.h"
 #include "tracker_proto.h"
 #include "tracker_func.h"
