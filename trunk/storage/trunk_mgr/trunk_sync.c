@@ -1080,6 +1080,7 @@ static void* trunk_sync_thread_entrance(void* arg)
 			pStorage->status != FDFS_STORAGE_STATUS_IP_CHANGED && \
 			pStorage->status != FDFS_STORAGE_STATUS_NONE)
 		{
+			strcpy(storage_server.ip_addr, pStorage->ip_addr);
 			storage_server.sock = \
 				socket(AF_INET, SOCK_STREAM, 0);
 			if(storage_server.sock < 0)
@@ -1109,7 +1110,7 @@ static void* trunk_sync_thread_entrance(void* arg)
 			}
 
 			if ((conn_result=connectserverbyip_nb(storage_server.sock,\
-				storage_server.ip_addr, g_server_port, \
+				pStorage->ip_addr, g_server_port, \
 				g_fdfs_connect_timeout)) == 0)
 			{
 				char szFailPrompt[64];
@@ -1126,8 +1127,8 @@ static void* trunk_sync_thread_entrance(void* arg)
 				logInfo("file: "__FILE__", line: %d, " \
 					"successfully connect to " \
 					"storage server %s:%d%s", __LINE__, \
-					storage_server.ip_addr, \
-					g_server_port, szFailPrompt);
+					pStorage->ip_addr, g_server_port, \
+					szFailPrompt);
 				nContinuousFail = 0;
 				break;
 			}
@@ -1138,7 +1139,7 @@ static void* trunk_sync_thread_entrance(void* arg)
 					"connect to storage server %s:%d fail" \
 					", errno: %d, error info: %s", \
 					__LINE__, \
-					storage_server.ip_addr, g_server_port, \
+					pStorage->ip_addr, g_server_port, \
 					conn_result, STRERROR(conn_result));
 				previousCode = conn_result;
 			}
@@ -1160,7 +1161,7 @@ static void* trunk_sync_thread_entrance(void* arg)
 			logError("file: "__FILE__", line: %d, " \
 				"connect to storage server %s:%d fail, " \
 				"try count: %d, errno: %d, error info: %s", \
-				__LINE__, storage_server.ip_addr, \
+				__LINE__, pStorage->ip_addr, \
 				g_server_port, nContinuousFail, \
 				conn_result, STRERROR(conn_result));
 		}
@@ -1196,15 +1197,15 @@ static void* trunk_sync_thread_entrance(void* arg)
 		//printf("file: "__FILE__", line: %d, " \
 			"storage_server.ip_addr=%s, " \
 			"local_ip_addr: %s\n", \
-			__LINE__, storage_server.ip_addr, local_ip_addr);
+			__LINE__, pStorage->ip_addr, local_ip_addr);
 		*/
 
-		if (is_local_host_ip(storage_server.ip_addr))
+		if (is_local_host_ip(pStorage->ip_addr))
 		{  //can't self sync to self
 			logError("file: "__FILE__", line: %d, " \
 				"ip_addr %s belong to the local host," \
 				" trunk sync thread exit.", \
-				__LINE__, storage_server.ip_addr);
+				__LINE__, pStorage->ip_addr);
 			fdfs_quit(&storage_server);
 			close(storage_server.sock);
 			break;
