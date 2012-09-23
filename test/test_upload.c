@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 	int rand_num;
 	int file_index;
 	char *conf_filename;
-	char file_id[64];
+	char file_id[128];
 	char storage_ip[IP_ADDRESS_SIZE];
 	int count_sums[FILE_TYPE_COUNT];
 	int i;

@@ -4,6 +4,7 @@ Version 4.00  2012-09-23
  * tracker.conf: storage reserved space can use ratio such as 10%
  * storage server support access log
  * appender file and trunk file also use rand number in file id
+ * bug fixed: test_upload.c: char file_id[64] change to: char file_id[128]
 
 Version 3.11  2012-08-04
  * setsockopt set linger.l_linger to micro-seconds in FreeBSD and seconds 
