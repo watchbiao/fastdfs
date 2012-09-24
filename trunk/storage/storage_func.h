@@ -11,6 +11,8 @@
 #ifndef _STORAGE_FUNC_H_
 #define _STORAGE_FUNC_H_
 
+#include "tracker_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
