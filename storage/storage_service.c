@@ -1565,8 +1565,8 @@ int storage_service_init()
 			break;
 		}
 
-		fcntl(pThreadData->pipe_fds[0], F_SETFL, O_NOATIME);
-		if ((result=set_nonblock(pThreadData->pipe_fds[0])) != 0)
+		if ((result=fd_add_flags(pThreadData->pipe_fds[0], \
+				O_NONBLOCK | O_NOATIME)) != 0)
 		{
 			break;
 		}
