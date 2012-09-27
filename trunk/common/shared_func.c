@@ -1348,7 +1348,7 @@ void set_log_level(char *pLogLevel)
 	}
 }
 
-int set_nonblock(int fd)
+int fd_add_flags(int fd, int adding_flags)
 {
 	int flags;
 
@@ -1361,7 +1361,7 @@ int set_nonblock(int fd)
 		return errno != 0 ? errno : EACCES;
 	}
 
-	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+	if (fcntl(fd, F_SETFL, flags | adding_flags) == -1)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"fcntl fail, errno: %d, error info: %s.", \

@@ -416,9 +416,17 @@ int set_rlimit(int resource, const rlim_t value);
 /** set non block mode
  *  parameters:
  *  	fd: the fd to set
+ *  	adding_flags: the flags to add
  *  return: error no , 0 success, != 0 fail
 */
-int set_nonblock(int fd);
+int fd_add_flags(int fd, int adding_flags);
+
+/** set non block mode
+ *  parameters:
+ *  	fd: the fd to set
+ *  return: error no , 0 success, != 0 fail
+*/
+#define set_nonblock(fd) fd_add_flags(fd, O_NONBLOCK)
 
 /** set run by group and user
  *  parameters:
