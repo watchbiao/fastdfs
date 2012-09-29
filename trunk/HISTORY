@@ -1,11 +1,12 @@
 
-Version 4.00  2012-09-27
+Version 4.00  2012-09-29
  * identify storage server by ID instead of IP address
  * tracker.conf: storage reserved space can use ratio such as 10%
  * storage server support access log
  * appender file and trunk file also use rand number in file id
  * bug fixed: test_upload.c: char file_id[64] change to: char file_id[128]
  * set pipe reading fd with attribute O_NOATIME
+ * bug fixed: correct php extension call_user_function TSRMLS_DC with TSRMLS_CC
 
 Version 3.11  2012-08-04
  * setsockopt set linger.l_linger to micro-seconds in FreeBSD and seconds 

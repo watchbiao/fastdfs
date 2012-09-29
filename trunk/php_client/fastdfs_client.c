@@ -840,9 +840,8 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				pStorage->version, strlen(pStorage->version), 1);
 
 			add_assoc_stringl_ex(server_info_array, \
-				"src_ip_addr", sizeof("src_ip_addr"), \
-				pStorage->src_ip_addr, \
-				strlen(pStorage->src_ip_addr), 1);
+				"src_storage_id", sizeof("src_storage_id"), \
+				pStorage->src_id, strlen(pStorage->src_id), 1);
 
 			add_assoc_bool_ex(server_info_array, \
 				"if_trunk_server", sizeof("if_trunk_server"), \
@@ -2778,6 +2777,7 @@ static int php_fdfs_upload_callback(void *arg, const int64_t file_size, int sock
 	zval ret;
 	zval null_args;
 	int result;
+	TSRMLS_FETCH();
 
 	ZVAL_NULL(&ret);
 	ZVAL_LONG(&zsock, sock);
@@ -2793,7 +2793,7 @@ static int php_fdfs_upload_callback(void *arg, const int64_t file_size, int sock
 
 	if (call_user_function(EG(function_table), NULL, \
 		pUploadCallback->callback.func_name, 
-		&ret, 2, args TSRMLS_DC) == FAILURE)
+		&ret, 2, args TSRMLS_CC) == FAILURE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call callback function: %s fail", __LINE__, \
@@ -2826,6 +2826,7 @@ static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 	zval ret;
 	zval null_args;
 	int result;
+	TSRMLS_FETCH();
 
 	ZVAL_NULL(&ret);
 	ZVAL_LONG(&zfilesize, file_size);
@@ -2842,7 +2843,7 @@ static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 	args[2] = &zdata;
 	if (call_user_function(EG(function_table), NULL, \
 		pCallback->func_name, 
-		&ret, 3, args TSRMLS_DC) == FAILURE)
+		&ret, 3, args TSRMLS_CC) == FAILURE)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call callback function: %s fail", __LINE__, \
