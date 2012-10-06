@@ -776,6 +776,8 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		add_assoc_zval_ex(return_value, pGroupStat->group_name, \
 			strlen(pGroupStat->group_name) + 1, group_info_array);
 
+		add_assoc_long_ex(group_info_array, "total_space", \
+			sizeof("total_space"), pGroupStat->total_mb);
 		add_assoc_long_ex(group_info_array, "free_space", \
 			sizeof("free_space"), pGroupStat->free_mb);
 		add_assoc_long_ex(group_info_array, "trunk_free_space", \
@@ -878,14 +880,14 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				sizeof("current_write_path"), \
 				pStorage->current_write_path);
 
-			pStorageStat = &(pStorage->stat);
-
 			add_assoc_long_ex(server_info_array, "status", \
 				sizeof("status"), pStorage->status);
 			add_assoc_long_ex(server_info_array, "total_space", \
 				sizeof("total_space"), pStorage->total_mb);
 			add_assoc_long_ex(server_info_array, "free_space", \
 				sizeof("free_space"), pStorage->free_mb);
+
+			pStorageStat = &(pStorage->stat);
 
 			add_assoc_long_ex(server_info_array, \
 				"total_upload_count", \
