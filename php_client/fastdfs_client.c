@@ -819,8 +819,12 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 			ALLOC_INIT_ZVAL(server_info_array);
 			array_init(server_info_array);
 
-			add_assoc_zval_ex(group_info_array, pStorage->ip_addr, \
-				strlen(pStorage->ip_addr)+1, server_info_array);
+			add_assoc_zval_ex(group_info_array, pStorage->id, \
+				strlen(pStorage->id) + 1, server_info_array);
+
+			add_assoc_stringl_ex(server_info_array, \
+				"ip_addr", sizeof("ip_addr"), \
+				pStorage->ip_addr, strlen(pStorage->ip_addr), 1);
 
 			add_assoc_long_ex(server_info_array, \
 				"join_time", sizeof("join_time"), \
