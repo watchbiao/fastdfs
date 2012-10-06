@@ -20,7 +20,7 @@
 
  if (!fastdfs_active_test($tracker))
  {
-	error_log("errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
+	error_log("fastdfs_active_test errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
 	exit(1);
  }
 
@@ -34,19 +34,19 @@
  $storage = fastdfs_tracker_query_storage_store();
  if (!$storage)
  {
-	error_log("errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
+	error_log("fastdfs_tracker_query_storage_store errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
 	exit(1);
  }
  
  $server = fastdfs_connect_server($storage['ip_addr'], $storage['port']);
  if (!$server)
  {
-        error_log("errno1: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
+        error_log("fastdfs_connect_server errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
         exit(1);
  }
  if (!fastdfs_active_test($server))
  {
-	error_log("errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
+	error_log("fastdfs_active_test errno: " . fastdfs_get_last_error_no() . ", error info: " . fastdfs_get_last_error_info());
 	exit(1);
  }
 
