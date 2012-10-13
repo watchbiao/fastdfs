@@ -38,6 +38,9 @@
 #define FDFS_DEFAULT_SYNC_MARK_FILE_FREQ  500
 #define STORAGE_DEFAULT_BUFF_SIZE    (64 * 1024)
 
+#define STORAGE_FILE_SIGNATURE_METHOD_HASH  1
+#define STORAGE_FILE_SIGNATURE_METHOD_MD5   2
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -124,6 +127,7 @@ extern bool g_rotate_access_log;  //if rotate the access log every day
 extern TimeInfo g_access_log_rotate_time; //rotate access log time base
 
 extern bool g_check_file_duplicate;  //if check file content duplicate
+extern byte g_file_signature_method; //file signature method
 extern char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1];
 extern int g_namespace_len;
 

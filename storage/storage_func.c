@@ -1388,6 +1388,21 @@ int storage_func_init(const char *filename, \
 		if (g_check_file_duplicate)
 		{
 			char *pKeyNamespace;
+			char *pFileSignatureMethod;
+
+			pFileSignatureMethod = iniGetStrValue(NULL, \
+				"file_signature_method", &iniContext);
+			if (pFileSignatureMethod != NULL && strcasecmp( \
+				pFileSignatureMethod, "md5") == 0)
+			{
+				g_file_signature_method = \
+					STORAGE_FILE_SIGNATURE_METHOD_MD5;
+			}
+			else
+			{
+				g_file_signature_method = \
+					STORAGE_FILE_SIGNATURE_METHOD_HASH;
+			}
 
 			strcpy(g_fdht_base_path, g_fdfs_base_path);
 			g_fdht_connect_timeout = g_fdfs_connect_timeout;
@@ -1504,11 +1519,11 @@ int storage_func_init(const char *filename, \
 			"sync_stat_file_interval=%ds, " \
 			"thread_stack_size=%d KB, upload_priority=%d, " \
 			"if_alias_prefix=%s, " \
-			"check_file_duplicate=%d, FDHT group count=%d, " \
-			"FDHT server count=%d, FDHT key_namespace=%s, " \
-			"FDHT keep_alive=%d, HTTP server port=%d, " \
-			"domain name=%s, use_access_log=%d, " \
-			"rotate_access_log=%d, " \
+			"check_file_duplicate=%d, file_signature_method=%s, " \
+			"FDHT group count=%d, FDHT server count=%d, " \
+			"FDHT key_namespace=%s, FDHT keep_alive=%d, " \
+			"HTTP server port=%d, domain name=%s, " \
+			"use_access_log=%d, rotate_access_log=%d, " \
 			"access_log_rotate_time=%02d:%02d", \
 			g_fdfs_version.major, g_fdfs_version.minor, \
 			g_fdfs_base_path, g_fdfs_path_count, g_subdir_count_per_path,\
@@ -1531,6 +1546,8 @@ int storage_func_init(const char *filename, \
 			g_sync_binlog_buff_interval, g_sync_stat_file_interval, \
 			g_thread_stack_size/1024, g_upload_priority, \
 			g_if_alias_prefix, g_check_file_duplicate, \
+			g_file_signature_method == STORAGE_FILE_SIGNATURE_METHOD_HASH \
+				? "hash" : "md5", 
 			g_group_array.group_count, g_group_array.server_count, \
 			g_key_namespace, g_keep_alive, \
 			g_http_port, g_http_domain, g_use_access_log, \

@@ -80,6 +80,7 @@ bool g_rotate_access_log = false; //if rotate the access log every day
 bool g_use_storage_id = false;    //identify storage by ID instead of IP address
 
 bool g_check_file_duplicate = false;
+byte g_file_signature_method = STORAGE_FILE_SIGNATURE_METHOD_HASH;
 char g_key_namespace[FDHT_MAX_NAMESPACE_LEN+1] = {0};
 int g_namespace_len = 0;
 int g_allow_ip_count = 0;

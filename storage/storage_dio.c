@@ -481,8 +481,16 @@ int dio_write_file(struct fast_task_info *pTask)
 
 	if (pFileContext->calc_file_hash)
 	{
-		CALC_HASH_CODES4(pDataBuff, write_bytes, \
-				pFileContext->file_hash_codes)
+		if (g_file_signature_method == STORAGE_FILE_SIGNATURE_METHOD_HASH)
+		{
+			CALC_HASH_CODES4(pDataBuff, write_bytes, \
+					pFileContext->file_hash_codes)
+		}
+		else
+		{
+			my_md5_update(&pFileContext->md5_context, \
+				(unsigned char *)pDataBuff, write_bytes);
+		}
 	}
 
 	/*
@@ -506,7 +514,15 @@ int dio_write_file(struct fast_task_info *pTask)
 
 		if (pFileContext->calc_file_hash)
 		{
-			FINISH_HASH_CODES4(pFileContext->file_hash_codes)
+			if (g_file_signature_method == STORAGE_FILE_SIGNATURE_METHOD_HASH)
+			{
+				FINISH_HASH_CODES4(pFileContext->file_hash_codes)
+			}
+			else
+			{
+				my_md5_final((unsigned char *)(pFileContext-> \
+				file_hash_codes), &pFileContext->md5_context);
+			}
 		}
 
 		if (pFileContext->extra_info.upload.before_close_callback != NULL)
