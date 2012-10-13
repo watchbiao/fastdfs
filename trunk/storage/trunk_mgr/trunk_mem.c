@@ -38,6 +38,10 @@
 
 #define STORAGE_TRUNK_DATA_FILENAME  "storage_trunk.dat"
 
+#define STORAGE_TRUNK_INIT_FLAG_NONE        0
+#define STORAGE_TRUNK_INIT_FLAG_DESTROYING  1
+#define STORAGE_TRUNK_INIT_FLAG_DONE        2
+
 int g_slot_min_size;
 int g_trunk_file_size;
 int g_slot_max_size;
@@ -55,7 +59,7 @@ bool g_if_trunker_self = false;
 bool g_trunk_create_file_advance = false;
 bool g_trunk_init_check_occupying = false;
 bool g_trunk_init_reload_from_binlog = false;
-static bool if_trunk_inited = false;
+static byte trunk_init_flag = STORAGE_TRUNK_INIT_FLAG_NONE;
 int64_t g_trunk_total_free_space = 0;
 int64_t g_trunk_create_file_space_threshold = 0;
 
@@ -123,6 +127,23 @@ static int storage_trunk_node_compare_offset(void *p1, void *p2)
 	return pTrunkInfo1->file.offset - pTrunkInfo2->file.offset;
 }
 
+#define STORAGE_TRUNK_CHECK_STATUS() \
+	do \
+	{  \
+		if (!g_if_trunker_self) \
+		{ \
+			logError("file: "__FILE__", line: %d, " \
+				"I am not trunk server!", __LINE__); \
+			return EINVAL; \
+		} \
+		if (trunk_init_flag != STORAGE_TRUNK_INIT_FLAG_DONE) \
+		{ \
+			logError("file: "__FILE__", line: %d, " \
+				"I am not inited!", __LINE__);  \
+			return EINVAL; \
+		} \
+	} while (0)
+
 int storage_trunk_init()
 {
 	int result;
@@ -134,7 +155,7 @@ int storage_trunk_init()
 		return 0;
 	}
 
-	if (if_trunk_inited)
+	if (trunk_init_flag != STORAGE_TRUNK_INIT_FLAG_NONE)
 	{
 		logWarning("file: "__FILE__", line: %d, " \
 			"trunk already inited!", __LINE__);
@@ -214,7 +235,7 @@ int storage_trunk_init()
 	}
 	*/
 
-	if_trunk_inited = true;
+	trunk_init_flag = STORAGE_TRUNK_INIT_FLAG_DONE;
 	return 0;
 }
 
@@ -222,10 +243,14 @@ int storage_trunk_destroy()
 {
 	int result;
 
-	if (!if_trunk_inited)
+	if (trunk_init_flag != STORAGE_TRUNK_INIT_FLAG_DONE)
 	{
+		logWarning("file: "__FILE__", line: %d, " \
+			"trunk not inited!", __LINE__);
 		return 0;
 	}
+
+	trunk_init_flag = STORAGE_TRUNK_INIT_FLAG_DESTROYING;
 
 	logDebug("file: "__FILE__", line: %d, " \
 		"storage trunk destroy", __LINE__);
@@ -239,7 +264,7 @@ int storage_trunk_destroy()
 	pthread_mutex_destroy(&trunk_file_lock);
 	pthread_mutex_destroy(&trunk_mem_lock);
 
-	if_trunk_inited = false;
+	trunk_init_flag = STORAGE_TRUNK_INIT_FLAG_NONE;
 	return result;
 }
 
@@ -964,7 +989,7 @@ int trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 		return EINVAL;
 	}
 
-	if (!if_trunk_inited)
+	if (trunk_init_flag != STORAGE_TRUNK_INIT_FLAG_DONE)
 	{
 		if (bWriteBinLog)
 		{
@@ -1316,10 +1341,7 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	FDFSTrunkNode *pTrunkNode;
 	int result;
 
-	if (!g_if_trunker_self || !if_trunk_inited)
-	{
-		return EINVAL;
-	}
+	STORAGE_TRUNK_CHECK_STATUS();
 
 	target_slot.size = (size > g_slot_min_size) ? size : g_slot_min_size;
 	target_slot.head = NULL;
@@ -1402,10 +1424,7 @@ int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status)
 {
 	FDFSTrunkFullInfo target_trunk_info;
 
-	if (!g_if_trunker_self || !if_trunk_inited)
-	{
-		return EINVAL;
-	}
+	STORAGE_TRUNK_CHECK_STATUS();
 
 	memset(&target_trunk_info, 0, sizeof(FDFSTrunkFullInfo));
 	target_trunk_info.status = FDFS_TRUNK_STATUS_HOLD;
