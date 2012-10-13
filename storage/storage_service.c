@@ -2386,7 +2386,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		int value_len;
 		int nSigLen;
 		char szFileSig[FILE_SIGNATURE_SIZE];
-		char buff[64];
+		//char buff[64];
 
 		memset(&key_info, 0, sizeof(key_info));
 		key_info.namespace_len = g_namespace_len;
@@ -2397,9 +2397,11 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 
 		STORAGE_GEN_FILE_SIGNATURE(file_size, \
 				pFileContext->file_hash_codes, szFileSig)
+		/*
 		bin2hex(szFileSig, FILE_SIGNATURE_SIZE, buff);
 		logInfo("file: "__FILE__", line: %d, " \
 			"file sig: %s", __LINE__, buff);
+		*/
 
 		nSigLen = FILE_SIGNATURE_SIZE;
 		key_info.obj_id_len = nSigLen;
