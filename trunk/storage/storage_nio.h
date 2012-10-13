@@ -22,6 +22,7 @@
 #include "storage_global.h"
 #include "fdht_types.h"
 #include "trunk_mem.h"
+#include "md5.h"
 
 #define FDFS_STORAGE_STAGE_NIO_INIT   '\0'
 #define FDFS_STORAGE_STAGE_NIO_RECV   'r'
@@ -90,6 +91,7 @@ typedef struct
 	int open_flags;           //open file flags
 	int file_hash_codes[4];   //file hash code
 	int crc32;   //file content crc32 signature
+	MD5_CTX md5_context;
 
 	union
 	{
@@ -103,13 +105,13 @@ typedef struct
 	int create_flag;    //create file flag
 	int buff_offset;    //buffer offset after recv to write to file
 	int fd;         //file description no
-	int64_t start;  //file start offset
-	int64_t end;    //file end offset
-	int64_t offset; //file current offset
+	int64_t start;  //the start offset of file
+	int64_t end;    //the end offset of file
+	int64_t offset; //the current offset of file
 	FileDealDoneCallback done_callback;
 	DeleteFileLogCallback log_callback;
 
-	struct timeval tv_deal_start; //task deal start tv
+	struct timeval tv_deal_start; //task deal start tv for access log
 } StorageFileContext;
 
 typedef struct
