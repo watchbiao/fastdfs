@@ -239,7 +239,7 @@ int storage_trunk_init()
 	return 0;
 }
 
-int storage_trunk_destroy()
+int storage_trunk_destroy_ex(const bool bNeedSleep)
 {
 	int result;
 
@@ -251,6 +251,10 @@ int storage_trunk_destroy()
 	}
 
 	trunk_init_flag = STORAGE_TRUNK_INIT_FLAG_DESTROYING;
+	if (bNeedSleep)
+	{
+		sleep(1);
+	}
 
 	logDebug("file: "__FILE__", line: %d, " \
 		"storage trunk destroy", __LINE__);
