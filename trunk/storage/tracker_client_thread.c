@@ -1281,7 +1281,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 						saved_trunk_sync_thread_count);
 				}
 				
-				storage_trunk_destroy();
+				storage_trunk_destroy_ex(true);
 				if (g_trunk_create_file_advance && \
 					g_trunk_create_file_interval > 0)
 				{
