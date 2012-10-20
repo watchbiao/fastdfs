@@ -849,6 +849,10 @@ int tracker_load_from_conf_file(const char *filename, \
 		{
 			return result;
 		}
+
+		g_store_slave_file_use_link = iniGetBoolValue(NULL, \
+			"store_slave_file_use_link", &iniContext, false);
+
 #ifdef WITH_HTTPD
 		if ((result=fdfs_http_params_load(&iniContext, \
 				filename, &g_http_params)) != 0)
@@ -919,7 +923,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			"trunk_create_file_space_threshold=%d GB, " \
 			"trunk_init_check_occupying=%d, " \
 			"trunk_init_reload_from_binlog=%d, " \
-			"use_storage_id=%d, storage_id_count=%d", \
+			"use_storage_id=%d, storage_id_count=%d, " \
+			"store_slave_file_use_link=%d", \
 			g_fdfs_version.major, g_fdfs_version.minor,  \
 			g_fdfs_base_path, g_run_by_group, g_run_by_user, \
 			g_fdfs_connect_timeout, \
@@ -945,7 +950,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			(int)(g_trunk_create_file_space_threshold / \
 			(FDFS_ONE_MB * 1024)), g_trunk_init_check_occupying, \
 			g_trunk_init_reload_from_binlog, \
-			g_use_storage_id, g_storage_id_count);
+			g_use_storage_id, g_storage_id_count, \
+			g_store_slave_file_use_link);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)

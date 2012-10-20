@@ -132,6 +132,8 @@ int storage_get_params_from_tracker()
 			"trunk_init_check_occupying", &iniContext, false);
 	g_trunk_init_reload_from_binlog = iniGetBoolValue(NULL, \
 			"trunk_init_reload_from_binlog", &iniContext, false);
+	g_store_slave_file_use_link = iniGetBoolValue(NULL, \
+			"store_slave_file_use_link", &iniContext, false);
 	iniFreeContext(&iniContext);
 
 	if (use_trunk_file && !g_if_use_trunk_file)
@@ -157,7 +159,8 @@ int storage_get_params_from_tracker()
 		"trunk_create_file_interval=%d, " \
 		"trunk_create_file_space_threshold=%d GB, " \
 		"trunk_init_check_occupying=%d, "   \
-		"trunk_init_reload_from_binlog=%d", \
+		"trunk_init_reload_from_binlog=%d, " \
+		"store_slave_file_use_link=%d", \
 		__LINE__, g_use_storage_id, \
 		g_storage_ip_changed_auto_adjust, \
 		g_store_path_mode, fdfs_storage_reserved_space_to_string( \
@@ -171,7 +174,7 @@ int storage_get_params_from_tracker()
 		g_trunk_create_file_interval, \
 		(int)(g_trunk_create_file_space_threshold / \
 		(FDFS_ONE_MB * 1024)), g_trunk_init_check_occupying, \
-		g_trunk_init_reload_from_binlog);
+		g_trunk_init_reload_from_binlog, g_store_slave_file_use_link);
 
 	if (g_use_storage_id && *g_sync_src_id != '\0' && \
 		!tracker_is_server_id_valid(g_sync_src_id))

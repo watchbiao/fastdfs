@@ -45,6 +45,7 @@ int g_thread_stack_size = 64 * 1024;
 int g_storage_sync_file_max_delay = DEFAULT_STORAGE_SYNC_FILE_MAX_DELAY;
 int g_storage_sync_file_max_time = DEFAULT_STORAGE_SYNC_FILE_MAX_TIME;
 
+bool g_store_slave_file_use_link = false; //if store slave file use symbol link
 bool g_if_use_trunk_file = false;   //if use trunk file
 bool g_trunk_create_file_advance = false;
 bool g_trunk_init_check_occupying = false;

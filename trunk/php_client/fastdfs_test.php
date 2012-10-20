@@ -125,7 +125,7 @@
 	echo "file exist: " . fastdfs_storage_file_exist($group_name, $remote_filename) . "\n";
 
 	$ts = time();
-	$token = fastdfs_http_gen_token($group_name . FDFS_FILE_ID_SEPERATOR . $remote_filename, $ts);
+	$token = fastdfs_http_gen_token($remote_filename, $ts);
 	echo "token=$token\n";
 
 	$file_content = fastdfs_storage_download_file_to_buff($file_info['group_name'], $file_info['filename']);

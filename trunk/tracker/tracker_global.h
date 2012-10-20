@@ -69,6 +69,7 @@ extern int g_thread_stack_size;
 extern int g_storage_sync_file_max_delay;
 extern int g_storage_sync_file_max_time;
 
+extern bool g_store_slave_file_use_link; //if store slave file use symbol link
 extern bool g_if_use_trunk_file;   //if use trunk file
 extern bool g_trunk_create_file_advance;
 extern bool g_trunk_init_check_occupying;

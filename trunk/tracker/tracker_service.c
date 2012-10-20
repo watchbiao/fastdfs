@@ -632,7 +632,8 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 		"trunk_create_file_interval=%d\n" \
 		"trunk_create_file_space_threshold="INT64_PRINTF_FORMAT"\n" \
 		"trunk_init_check_occupying=%d\n"     \
-		"trunk_init_reload_from_binlog=%d\n", \
+		"trunk_init_reload_from_binlog=%d\n"  \
+		"store_slave_file_use_link=%d\n",    \
 		g_use_storage_id, g_storage_ip_changed_auto_adjust, \
 		g_storage_sync_file_max_delay, g_groups.store_path, \
 		fdfs_storage_reserved_space_to_string( \
@@ -645,7 +646,8 @@ static int tracker_deal_parameter_req(struct fast_task_info *pTask)
 		g_trunk_create_file_interval, \
 		g_trunk_create_file_space_threshold, \
 		g_trunk_init_check_occupying, \
-		g_trunk_init_reload_from_binlog);
+		g_trunk_init_reload_from_binlog, \
+		g_store_slave_file_use_link);
 
 	return 0;
 }

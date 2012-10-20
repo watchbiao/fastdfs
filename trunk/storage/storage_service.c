@@ -2268,6 +2268,8 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		pFileContext->extra_info.upload.trunk_info.path. \
 		store_path_index, new_filename);
 
+	logInfo("pFileContext->filename=%s, new_full_filename=%s", 
+		pFileContext->filename, new_full_filename);
 	if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_TRUNK)
 	{
 		char trunk_buff[FDFS_TRUNK_FILE_INFO_LEN + 1];
@@ -2331,42 +2333,65 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 			FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
 			master_store_path_index, filename);
 
-		if (symlink(new_full_filename, pFileContext->filename) != 0)
+		if (g_store_slave_file_use_link)
 		{
-			result = errno != 0 ? errno : ENOENT;
-			logError("file: "__FILE__", line: %d, " \
-				"link file %s to %s fail, " \
-				"errno: %d, error info: %s", __LINE__, \
-				new_full_filename, pFileContext->filename, \
-				result, STRERROR(result));
+			if (symlink(new_full_filename, pFileContext->filename) != 0)
+			{
+				result = errno != 0 ? errno : ENOENT;
+				logError("file: "__FILE__", line: %d, " \
+					"link file %s to %s fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, new_full_filename, \
+					pFileContext->filename, \
+					result, STRERROR(result));
 
-			unlink(new_full_filename);
-			return result;
-		}
+				unlink(new_full_filename);
+				return result;
+			}
 
-		result = storage_binlog_write( \
-				pFileContext->timestamp2log, \
-				STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
-				new_fname2log);
-		if (result == 0)
-		{
-			char binlog_buff[256];
-			snprintf(binlog_buff, sizeof(binlog_buff), "%s %s", \
-				pFileContext->fname2log, new_fname2log);
 			result = storage_binlog_write( \
-				pFileContext->timestamp2log, \
-				STORAGE_OP_TYPE_SOURCE_CREATE_LINK, \
-				binlog_buff);
-		}
+					pFileContext->timestamp2log, \
+					STORAGE_OP_TYPE_SOURCE_CREATE_FILE, \
+					new_fname2log);
+			if (result == 0)
+			{
+				char binlog_buff[256];
+				snprintf(binlog_buff, sizeof(binlog_buff), \
+					"%s %s", pFileContext->fname2log, \
+					new_fname2log);
+				result = storage_binlog_write( \
+					pFileContext->timestamp2log, \
+					STORAGE_OP_TYPE_SOURCE_CREATE_LINK, \
+					binlog_buff);
+			}
+			if (result != 0)
+			{
+				unlink(new_full_filename);
+				unlink(pFileContext->filename);
+				return result;
+			}
 
-		if (result != 0)
+			pFileContext->create_flag = STORAGE_CREATE_FLAG_LINK;
+		}
+		else
 		{
-			unlink(new_full_filename);
-			unlink(pFileContext->filename);
-			return result;
+			if (rename(new_full_filename, pFileContext->filename) != 0)
+			{
+				result = errno != 0 ? errno : ENOENT;
+				logError("file: "__FILE__", line: %d, " \
+					"rename file %s to %s fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, new_full_filename, \
+					pFileContext->filename, \
+					result, STRERROR(result));
+
+				unlink(new_full_filename);
+				return result;
+			}
+
+			pFileContext->create_flag = STORAGE_CREATE_FLAG_FILE;
 		}
 
-		pFileContext->create_flag = STORAGE_CREATE_FLAG_LINK;
 		return 0;
 	}
 
@@ -5145,7 +5170,12 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 		return EBUSY;
 	}
 
-	pFileContext->calc_crc32 = true;
+	pFileContext->calc_crc32 = g_check_file_duplicate || \
+				g_store_slave_file_use_link;
+	if (!pFileContext->calc_crc32)
+	{
+		pFileContext->crc32 = crc32;
+	}
 	pFileContext->calc_file_hash = g_check_file_duplicate;
 
 	strcpy(pFileContext->extra_info.upload.master_filename, master_filename);
