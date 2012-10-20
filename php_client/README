@@ -45,10 +45,10 @@ string fastdfs_get_last_error_info()
 return last error info
 
 
-string fastdfs_http_gen_token(string file_id, int timestamp)
+string fastdfs_http_gen_token(string remote_filename, int timestamp)
 generate anti-steal token for HTTP download
 parameters:
-	file_id: the file id (including group name and filename)
+	remote_filename: the remote filename (do NOT including group name)
 	timestamp: the timestamp (unix timestamp)
 return token string for success, false for error
 
@@ -1088,10 +1088,10 @@ parameters:
 return true for success, false for error
 
 
-string FastDFS::http_gen_token(string file_id, int timestamp)
+string FastDFS::http_gen_token(string remote_filename, int timestamp)
 generate anti-steal token for HTTP download
 parameters:
-	file_id: the file id (including group name and filename)
+	remote_filename: the remote filename (do NOT including group name)
 	timestamp: the timestamp (unix timestamp)
 return token string for success, false for error
 

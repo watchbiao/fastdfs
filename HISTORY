@@ -1,7 +1,8 @@
 
-Version 4.01  2012-10-13
+Version 4.01  2012-10-20
  * trunk_mgr/trunk_mem.c: trunk init flag check more strictly
  * file signature for checking file duplicate support MD5
+ * slave file support both symbol link and direct file
 
 Version 4.00  2012-10-06
  * identify storage server by ID instead of IP address

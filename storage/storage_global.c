@@ -78,6 +78,7 @@ char g_last_storage_ip[IP_ADDRESS_SIZE] = {0};	 //the last storage ip address
 bool g_use_access_log = false;    //if log to access log
 bool g_rotate_access_log = false; //if rotate the access log every day
 bool g_use_storage_id = false;    //identify storage by ID instead of IP address
+bool g_store_slave_file_use_link = false; //if store slave file use symbol link
 
 bool g_check_file_duplicate = false;
 byte g_file_signature_method = STORAGE_FILE_SIGNATURE_METHOD_HASH;
