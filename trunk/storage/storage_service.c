@@ -5174,7 +5174,7 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 				g_store_slave_file_use_link;
 	if (!pFileContext->calc_crc32)
 	{
-		pFileContext->crc32 = crc32;
+		pFileContext->crc32 = 0;
 	}
 	pFileContext->calc_file_hash = g_check_file_duplicate;
 
