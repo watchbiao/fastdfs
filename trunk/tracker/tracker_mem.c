@@ -4834,6 +4834,79 @@ static int tracker_mem_get_trunk_binlog_size(
 	return result;
 }
 
+static int tracker_write_to_trunk_change_log(FDFSGroupInfo *pGroup, \
+		FDFSStorageDetail *pNewTrunkServer)
+{
+	char full_filename[MAX_PATH_SIZE];
+	char buff[256];
+	int fd;
+	int len;
+	struct tm tm;
+	time_t current_time;
+
+	snprintf(full_filename, sizeof(full_filename), "%s/logs/%s", \
+		g_fdfs_base_path, TRUNK_SERVER_CHANGELOG_FILENAME);
+	if ((fd=open(full_filename, O_WRONLY | O_CREAT | O_APPEND, 0644)) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"open \"%s\" fail, errno: %d, error info: %s", \
+			__LINE__, full_filename, errno, STRERROR(errno));
+		return errno != 0 ? errno : ENOENT;
+	}
+
+	current_time = time(NULL);
+	localtime_r(&current_time, &tm);
+	len = sprintf(buff, "[%04d-%02d-%02d %02d:%02d:%02d] %s ", \
+		tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
+		tm.tm_hour, tm.tm_min, tm.tm_sec, pGroup->group_name);
+
+	if (g_use_storage_id)
+	{
+		if (pGroup->pTrunkServer == NULL)
+		{
+			len += sprintf(buff + len, " %s(%s)  =>  %s(%s)\n", \
+				*(pGroup->last_trunk_server_id) == '\0' ? \
+				  "-" : pGroup->last_trunk_server_id, "-", \
+				pNewTrunkServer->id, pNewTrunkServer->ip_addr);
+		}
+		else
+		{
+			len += sprintf(buff + len, " %s(%s)  =>  %s(%s)\n", \
+				pGroup->pTrunkServer->id, \
+				pGroup->pTrunkServer->ip_addr, \
+				pNewTrunkServer->id, pNewTrunkServer->ip_addr);
+		}
+	}
+	else
+	{
+		if (pGroup->pTrunkServer == NULL)
+		{
+			len += sprintf(buff + len, " %s  =>  %s\n", \
+				*(pGroup->last_trunk_server_id) == '\0' ? \
+				  "-" : pGroup->last_trunk_server_id, \
+				pNewTrunkServer->ip_addr);
+		}
+		else
+		{
+			len += sprintf(buff + len, " %s  =>  %s\n", \
+				pGroup->pTrunkServer->ip_addr, \
+				pNewTrunkServer->ip_addr);
+		}
+	}
+
+	if (write(fd, buff, len) != len)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"write to file \"%s\" fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, full_filename, \
+			errno, STRERROR(errno));
+	}
+
+	close(fd);
+	return 0;
+}
+
 static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup, 
 		const bool save)
 {
@@ -4888,6 +4961,12 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 		{
 			return result;
 		}
+
+	}
+
+	if (strcmp(pStoreServer->id, pGroup->last_trunk_server_id) != 0)
+	{
+		tracker_write_to_trunk_change_log(pGroup, pStoreServer);
 	}
 
 	pGroup->pTrunkServer = pStoreServer;
