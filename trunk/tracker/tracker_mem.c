@@ -4935,13 +4935,40 @@ static int tracker_write_to_trunk_change_log(FDFSGroupInfo *pGroup, \
 	return 0;
 }
 
+static int tracker_set_trunk_server(FDFSGroupInfo *pGroup, \
+		FDFSStorageDetail *pNewTrunkServer)
+{
+	FDFSStorageDetail *pLastTrunkServer;
+
+	pLastTrunkServer = pGroup->pTrunkServer;
+	pGroup->pTrunkServer = pNewTrunkServer;
+	if (pNewTrunkServer == NULL || strcmp(pNewTrunkServer->id, \
+					pGroup->last_trunk_server_id) != 0)
+	{
+		int result;
+		result = tracker_write_to_trunk_change_log(pGroup, \
+				pLastTrunkServer);
+		if (pNewTrunkServer == NULL)
+		{
+			*(pGroup->last_trunk_server_id) = '\0';
+		}
+		else
+		{
+			strcpy(pGroup->last_trunk_server_id, \
+				pNewTrunkServer->id);
+		}
+		return result;
+	}
+
+	return 0;
+}
+
 static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup, 
 		const bool save)
 {
 	FDFSStorageDetail *pStoreServer;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppServerEnd;
-	FDFSStorageDetail *pLastTrunkServer;
 	int result;
 	int64_t file_size;
 	int64_t max_file_size;
@@ -4993,16 +5020,9 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 
 	}
 
-	pLastTrunkServer = pGroup->pTrunkServer;
-	pGroup->pTrunkServer = pStoreServer;
+	tracker_set_trunk_server(pGroup, pStoreServer);
 	pGroup->trunk_chg_count++;
 	g_trunk_server_chg_count++;
-
-	if (strcmp(pStoreServer->id, pGroup->last_trunk_server_id) != 0)
-	{
-		tracker_write_to_trunk_change_log(pGroup, pLastTrunkServer);
-	}
-	strcpy(pGroup->last_trunk_server_id, pStoreServer->id);
 
 	logInfo("file: "__FILE__", line: %d, " \
 		"group: %s, trunk server set to %s(%s:%d)", __LINE__, \
@@ -5732,8 +5752,6 @@ int tracker_mem_check_alive(void *arg)
 					g_check_active_interval;
 	    	if (last_beat_interval > check_trunk_interval)
 		{
-			FDFSStorageDetail *pLastTrunkServer;
-
 			logInfo("file: "__FILE__", line: %d, " \
 				"trunk server %s(%s:%d) offline because idle " \
 				"time: %d s > threshold: %d s, should " \
@@ -5743,13 +5761,11 @@ int tracker_mem_check_alive(void *arg)
 				(*ppGroup)->storage_port, last_beat_interval, \
 				check_trunk_interval);
 
-			pLastTrunkServer = (*ppGroup)->pTrunkServer;
 			(*ppGroup)->pTrunkServer = NULL;
 			tracker_mem_find_trunk_server(*ppGroup, false);
 			if ((*ppGroup)->pTrunkServer == NULL)
 			{
-				tracker_write_to_trunk_change_log(*ppGroup, \
-					pLastTrunkServer);
+				tracker_set_trunk_server(*ppGroup, NULL);
 			}
 
 			(*ppGroup)->trunk_chg_count++;
