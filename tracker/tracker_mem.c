@@ -4874,23 +4874,23 @@ static int tracker_write_to_trunk_change_log(FDFSGroupInfo *pGroup, \
 	{
 		if (pLastTrunk == NULL)
 		{
-			len += sprintf(buff + len, " %s(%s)  => ", \
+			len += sprintf(buff + len, " %s/%s  => ", \
 				*(pGroup->last_trunk_server_id) == '\0' ? \
 				  "-" : pGroup->last_trunk_server_id, "-");
 		}
 		else
 		{
-			len += sprintf(buff + len, " %s(%s)  => ", \
+			len += sprintf(buff + len, " %s/%s  => ", \
 				pLastTrunk->id, pLastTrunk->ip_addr);
 		}
 
 		if (pGroup->pTrunkServer == NULL)
 		{
-			len += sprintf(buff + len, " %s(%s)\n", "-", "-");
+			len += sprintf(buff + len, " %s/%s\n", "-", "-");
 		}
 		else
 		{
-			len += sprintf(buff + len, " %s(%s)\n", \
+			len += sprintf(buff + len, " %s/%s\n", \
 				pGroup->pTrunkServer->id, \
 				pGroup->pTrunkServer->ip_addr);
 		}
