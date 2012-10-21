@@ -4835,7 +4835,7 @@ static int tracker_mem_get_trunk_binlog_size(
 }
 
 static int tracker_write_to_trunk_change_log(FDFSGroupInfo *pGroup, \
-		FDFSStorageDetail *pNewTrunkServer)
+		FDFSStorageDetail *pLastTrunkServer)
 {
 	char full_filename[MAX_PATH_SIZE];
 	char buff[256];
@@ -4843,11 +4843,15 @@ static int tracker_write_to_trunk_change_log(FDFSGroupInfo *pGroup, \
 	int len;
 	struct tm tm;
 	time_t current_time;
+	FDFSStorageDetail *pLastTrunk;
+
+	tracker_mem_file_lock();
 
 	snprintf(full_filename, sizeof(full_filename), "%s/logs/%s", \
 		g_fdfs_base_path, TRUNK_SERVER_CHANGELOG_FILENAME);
 	if ((fd=open(full_filename, O_WRONLY | O_CREAT | O_APPEND, 0644)) < 0)
 	{
+		tracker_mem_file_unlock();
 		logError("file: "__FILE__", line: %d, " \
 			"open \"%s\" fail, errno: %d, error info: %s", \
 			__LINE__, full_filename, errno, STRERROR(errno));
@@ -4860,46 +4864,59 @@ static int tracker_write_to_trunk_change_log(FDFSGroupInfo *pGroup, \
 		tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
 		tm.tm_hour, tm.tm_min, tm.tm_sec, pGroup->group_name);
 
+	pLastTrunk = pLastTrunkServer;
+	if (pLastTrunk == NULL && *(pGroup->last_trunk_server_id) != '\0')
+	{
+		pLastTrunk = tracker_mem_get_storage(pGroup, \
+				pGroup->last_trunk_server_id);
+	}
 	if (g_use_storage_id)
 	{
-		FDFSStorageDetail *pLastTrunk;
-		if (*(pGroup->last_trunk_server_id) == '\0')
-		{
-			pLastTrunk = pGroup->pTrunkServer;
-		}
-		else
-		{
-			pLastTrunk = tracker_mem_get_storage(pGroup, \
-					pGroup->last_trunk_server_id);
-		}
 		if (pLastTrunk == NULL)
 		{
-			len += sprintf(buff + len, " %s(%s)  =>  %s(%s)\n", \
+			len += sprintf(buff + len, " %s(%s)  => ", \
 				*(pGroup->last_trunk_server_id) == '\0' ? \
-				  "-" : pGroup->last_trunk_server_id, "-", \
-				pNewTrunkServer->id, pNewTrunkServer->ip_addr);
+				  "-" : pGroup->last_trunk_server_id, "-");
 		}
 		else
 		{
-			len += sprintf(buff + len, " %s(%s)  =>  %s(%s)\n", \
-				pLastTrunk->id, pLastTrunk->ip_addr, \
-				pNewTrunkServer->id, pNewTrunkServer->ip_addr);
+			len += sprintf(buff + len, " %s(%s)  => ", \
+				pLastTrunk->id, pLastTrunk->ip_addr);
+		}
+
+		if (pGroup->pTrunkServer == NULL)
+		{
+			len += sprintf(buff + len, " %s(%s)\n", "-", "-");
+		}
+		else
+		{
+			len += sprintf(buff + len, " %s(%s)\n", \
+				pGroup->pTrunkServer->id, \
+				pGroup->pTrunkServer->ip_addr);
 		}
 	}
 	else
 	{
-		if (pGroup->pTrunkServer == NULL)
+		if (pLastTrunk == NULL)
 		{
-			len += sprintf(buff + len, " %s  =>  %s\n", \
+			len += sprintf(buff + len, " %s  => ", \
 				*(pGroup->last_trunk_server_id) == '\0' ? \
-				  "-" : pGroup->last_trunk_server_id, \
-				pNewTrunkServer->ip_addr);
+				  "-" : pGroup->last_trunk_server_id);
 		}
 		else
 		{
-			len += sprintf(buff + len, " %s  =>  %s\n", \
-				pGroup->pTrunkServer->ip_addr, \
-				pNewTrunkServer->ip_addr);
+			len += sprintf(buff + len, " %s  => ", \
+				pLastTrunk->ip_addr);
+		}
+
+		if (pGroup->pTrunkServer == NULL)
+		{
+			len += sprintf(buff + len, " %s\n", "-");
+		}
+		else
+		{
+			len += sprintf(buff + len, " %s\n", \
+				pGroup->pTrunkServer->ip_addr);
 		}
 	}
 
@@ -4913,6 +4930,8 @@ static int tracker_write_to_trunk_change_log(FDFSGroupInfo *pGroup, \
 	}
 
 	close(fd);
+	tracker_mem_file_unlock();
+
 	return 0;
 }
 
@@ -4922,6 +4941,7 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 	FDFSStorageDetail *pStoreServer;
 	FDFSStorageDetail **ppServer;
 	FDFSStorageDetail **ppServerEnd;
+	FDFSStorageDetail *pLastTrunkServer;
 	int result;
 	int64_t file_size;
 	int64_t max_file_size;
@@ -4973,14 +4993,15 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 
 	}
 
-	if (strcmp(pStoreServer->id, pGroup->last_trunk_server_id) != 0)
-	{
-		tracker_write_to_trunk_change_log(pGroup, pStoreServer);
-	}
-
+	pLastTrunkServer = pGroup->pTrunkServer;
 	pGroup->pTrunkServer = pStoreServer;
 	pGroup->trunk_chg_count++;
 	g_trunk_server_chg_count++;
+
+	if (strcmp(pStoreServer->id, pGroup->last_trunk_server_id) != 0)
+	{
+		tracker_write_to_trunk_change_log(pGroup, pLastTrunkServer);
+	}
 	strcpy(pGroup->last_trunk_server_id, pStoreServer->id);
 
 	logInfo("file: "__FILE__", line: %d, " \
@@ -5711,6 +5732,8 @@ int tracker_mem_check_alive(void *arg)
 					g_check_active_interval;
 	    	if (last_beat_interval > check_trunk_interval)
 		{
+			FDFSStorageDetail *pLastTrunkServer;
+
 			logInfo("file: "__FILE__", line: %d, " \
 				"trunk server %s(%s:%d) offline because idle " \
 				"time: %d s > threshold: %d s, should " \
@@ -5720,8 +5743,14 @@ int tracker_mem_check_alive(void *arg)
 				(*ppGroup)->storage_port, last_beat_interval, \
 				check_trunk_interval);
 
+			pLastTrunkServer = (*ppGroup)->pTrunkServer;
 			(*ppGroup)->pTrunkServer = NULL;
 			tracker_mem_find_trunk_server(*ppGroup, false);
+			if ((*ppGroup)->pTrunkServer == NULL)
+			{
+				tracker_write_to_trunk_change_log(*ppGroup, \
+					pLastTrunkServer);
+			}
 
 			(*ppGroup)->trunk_chg_count++;
 			g_trunk_server_chg_count++;
