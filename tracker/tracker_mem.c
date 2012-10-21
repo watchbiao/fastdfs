@@ -4862,7 +4862,17 @@ static int tracker_write_to_trunk_change_log(FDFSGroupInfo *pGroup, \
 
 	if (g_use_storage_id)
 	{
-		if (pGroup->pTrunkServer == NULL)
+		FDFSStorageDetail *pLastTrunk;
+		if (*(pGroup->last_trunk_server_id) == '\0')
+		{
+			pLastTrunk = pGroup->pTrunkServer;
+		}
+		else
+		{
+			pLastTrunk = tracker_mem_get_storage(pGroup, \
+					pGroup->last_trunk_server_id);
+		}
+		if (pLastTrunk == NULL)
 		{
 			len += sprintf(buff + len, " %s(%s)  =>  %s(%s)\n", \
 				*(pGroup->last_trunk_server_id) == '\0' ? \
@@ -4872,8 +4882,7 @@ static int tracker_write_to_trunk_change_log(FDFSGroupInfo *pGroup, \
 		else
 		{
 			len += sprintf(buff + len, " %s(%s)  =>  %s(%s)\n", \
-				pGroup->pTrunkServer->id, \
-				pGroup->pTrunkServer->ip_addr, \
+				pLastTrunk->id, pLastTrunk->ip_addr, \
 				pNewTrunkServer->id, pNewTrunkServer->ip_addr);
 		}
 	}
