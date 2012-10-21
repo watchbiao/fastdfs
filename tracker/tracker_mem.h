@@ -22,6 +22,7 @@
 #define STORAGE_SERVERS_LIST_FILENAME_NEW  "storage_servers_new.dat"
 #define STORAGE_SERVERS_CHANGELOG_FILENAME "storage_changelog.dat"
 #define STORAGE_SYNC_TIMESTAMP_FILENAME	   "storage_sync_timestamp.dat"
+#define TRUNK_SERVER_CHANGELOG_FILENAME    "trunk_server_change.log"
 #define STORAGE_DATA_FIELD_SEPERATOR	   ','
 
 typedef struct {
