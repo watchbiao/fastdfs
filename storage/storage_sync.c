@@ -2926,6 +2926,12 @@ static void* storage_sync_thread_entrance(void* arg)
 			else if ((sync_result=storage_sync_data(&reader, \
 				&storage_server, &record)) != 0)
 			{
+				logDebug("file: "__FILE__", line: %d, " \
+					"current record offset: " \
+					INT64_PRINTF_FORMAT", next record " \
+					"offset: "INT64_PRINTF_FORMAT, \
+					__LINE__, reader.binlog_offset, \
+					reader.binlog_offset + record_len);
 				if (rewind_to_prev_rec_end(&reader) != 0)
 				{
 					logCrit("file: "__FILE__", line: %d, " \
