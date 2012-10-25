@@ -1,6 +1,7 @@
 
 Version 4.02  2012-10-25
  * validate file_ext_name and prefix_name when upload file
+ * storage.conf add parameter: file_sync_skip_invalid_record
 
 Version 4.01  2012-10-21
  * trunk_mgr/trunk_mem.c: trunk init flag check more strictly

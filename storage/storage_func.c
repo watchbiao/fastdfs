@@ -1470,6 +1470,8 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 
+		g_file_sync_skip_invalid_record = iniGetBoolValue(NULL, \
+			"file_sync_skip_invalid_record", &iniContext, false);
 #ifdef WITH_HTTPD
 		{
 		char *pHttpTrunkSize;
@@ -1524,7 +1526,8 @@ int storage_func_init(const char *filename, \
 			"FDHT key_namespace=%s, FDHT keep_alive=%d, " \
 			"HTTP server port=%d, domain name=%s, " \
 			"use_access_log=%d, rotate_access_log=%d, " \
-			"access_log_rotate_time=%02d:%02d", \
+			"access_log_rotate_time=%02d:%02d, " \
+			"file_sync_skip_invalid_record=%d", \
 			g_fdfs_version.major, g_fdfs_version.minor, \
 			g_fdfs_base_path, g_fdfs_path_count, g_subdir_count_per_path,\
 			g_group_name, g_run_by_group, g_run_by_user, \
@@ -1552,7 +1555,8 @@ int storage_func_init(const char *filename, \
 			g_key_namespace, g_keep_alive, \
 			g_http_port, g_http_domain, g_use_access_log, \
 			g_rotate_access_log, g_access_log_rotate_time.hour, \
-			g_access_log_rotate_time.minute);
+			g_access_log_rotate_time.minute, \
+			g_file_sync_skip_invalid_record);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)
