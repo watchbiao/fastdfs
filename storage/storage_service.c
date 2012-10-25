@@ -4270,6 +4270,15 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 	memcpy(file_ext_name, p, FDFS_FILE_EXT_NAME_MAX_LEN);
 	*(file_ext_name + FDFS_FILE_EXT_NAME_MAX_LEN) = '\0';
 	p += FDFS_FILE_EXT_NAME_MAX_LEN;
+	if ((result=fdfs_validate_filename(file_ext_name)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, file_ext_name: %s " \
+			"is invalid!", __LINE__, \
+			pTask->client_ip, file_ext_name);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return result;
+	}
 
 	pFileContext->calc_crc32 = true;
 	pFileContext->calc_file_hash = g_check_file_duplicate;
@@ -5059,10 +5068,36 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	memcpy(prefix_name, p, FDFS_FILE_PREFIX_MAX_LEN);
 	*(prefix_name + FDFS_FILE_PREFIX_MAX_LEN) = '\0';
 	p += FDFS_FILE_PREFIX_MAX_LEN;
+	if (*prefix_name == '\0')
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, prefix_name is empty!", \
+			 __LINE__, pTask->client_ip);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+	if ((result=fdfs_validate_filename(prefix_name)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, prefix_name: %s " \
+			"is invalid!", __LINE__, \
+			pTask->client_ip, prefix_name);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return result;
+	}
 
 	memcpy(file_ext_name, p, FDFS_FILE_EXT_NAME_MAX_LEN);
 	*(file_ext_name + FDFS_FILE_EXT_NAME_MAX_LEN) = '\0';
 	p += FDFS_FILE_EXT_NAME_MAX_LEN;
+	if ((result=fdfs_validate_filename(file_ext_name)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, file_ext_name: %s " \
+			"is invalid!", __LINE__, \
+			pTask->client_ip, file_ext_name);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return result;
+	}
 
 	memcpy(master_filename, p, master_filename_len);
 	*(master_filename + master_filename_len) = '\0';
