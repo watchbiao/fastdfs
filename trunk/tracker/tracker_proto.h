@@ -222,6 +222,7 @@ int tracker_connect_server_ex(TrackerServerInfo *pTrackerServer, \
 void tracker_disconnect_server(TrackerServerInfo *pTrackerServer);
 
 int fdfs_validate_group_name(const char *group_name);
+int fdfs_validate_filename(const char *filename);
 int metadata_cmp_by_name(const void *p1, const void *p2);
 
 const char *get_storage_status_caption(const int status);
