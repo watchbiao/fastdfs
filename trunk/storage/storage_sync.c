@@ -2195,6 +2195,7 @@ static int storage_binlog_do_line_read(StorageBinLogReader *pReader, \
 
 	if (pReader->binlog_buff.length == 0)
 	{
+		*line_length = 0;
 		return ENOENT;
 	}
 
@@ -2202,6 +2203,7 @@ static int storage_binlog_do_line_read(StorageBinLogReader *pReader, \
 			pReader->binlog_buff.length);
 	if (pLineEnd == NULL)
 	{
+		*line_length = 0;
 		return ENOENT;
 	}
 
@@ -2274,7 +2276,6 @@ int storage_binlog_read(StorageBinLogReader *pReader, \
 			return ENOENT;
 		}
 
-		//rotate
 		if (pReader->binlog_buff.length != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -2282,9 +2283,10 @@ int storage_binlog_read(StorageBinLogReader *pReader, \
 				"file offset: "INT64_PRINTF_FORMAT, __LINE__, \
 				get_binlog_readable_filename(pReader, NULL), \
 				pReader->binlog_offset);
-			return EINVAL;
+			return ENOENT;
 		}
 
+		//rotate
 		pReader->binlog_index++;
 		pReader->binlog_offset = 0;
 		pReader->binlog_buff.version = 0;
@@ -2308,13 +2310,13 @@ int storage_binlog_read(StorageBinLogReader *pReader, \
 			"read item count: %d < 3", \
 			__LINE__, get_binlog_readable_filename(pReader, NULL), \
 			pReader->binlog_offset, result);
-		return ENOENT;
+		return EINVAL;
 	}
 
 	pRecord->timestamp = atoi(cols[0]);
 	pRecord->op_type = *(cols[1]);
 	pRecord->filename_len = strlen(cols[2]) - 1; //need trim new line \n
-	if (pRecord->filename_len > sizeof(pRecord->filename)-1)
+	if (pRecord->filename_len > sizeof(pRecord->filename) - 1)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"item \"filename\" in binlog " \
@@ -2394,7 +2396,15 @@ static int storage_binlog_reader_skip(StorageBinLogReader *pReader)
 				return 0;
 			}
 
-			return result;
+			if (result == EINVAL && g_file_sync_skip_invalid_record)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"skip invalid record!", __LINE__);
+			}
+			else
+			{
+				return result;
+			}
 		}
 
 		if (record.timestamp >= pReader->until_timestamp)
@@ -2902,11 +2912,18 @@ static void* storage_sync_thread_entrance(void* arg)
 
 			if (read_result != 0)
 			{
-				sleep(5);
-				continue;
+			if (result == EINVAL && g_file_sync_skip_invalid_record)
+			{
+				logWarning("file: "__FILE__", line: %d, " \
+					"skip invalid record!", __LINE__);
 			}
-
-			if ((sync_result=storage_sync_data(&reader, \
+			else
+			{
+				sleep(5);
+				break;
+			}
+			}
+			else if ((sync_result=storage_sync_data(&reader, \
 				&storage_server, &record)) != 0)
 			{
 				if (rewind_to_prev_rec_end(&reader) != 0)
