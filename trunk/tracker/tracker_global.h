@@ -60,6 +60,8 @@ extern char g_run_by_user[32];
 
 extern bool g_storage_ip_changed_auto_adjust;
 extern bool g_use_storage_id;  //identify storage by ID instead of IP address
+extern bool g_rotate_error_log;  //if rotate the error log every day
+extern TimeInfo g_error_log_rotate_time;  //rotate error log time base
 
 extern FDFSStorageIdInfo *g_storage_ids_by_ip;  //sorted by group name and storage IP
 extern FDFSStorageIdInfo **g_storage_ids_by_id;  //sorted by storage ID

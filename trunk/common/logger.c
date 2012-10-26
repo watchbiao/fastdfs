@@ -218,17 +218,15 @@ static int log_check_rotate(LogContext *pContext, const bool bNeedLock)
 		pthread_mutex_lock(&(pContext->log_thread_lock));
 	}
 
-	result = 0;
-	do
+	if (pContext->rotate_immediately)
 	{
-		if (!pContext->rotate_immediately)
-		{
-			break;
-		}
-
 		result = log_rotate(pContext);
 		pContext->rotate_immediately = false;
-	} while (0);
+	}
+	else
+	{
+		result = 0;
+	}
 
 	if (bNeedLock)
 	{

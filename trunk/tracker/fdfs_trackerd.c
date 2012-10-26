@@ -73,7 +73,7 @@ static void sigSegvHandler(int signum, siginfo_t *info, void *ptr);
 static void sigDumpHandler(int sig);
 #endif
 
-#define SCHEDULE_ENTRIES_COUNT 3
+#define SCHEDULE_ENTRIES_COUNT 4
 
 int main(int argc, char *argv[])
 {
@@ -268,8 +268,6 @@ int main(int argc, char *argv[])
 	}
 
 	scheduleArray.entries = scheduleEntries;
-	scheduleArray.count = SCHEDULE_ENTRIES_COUNT;
-
 	memset(scheduleEntries, 0, sizeof(scheduleEntries));
 	scheduleEntries[0].id = 1;
 	scheduleEntries[0].time_base.hour = TIME_NONE;
@@ -291,6 +289,23 @@ int main(int argc, char *argv[])
 	scheduleEntries[2].interval = TRACKER_SYNC_STATUS_FILE_INTERVAL;
 	scheduleEntries[2].task_func = tracker_write_status_to_file;
 	scheduleEntries[2].func_args = NULL;
+
+	scheduleArray.count = 3;
+
+	if (g_rotate_error_log)
+	{
+		scheduleEntries[scheduleArray.count].id = 4;
+		scheduleEntries[scheduleArray.count].time_base = \
+				g_error_log_rotate_time;
+		scheduleEntries[scheduleArray.count].interval = \
+				24 * 3600;
+		scheduleEntries[scheduleArray.count].task_func = \
+				log_notify_rotate;
+		scheduleEntries[scheduleArray.count].func_args = \
+				&g_log_context;
+		scheduleArray.count++;
+	}
+
 	if ((result=sched_start(&scheduleArray, &schedule_tid, \
 		g_thread_stack_size, &g_continue_flag)) != 0)
 	{
