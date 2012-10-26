@@ -522,6 +522,11 @@ static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
 			pFileContext->sync_flag, pFileContext->fname2log);
 			}
 		}
+		else  //FDFS_STORAGE_FILE_OP_DISCARD
+		{
+			storage_binlog_write(pFileContext->timestamp2log, \
+			pFileContext->sync_flag, pFileContext->fname2log);
+		}
 	}
 
 	if (pFileContext->op == FDFS_STORAGE_FILE_OP_WRITE)
