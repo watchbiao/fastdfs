@@ -36,6 +36,8 @@ char g_run_by_user[32] = {0};
 
 bool g_storage_ip_changed_auto_adjust = true;
 bool g_use_storage_id = false;  //if use storage ID instead of IP address
+bool g_rotate_error_log = false;  //if rotate the error log every day
+TimeInfo g_error_log_rotate_time  = {0, 0}; //rotate error log time base
 
 FDFSStorageIdInfo *g_storage_ids_by_ip = NULL;  //sorted by group name and storage IP
 FDFSStorageIdInfo **g_storage_ids_by_id = NULL; //sorted by storage ID

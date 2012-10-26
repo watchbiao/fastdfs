@@ -77,6 +77,7 @@ char g_last_storage_ip[IP_ADDRESS_SIZE] = {0};	 //the last storage ip address
 
 bool g_use_access_log = false;    //if log to access log
 bool g_rotate_access_log = false; //if rotate the access log every day
+bool g_rotate_error_log = false;  //if rotate the error log every day
 bool g_use_storage_id = false;    //identify storage by ID instead of IP address
 bool g_store_slave_file_use_link = false; //if store slave file use symbol link
 
@@ -88,6 +89,7 @@ int g_allow_ip_count = 0;
 in_addr_t *g_allow_ip_addrs = NULL;
 
 TimeInfo g_access_log_rotate_time = {0, 0}; //rotate access log time base
+TimeInfo g_error_log_rotate_time  = {0, 0}; //rotate error log time base
 
 gid_t g_run_by_gid;
 uid_t g_run_by_uid;

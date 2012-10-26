@@ -124,8 +124,10 @@ extern bool g_store_slave_file_use_link; //if store slave file use symbol link
 extern bool g_use_storage_id;  //identify storage by ID instead of IP address
 extern bool g_use_access_log;  //if log to access log
 extern bool g_rotate_access_log;  //if rotate the access log every day
+extern bool g_rotate_error_log;  //if rotate the error log every day
 
 extern TimeInfo g_access_log_rotate_time; //rotate access log time base
+extern TimeInfo g_error_log_rotate_time;  //rotate error log time base
 
 extern bool g_check_file_duplicate;  //if check file content duplicate
 extern byte g_file_signature_method; //file signature method

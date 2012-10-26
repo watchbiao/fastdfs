@@ -1470,6 +1470,15 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 
+		g_rotate_error_log = iniGetBoolValue(NULL, "rotate_error_log",\
+					&iniContext, false);
+		if ((result=get_time_item_from_conf(&iniContext, \
+			"error_log_rotate_time", &g_error_log_rotate_time, \
+			0, 0)) != 0)
+		{
+			break;
+		}
+
 		g_file_sync_skip_invalid_record = iniGetBoolValue(NULL, \
 			"file_sync_skip_invalid_record", &iniContext, false);
 #ifdef WITH_HTTPD
@@ -1527,6 +1536,8 @@ int storage_func_init(const char *filename, \
 			"HTTP server port=%d, domain name=%s, " \
 			"use_access_log=%d, rotate_access_log=%d, " \
 			"access_log_rotate_time=%02d:%02d, " \
+			"rotate_error_log=%d, " \
+			"error_log_rotate_time=%02d:%02d, " \
 			"file_sync_skip_invalid_record=%d", \
 			g_fdfs_version.major, g_fdfs_version.minor, \
 			g_fdfs_base_path, g_fdfs_path_count, g_subdir_count_per_path,\
@@ -1556,6 +1567,8 @@ int storage_func_init(const char *filename, \
 			g_http_port, g_http_domain, g_use_access_log, \
 			g_rotate_access_log, g_access_log_rotate_time.hour, \
 			g_access_log_rotate_time.minute, \
+			g_rotate_error_log, g_error_log_rotate_time.hour, \
+			g_error_log_rotate_time.minute, \
 			g_file_sync_skip_invalid_record);
 
 #ifdef WITH_HTTPD

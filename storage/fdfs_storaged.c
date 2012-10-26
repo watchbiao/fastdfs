@@ -75,7 +75,7 @@ static void sigSegvHandler(int signum, siginfo_t *info, void *ptr);
 static void sigDumpHandler(int sig);
 #endif
 
-#define SCHEDULE_ENTRIES_MAX_COUNT 6
+#define SCHEDULE_ENTRIES_MAX_COUNT 7
 
 int main(int argc, char *argv[])
 {
@@ -333,6 +333,20 @@ int main(int argc, char *argv[])
 					&g_access_log_context;
 			scheduleArray.count++;
 		}
+	}
+
+	if (g_rotate_error_log)
+	{
+		scheduleEntries[scheduleArray.count].id = 7;
+		scheduleEntries[scheduleArray.count].time_base = \
+				g_error_log_rotate_time;
+		scheduleEntries[scheduleArray.count].interval = \
+				24 * 3600;
+		scheduleEntries[scheduleArray.count].task_func = \
+				log_notify_rotate;
+		scheduleEntries[scheduleArray.count].func_args = \
+				&g_log_context;
+		scheduleArray.count++;
 	}
 
 	if ((result=sched_start(&scheduleArray, &schedule_tid, \
