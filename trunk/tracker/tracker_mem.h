@@ -65,7 +65,10 @@ FDFSStorageDetail *tracker_mem_get_storage(FDFSGroupInfo *pGroup, \
 FDFSStorageDetail *tracker_mem_get_storage_by_ip(FDFSGroupInfo *pGroup, \
 				const char *ip_addr);
 
+const FDFSStorageDetail *tracker_mem_set_trunk_server( \
+	FDFSGroupInfo *pGroup, const char *pStroageId, int *result);
 int tracker_mem_delete_storage(FDFSGroupInfo *pGroup, const char *id);
+
 int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 		const char *old_storage_ip, const char *new_storage_ip);
 
