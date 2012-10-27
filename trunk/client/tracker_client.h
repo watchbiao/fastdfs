@@ -262,6 +262,20 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 
 
 /**
+* set trunk server of the specified group
+* params:
+*	pTrackerGroup: the tracker group
+*	group_name: the group name which the storage server belongs to
+*	storage_id: the storage server id, can be NULL or empty
+*       new_trunk_server_id: the new trunk server id
+* return: 0 success, !=0 fail, return the error code
+**/
+int tracker_set_trunk_server(TrackerServerGroup *pTrackerGroup, \
+		const char *group_name, const char *storage_id, \
+		char *new_trunk_server_id);
+
+
+/**
 * get storage server status from the tracker server
 * params:
 *	pTrackerServer: tracker server

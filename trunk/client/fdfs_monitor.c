@@ -26,7 +26,7 @@ static int list_all_groups(const char *group_name);
 
 static void usage(char *argv[])
 {
-	printf("Usage: %s <config_file> [-h <tracker_server>] [list|delete <group_name> " \
+	printf("Usage: %s <config_file> [-h <tracker_server>] [list|delete|set_trunk_server <group_name> " \
 		"[storage_id]]\n", argv[0]);
 }
 
@@ -196,6 +196,40 @@ int main(int argc, char *argv[])
 		else
 		{
 			printf("delete storage server %s::%s fail, " \
+				"error no: %d, error info: %s\n", \
+				group_name, storage_id, \
+				result, STRERROR(result));
+		}
+	}
+	else if (strcmp(op_type, "set_trunk_server") == 0)
+	{
+		char *storage_id;
+		char new_trunk_server_id[FDFS_STORAGE_ID_MAX_SIZE];
+
+		if (group_name == NULL)
+		{
+			usage(argv);
+			return 1;
+		}
+		if (arg_index >= argc)
+		{
+			storage_id = "";
+		}
+		else
+		{
+			storage_id = argv[arg_index++];
+		}
+
+		if ((result=tracker_set_trunk_server(&g_tracker_group, \
+			group_name, storage_id, new_trunk_server_id)) == 0)
+		{
+			printf("set trunk server %s::%s success, " \
+				"new trunk server: %s\n", group_name, \
+				storage_id, new_trunk_server_id);
+		}
+		else
+		{
+			printf("set trunk server %s::%s fail, " \
 				"error no: %d, error info: %s\n", \
 				group_name, storage_id, \
 				result, STRERROR(result));
