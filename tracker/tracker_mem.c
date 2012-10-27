@@ -4935,7 +4935,7 @@ static int tracker_write_to_trunk_change_log(FDFSGroupInfo *pGroup, \
 	return 0;
 }
 
-static int tracker_set_trunk_server(FDFSGroupInfo *pGroup, \
+static int tracker_set_trunk_server_and_log(FDFSGroupInfo *pGroup, \
 		FDFSStorageDetail *pNewTrunkServer)
 {
 	FDFSStorageDetail *pLastTrunkServer;
@@ -4958,6 +4958,40 @@ static int tracker_set_trunk_server(FDFSGroupInfo *pGroup, \
 				pNewTrunkServer->id);
 		}
 		return result;
+	}
+
+	return 0;
+}
+
+static int tracker_mem_do_set_trunk_server(FDFSGroupInfo *pGroup, 
+	FDFSStorageDetail *pTrunkServer, const bool save)
+{
+	int result;
+
+	if (*(pGroup->last_trunk_server_id) != '\0' && 
+	    strcmp(pTrunkServer->id, pGroup->last_trunk_server_id) != 0)
+	{
+		if ((result=fdfs_deal_no_body_cmd_ex(
+			pTrunkServer->ip_addr, 
+			pGroup->storage_port, 
+			STORAGE_PROTO_CMD_TRUNK_DELETE_BINLOG_MARKS)) != 0)
+		{
+			return result;
+		}
+
+	}
+
+	tracker_set_trunk_server_and_log(pGroup, pTrunkServer);
+	pGroup->trunk_chg_count++;
+	g_trunk_server_chg_count++;
+
+	logInfo("file: "__FILE__", line: %d, " \
+		"group: %s, trunk server set to %s(%s:%d)", __LINE__, \
+		pGroup->group_name, pGroup->pTrunkServer->id, \
+		pGroup->pTrunkServer->ip_addr, pGroup->storage_port);
+	if (save)
+	{
+		return tracker_save_groups();
 	}
 
 	return 0;
@@ -5007,33 +5041,60 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 		}
 	}
 
-	if (*(pGroup->last_trunk_server_id) != '\0' && 
-	    strcmp(pStoreServer->id, pGroup->last_trunk_server_id) != 0)
+	return tracker_mem_do_set_trunk_server(pGroup, \
+			pStoreServer, save);
+}
+
+const FDFSStorageDetail *tracker_mem_set_trunk_server( \
+	FDFSGroupInfo *pGroup, const char *pStroageId, int *result)
+{
+	if (!(g_if_leader_self && g_if_use_trunk_file))
 	{
-		if ((result=fdfs_deal_no_body_cmd_ex(
-			pStoreServer->ip_addr, 
-			pGroup->storage_port, 
-			STORAGE_PROTO_CMD_TRUNK_DELETE_BINLOG_MARKS)) != 0)
+		*result = EOPNOTSUPP;
+		return NULL;
+	}
+
+	FDFSStorageDetail *pServer;
+	if (pStroageId == NULL || *pStroageId == '\0')
+	{
+		if (pGroup->pTrunkServer != NULL && pGroup-> \
+		pTrunkServer->status == FDFS_STORAGE_STATUS_ACTIVE)
 		{
-			return result;
+			*result = 0;
+			return pGroup->pTrunkServer;
 		}
 
+		*result = tracker_mem_find_trunk_server(pGroup, true);
+		if (*result != 0)
+		{
+			return NULL;
+		}
+		return pGroup->pTrunkServer;
 	}
 
-	tracker_set_trunk_server(pGroup, pStoreServer);
-	pGroup->trunk_chg_count++;
-	g_trunk_server_chg_count++;
-
-	logInfo("file: "__FILE__", line: %d, " \
-		"group: %s, trunk server set to %s(%s:%d)", __LINE__, \
-		pGroup->group_name, pGroup->pTrunkServer->id, \
-		pGroup->pTrunkServer->ip_addr, pGroup->storage_port);
-	if (save)
+	if (pGroup->pTrunkServer != NULL && pGroup-> \
+		pTrunkServer->status == FDFS_STORAGE_STATUS_ACTIVE)
 	{
-		return tracker_save_groups();
+		*result = EEXIST;
+		return NULL;
 	}
 
-	return 0;
+	pServer = tracker_mem_get_storage(pGroup, pStroageId);
+	if (pServer == NULL)
+	{
+		*result = ENOENT;
+		return NULL;
+	}
+
+	if (pServer->status != FDFS_STORAGE_STATUS_ACTIVE)
+	{
+		*result = EINVAL;
+		return NULL;
+	}
+
+	*result = tracker_mem_do_set_trunk_server(pGroup, \
+			pServer, true);
+	return *result == 0 ? pGroup->pTrunkServer : NULL;
 }
 
 int tracker_mem_deactive_store_server(FDFSGroupInfo *pGroup,
@@ -5765,7 +5826,7 @@ int tracker_mem_check_alive(void *arg)
 			tracker_mem_find_trunk_server(*ppGroup, false);
 			if ((*ppGroup)->pTrunkServer == NULL)
 			{
-				tracker_set_trunk_server(*ppGroup, NULL);
+				tracker_set_trunk_server_and_log(*ppGroup, NULL);
 			}
 
 			(*ppGroup)->trunk_chg_count++;

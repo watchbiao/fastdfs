@@ -1336,6 +1336,60 @@ static int tracker_deal_server_delete_storage(struct fast_task_info *pTask)
 	return tracker_mem_delete_storage(pGroup, pStorageId);
 }
 
+static int tracker_deal_server_set_trunk_server(struct fast_task_info *pTask)
+{
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char *pStorageId;
+	FDFSGroupInfo *pGroup;
+	int nPkgLen;
+
+	nPkgLen = pTask->length - sizeof(TrackerHeader);
+	if (nPkgLen < FDFS_GROUP_NAME_MAX_LEN)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length >= %d", __LINE__, \
+			TRACKER_PROTO_CMD_SERVER_SET_TRUNK_SERVER, \
+			pTask->client_ip, nPkgLen, FDFS_GROUP_NAME_MAX_LEN);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+	if (nPkgLen >= FDFS_GROUP_NAME_MAX_LEN + FDFS_STORAGE_ID_MAX_SIZE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip: %s, package size " \
+			PKG_LEN_PRINTF_FORMAT" is not correct, " \
+			"expect length < %d", __LINE__, \
+			TRACKER_PROTO_CMD_SERVER_SET_TRUNK_SERVER, \
+			pTask->client_ip, nPkgLen, \
+			FDFS_GROUP_NAME_MAX_LEN + FDFS_STORAGE_ID_MAX_SIZE);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	pTask->data[pTask->length] = '\0';
+
+	memcpy(group_name, pTask->data + sizeof(TrackerHeader), \
+			FDFS_GROUP_NAME_MAX_LEN);
+	group_name[FDFS_GROUP_NAME_MAX_LEN] = '\0';
+	pStorageId = pTask->data + sizeof(TrackerHeader) + \
+			FDFS_GROUP_NAME_MAX_LEN;
+	*(pStorageId + FDFS_STORAGE_ID_MAX_SIZE - 1) = '\0';
+	pGroup = tracker_mem_get_group(group_name);
+	if (pGroup == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, invalid group_name: %s", \
+			__LINE__, pTask->client_ip, group_name);
+		pTask->length = sizeof(TrackerHeader);
+		return ENOENT;
+	}
+
+	pTask->length = sizeof(TrackerHeader);
+	return tracker_mem_delete_storage(pGroup, pStorageId);
+}
+
 static int tracker_deal_active_test(struct fast_task_info *pTask)
 {
 	if (pTask->length - sizeof(TrackerHeader) != 0)
@@ -3456,6 +3510,9 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			break;
 		case TRACKER_PROTO_CMD_SERVER_DELETE_STORAGE:
 			result = tracker_deal_server_delete_storage(pTask);
+			break;
+		case TRACKER_PROTO_CMD_SERVER_SET_TRUNK_SERVER:
+			result = tracker_deal_server_set_trunk_server(pTask);
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_REPORT_IP_CHANGED:
 			result = tracker_deal_storage_report_ip_changed(pTask);
