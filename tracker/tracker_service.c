@@ -1341,7 +1341,9 @@ static int tracker_deal_server_set_trunk_server(struct fast_task_info *pTask)
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char *pStorageId;
 	FDFSGroupInfo *pGroup;
+	const FDFSStorageDetail *pTrunkServer;
 	int nPkgLen;
+	int result;
 
 	nPkgLen = pTask->length - sizeof(TrackerHeader);
 	if (nPkgLen < FDFS_GROUP_NAME_MAX_LEN)
@@ -1386,8 +1388,31 @@ static int tracker_deal_server_set_trunk_server(struct fast_task_info *pTask)
 		return ENOENT;
 	}
 
-	pTask->length = sizeof(TrackerHeader);
-	return tracker_mem_delete_storage(pGroup, pStorageId);
+	pTrunkServer = tracker_mem_set_trunk_server(pGroup, \
+				pStorageId, &result);
+	if (result == 0 && pTrunkServer != NULL)
+	{
+		int nIdLen;
+		nIdLen = strlen(pTrunkServer->id) + 1;
+		pTask->length = sizeof(TrackerHeader) + nIdLen;
+		memcpy(pTask->data + sizeof(TrackerHeader), \
+			pTrunkServer->id, nIdLen);
+	}
+	else
+	{
+		if (result == 0)
+		{
+			result = ENOENT;
+		}
+
+		logError("file: "__FILE__", line: %d, " \
+			"client ip: %s, set trunk server %s:%s fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			pTask->client_ip, group_name, pStorageId, \
+			result, STRERROR(result));
+		pTask->length = sizeof(TrackerHeader);
+	}
+	return result;
 }
 
 static int tracker_deal_active_test(struct fast_task_info *pTask)

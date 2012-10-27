@@ -4978,7 +4978,6 @@ static int tracker_mem_do_set_trunk_server(FDFSGroupInfo *pGroup,
 		{
 			return result;
 		}
-
 	}
 
 	tracker_set_trunk_server_and_log(pGroup, pTrunkServer);
@@ -5048,20 +5047,23 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 const FDFSStorageDetail *tracker_mem_set_trunk_server( \
 	FDFSGroupInfo *pGroup, const char *pStroageId, int *result)
 {
+	FDFSStorageDetail *pServer;
+	FDFSStorageDetail *pTrunkServer;
+
 	if (!(g_if_leader_self && g_if_use_trunk_file))
 	{
 		*result = EOPNOTSUPP;
 		return NULL;
 	}
 
-	FDFSStorageDetail *pServer;
+	pTrunkServer = pGroup->pTrunkServer;
 	if (pStroageId == NULL || *pStroageId == '\0')
 	{
-		if (pGroup->pTrunkServer != NULL && pGroup-> \
-		pTrunkServer->status == FDFS_STORAGE_STATUS_ACTIVE)
+		if (pTrunkServer != NULL && pTrunkServer-> \
+			status == FDFS_STORAGE_STATUS_ACTIVE)
 		{
 			*result = 0;
-			return pGroup->pTrunkServer;
+			return pTrunkServer;
 		}
 
 		*result = tracker_mem_find_trunk_server(pGroup, true);
@@ -5072,11 +5074,18 @@ const FDFSStorageDetail *tracker_mem_set_trunk_server( \
 		return pGroup->pTrunkServer;
 	}
 
-	if (pGroup->pTrunkServer != NULL && pGroup-> \
-		pTrunkServer->status == FDFS_STORAGE_STATUS_ACTIVE)
+	if (pTrunkServer != NULL && pTrunkServer->status == \
+			FDFS_STORAGE_STATUS_ACTIVE)
 	{
-		*result = EEXIST;
-		return NULL;
+		if (strcmp(pStroageId, pTrunkServer->id) == 0)
+		{
+			*result = EALREADY;
+		}
+		else
+		{
+			*result = EEXIST;
+		}
+		return pTrunkServer;
 	}
 
 	pServer = tracker_mem_get_storage(pGroup, pStroageId);
@@ -5088,7 +5097,7 @@ const FDFSStorageDetail *tracker_mem_set_trunk_server( \
 
 	if (pServer->status != FDFS_STORAGE_STATUS_ACTIVE)
 	{
-		*result = EINVAL;
+		*result = ENONET;
 		return NULL;
 	}
 

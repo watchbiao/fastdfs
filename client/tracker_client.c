@@ -1071,7 +1071,7 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 	TrackerServerInfo *pEnd;
 	FDFSStorageInfo storage_infos[1];
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
-			IP_ADDRESS_SIZE];
+			FDFS_STORAGE_ID_MAX_SIZE];
 	char in_buff[1];
 	char *pInBuff;
 	int64_t in_bytes;
@@ -1180,6 +1180,98 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 	}
 
 	return result == ENOENT ? 0 : result;
+}
+
+int tracker_set_trunk_server(TrackerServerGroup *pTrackerGroup, \
+		const char *group_name, const char *storage_id, \
+		char *new_trunk_server_id)
+{
+	TrackerHeader *pHeader;
+	TrackerServerInfo tracker_server;
+	TrackerServerInfo *pServer;
+	TrackerServerInfo *pEnd;
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
+			FDFS_STORAGE_ID_MAX_SIZE];
+	char in_buff[FDFS_STORAGE_ID_MAX_SIZE];
+	char *pInBuff;
+	int64_t in_bytes;
+	int result;
+	int storage_id_len;
+
+	*new_trunk_server_id = '\0';
+	memset(out_buff, 0, sizeof(out_buff));
+	memset(in_buff, 0, sizeof(in_buff));
+	pHeader = (TrackerHeader *)out_buff;
+	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
+			sizeof(TrackerHeader),  "%s", group_name);
+	if (storage_id == NULL)
+	{
+		storage_id_len = 0;
+	}
+	else
+	{
+		storage_id_len = snprintf(out_buff + sizeof(TrackerHeader) + \
+				FDFS_GROUP_NAME_MAX_LEN, \
+				sizeof(out_buff) - sizeof(TrackerHeader) - \
+				FDFS_GROUP_NAME_MAX_LEN,  "%s", storage_id);
+	}
+	
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + storage_id_len, pHeader->pkg_len);
+	pHeader->cmd = TRACKER_PROTO_CMD_SERVER_SET_TRUNK_SERVER;
+
+	result = 0;
+	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
+	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
+	{
+		memcpy(&tracker_server, pServer, sizeof(TrackerServerInfo));
+		tracker_server.sock = -1;
+		if ((result=tracker_connect_server(&tracker_server)) != 0)
+		{
+			continue;
+		}
+
+		if ((result=tcpsenddata_nb(tracker_server.sock, out_buff, \
+			sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 
+			storage_id_len, g_fdfs_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"send data to tracker server %s:%d fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				tracker_server.ip_addr, tracker_server.port, \
+				result, STRERROR(result));
+			close(tracker_server.sock);
+			continue;
+		}
+
+		pInBuff = in_buff;
+		result = fdfs_recv_response(&tracker_server, \
+				&pInBuff, sizeof(in_buff) - 1, &in_bytes);
+		close(tracker_server.sock);
+		if (result == 0)
+		{
+			strcpy(new_trunk_server_id, in_buff);
+			return 0;
+		}
+
+		if (result == EOPNOTSUPP)
+		{
+			continue;
+		}
+		if (result == EALREADY)
+		{
+			if (storage_id_len > 0)
+			{
+				strcpy(new_trunk_server_id, storage_id);
+			}
+			return result;
+		}
+		else
+		{
+			return result;
+		}
+	}
+
+	return result;
 }
 
 int tracker_get_storage_status(TrackerServerInfo *pTrackerServer, \
