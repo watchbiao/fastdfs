@@ -429,11 +429,15 @@ static void sigQuitHandler(int sig)
 	}
 }
 
-
 static void sigHupHandler(int sig)
 {
+	if (g_rotate_error_log)
+	{
+		g_log_context.rotate_immediately = true;
+	}
+
 	logInfo("file: "__FILE__", line: %d, " \
-		"catch signal %d, ignore it", __LINE__, sig);
+		"catch signal %d, rotate log", __LINE__, sig);
 }
 
 static void sigAlarmHandler(int sig)
