@@ -904,11 +904,15 @@ int storage_func_init(const char *filename, \
 	char *pBuffSize;
 	char *pIfAliasPrefix;
 	char *pHttpDomain;
+	char *pRotateAccessLogSize;
+	char *pRotateErrorLogSize;
 	IniContext iniContext;
 	int result;
 	int64_t fsync_after_written_bytes;
 	int64_t thread_stack_size;
 	int64_t buff_size;
+	int64_t rotate_access_log_size;
+	int64_t rotate_error_log_size;
 	TrackerServerInfo *pServer;
 	TrackerServerInfo *pEnd;
 
@@ -1135,7 +1139,7 @@ int storage_func_init(const char *filename, \
 		}
 		else if ((result=parse_bytes(pBuffSize, 1, &buff_size)) != 0)
 		{
-			return result;
+			break;
 		}
 		g_buff_size = buff_size;
 		if (g_buff_size < 4 * 1024 || \
@@ -1307,7 +1311,7 @@ int storage_func_init(const char *filename, \
 		else if ((result=parse_bytes(pFsyncAfterWrittenBytes, 1, \
 				&fsync_after_written_bytes)) != 0)
 		{
-			return result;
+			break;
 		}
 		g_fsync_after_written_bytes = fsync_after_written_bytes;
 
@@ -1353,7 +1357,7 @@ int storage_func_init(const char *filename, \
 		else if ((result=parse_bytes(pThreadStackSize, 1, \
 				&thread_stack_size)) != 0)
 		{
-			return result;
+			break;
 		}
 		g_thread_stack_size = (int)thread_stack_size;
 
@@ -1444,7 +1448,8 @@ int storage_func_init(const char *filename, \
 			logError("file: "__FILE__", line: %d, " \
 				"invalid param \"http.server_port\": %d", \
 				__LINE__, g_http_port);
-			return EINVAL;
+			result = EINVAL;
+			break;
 		}
  
 		pHttpDomain = iniGetStrValue(NULL, \
@@ -1461,6 +1466,25 @@ int storage_func_init(const char *filename, \
 
 		g_use_access_log = iniGetBoolValue(NULL, "use_access_log", \
 					&iniContext, false);
+		if (g_use_access_log)
+		{
+			result = log_init_ex(&g_access_log_context);
+			if (result != 0)
+			{
+				break;
+			}
+
+			log_set_time_precision(&g_access_log_context, \
+				LOG_TIME_PRECISION_MSECOND);
+			log_set_cache_ex(&g_access_log_context, true);
+			result = log_set_prefix_ex(&g_access_log_context, \
+				g_fdfs_base_path, "storage_access");
+			if (result != 0)
+			{
+				break;
+			}
+		}
+	
 		g_rotate_access_log = iniGetBoolValue(NULL, "rotate_access_log",\
 					&iniContext, false);
 		if ((result=get_time_item_from_conf(&iniContext, \
@@ -1478,6 +1502,52 @@ int storage_func_init(const char *filename, \
 		{
 			break;
 		}
+
+		pRotateAccessLogSize = iniGetStrValue(NULL, \
+			"rotate_access_log_size", &iniContext);
+		if (pRotateAccessLogSize == NULL)
+		{
+			rotate_access_log_size = 0;
+		}
+		else if ((result=parse_bytes(pRotateAccessLogSize, 1, \
+				&rotate_access_log_size)) != 0)
+		{
+			break;
+		}
+		if (rotate_access_log_size > 0 && \
+			rotate_access_log_size< FDFS_ONE_MB)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"item \"rotate_access_log_size\": " \
+				INT64_PRINTF_FORMAT" is too small, " \
+				"change to 1 MB", __LINE__, \
+				rotate_access_log_size);
+			rotate_access_log_size = FDFS_ONE_MB;
+		}
+		g_access_log_context.rotate_size = rotate_access_log_size;
+
+		pRotateErrorLogSize = iniGetStrValue(NULL, \
+			"rotate_error_log_size", &iniContext);
+		if (pRotateErrorLogSize == NULL)
+		{
+			rotate_error_log_size = 0;
+		}
+		else if ((result=parse_bytes(pRotateErrorLogSize, 1, \
+				&rotate_error_log_size)) != 0)
+		{
+			break;
+		}
+		if (rotate_error_log_size > 0 && \
+			rotate_error_log_size < FDFS_ONE_MB)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"item \"rotate_error_log_size\": " \
+				INT64_PRINTF_FORMAT" is too small, " \
+				"change to 1 MB", __LINE__, \
+				rotate_error_log_size);
+			rotate_error_log_size = FDFS_ONE_MB;
+		}
+		g_log_context.rotate_size = rotate_error_log_size;
 
 		g_file_sync_skip_invalid_record = iniGetBoolValue(NULL, \
 			"file_sync_skip_invalid_record", &iniContext, false);
@@ -1538,6 +1608,8 @@ int storage_func_init(const char *filename, \
 			"access_log_rotate_time=%02d:%02d, " \
 			"rotate_error_log=%d, " \
 			"error_log_rotate_time=%02d:%02d, " \
+			"rotate_access_log_size="INT64_PRINTF_FORMAT", " \
+			"rotate_error_log_size="INT64_PRINTF_FORMAT", " \
 			"file_sync_skip_invalid_record=%d", \
 			g_fdfs_version.major, g_fdfs_version.minor, \
 			g_fdfs_base_path, g_fdfs_path_count, g_subdir_count_per_path,\
@@ -1569,6 +1641,8 @@ int storage_func_init(const char *filename, \
 			g_access_log_rotate_time.minute, \
 			g_rotate_error_log, g_error_log_rotate_time.hour, \
 			g_error_log_rotate_time.minute, \
+			g_access_log_context.rotate_size, \
+			g_log_context.rotate_size, \
 			g_file_sync_skip_invalid_record);
 
 #ifdef WITH_HTTPD
@@ -1663,6 +1737,11 @@ int storage_func_destroy()
 	}
 
 	close_ret = storage_close_stat_file();
+
+	if (g_use_access_log)
+	{
+		log_destroy_ex(&g_access_log_context);
+	}
 
 	if ((result=pthread_mutex_destroy(&sync_stat_file_lock)) != 0)
 	{

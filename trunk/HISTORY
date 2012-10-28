@@ -1,10 +1,11 @@
 
-Version 4.02  2012-10-27
+Version 4.02  2012-10-28
  * validate file_ext_name and prefix_name when upload file
  * storage.conf add parameter: file_sync_skip_invalid_record
  * add offset debug info when sync file fail
  * bug fixed: log to binlog also if the file exists when sync file
  * tracker and storage error log support rotate
+ * support rotate log by file size
  * rotate log when receive HUP signal
  * fdfs_monitor support set trunk server
 

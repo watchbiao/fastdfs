@@ -60,7 +60,6 @@
 
 pthread_mutex_t g_storage_thread_lock;
 int g_storage_thread_count = 0;
-LogContext g_access_log_context = {LOG_INFO, STDERR_FILENO, NULL};
 
 static int last_stat_change_count = 1;  //for sync to stat file
 static int64_t temp_file_sequence = 0;
@@ -1625,31 +1624,11 @@ int storage_service_init()
 		return result;
 	}
 
-	if (g_use_access_log)
-	{
-		result = log_init_ex(&g_access_log_context);
-		if (result != 0)
-		{
-			return result;
-		}
-
-		log_set_time_precision(&g_access_log_context, \
-				LOG_TIME_PRECISION_MSECOND);
-		log_set_cache_ex(&g_access_log_context, true);
-		result = log_set_prefix_ex(&g_access_log_context, \
-				g_fdfs_base_path, "storage_access");
-	}
-	
 	return result;
 }
 
 void storage_service_destroy()
 {
-	if (g_use_access_log)
-	{
-		log_destroy_ex(&g_access_log_context);
-	}
-
 	pthread_mutex_destroy(&g_storage_thread_lock);
 	pthread_mutex_destroy(&path_index_thread_lock);
 	pthread_mutex_destroy(&stat_count_thread_lock);
