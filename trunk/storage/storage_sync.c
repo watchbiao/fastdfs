@@ -2912,10 +2912,14 @@ static void* storage_sync_thread_entrance(void* arg)
 
 			if (read_result != 0)
 			{
-			if (result == EINVAL && g_file_sync_skip_invalid_record)
+			if (read_result == EINVAL && \
+				g_file_sync_skip_invalid_record)
 			{
 				logWarning("file: "__FILE__", line: %d, " \
-					"skip invalid record!", __LINE__);
+					"skip invalid record, binlog index: " \
+					"%d, offset: "INT64_PRINTF_FORMAT, \
+					__LINE__, reader.binlog_index, \
+					reader.binlog_offset);
 			}
 			else
 			{
@@ -2927,10 +2931,11 @@ static void* storage_sync_thread_entrance(void* arg)
 				&storage_server, &record)) != 0)
 			{
 				logDebug("file: "__FILE__", line: %d, " \
-					"current record offset: " \
-					INT64_PRINTF_FORMAT", next record " \
-					"offset: "INT64_PRINTF_FORMAT, \
-					__LINE__, reader.binlog_offset, \
+					"binlog index: %d, current record " \
+					"offset: "INT64_PRINTF_FORMAT", next " \
+					"record offset: "INT64_PRINTF_FORMAT, \
+					__LINE__, reader.binlog_index, \
+					reader.binlog_offset, \
 					reader.binlog_offset + record_len);
 				if (rewind_to_prev_rec_end(&reader) != 0)
 				{
