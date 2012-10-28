@@ -75,6 +75,8 @@ char g_my_server_id[FDFS_STORAGE_ID_MAX_SIZE] = {0}; //my server id
 char g_tracker_client_ip[IP_ADDRESS_SIZE] = {0}; //storage ip as tracker client
 char g_last_storage_ip[IP_ADDRESS_SIZE] = {0};	 //the last storage ip address
 
+LogContext g_access_log_context = {LOG_INFO, STDERR_FILENO, NULL};
+
 bool g_use_access_log = false;    //if log to access log
 bool g_rotate_access_log = false; //if rotate the access log every day
 bool g_rotate_error_log = false;  //if rotate the error log every day

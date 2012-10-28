@@ -120,6 +120,8 @@ extern char g_my_server_id[FDFS_STORAGE_ID_MAX_SIZE]; //my server id
 extern char g_tracker_client_ip[IP_ADDRESS_SIZE]; //storage ip as tracker client
 extern char g_last_storage_ip[IP_ADDRESS_SIZE];	//the last storage ip address
 
+extern LogContext g_access_log_context;
+
 extern bool g_store_slave_file_use_link; //if store slave file use symbol link
 extern bool g_use_storage_id;  //identify storage by ID instead of IP address
 extern bool g_use_access_log;  //if log to access log

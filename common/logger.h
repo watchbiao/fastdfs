@@ -38,7 +38,16 @@ typedef struct log_context
 	char *pcurrent_buff;
 
 	/* mutext lock */
-	pthread_mutex_t log_thread_lock; 
+	pthread_mutex_t log_thread_lock;
+
+	/*
+	rotate the log when the log file exceeds this parameter
+	rotate_size > 0 means need rotate log by log file size
+	*/
+	int64_t rotate_size;
+
+	/* log file current size */
+	int64_t current_size;
 
 	/* if write to buffer firstly, then sync to disk.
 	   default value is false (no cache) */

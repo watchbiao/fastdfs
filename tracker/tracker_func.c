@@ -428,6 +428,7 @@ int tracker_load_from_conf_file(const char *filename, \
 	char *pSlotMaxSize;
 	char *pSpaceThreshold;
 	char *pTrunkFileSize;
+	char *pRotateErrorLogSize;
 #ifdef WITH_HTTPD
 	char *pHttpCheckUri;
 	char *pHttpCheckType;
@@ -438,6 +439,7 @@ int tracker_load_from_conf_file(const char *filename, \
 	int64_t trunk_file_size;
 	int64_t slot_min_size;
 	int64_t slot_max_size;
+	int64_t rotate_error_log_size;
 	char reserved_space_str[32];
 
 	memset(&g_groups, 0, sizeof(FDFSGroups));
@@ -859,6 +861,29 @@ int tracker_load_from_conf_file(const char *filename, \
 			break;
 		}
 
+		pRotateErrorLogSize = iniGetStrValue(NULL, \
+			"rotate_error_log_size", &iniContext);
+		if (pRotateErrorLogSize == NULL)
+		{
+			rotate_error_log_size = 0;
+		}
+		else if ((result=parse_bytes(pRotateErrorLogSize, 1, \
+				&rotate_error_log_size)) != 0)
+		{
+			break;
+		}
+		if (rotate_error_log_size > 0 && \
+			rotate_error_log_size < FDFS_ONE_MB)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"item \"rotate_error_log_size\": " \
+				INT64_PRINTF_FORMAT" is too small, " \
+				"change to 1 MB", __LINE__, \
+				rotate_error_log_size);
+			rotate_error_log_size = FDFS_ONE_MB;
+		}
+		g_log_context.rotate_size = rotate_error_log_size;
+
 		g_store_slave_file_use_link = iniGetBoolValue(NULL, \
 			"store_slave_file_use_link", &iniContext, false);
 
@@ -935,6 +960,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			"use_storage_id=%d, storage_id_count=%d, " \
 			"rotate_error_log=%d, " \
 			"error_log_rotate_time=%02d:%02d, " \
+			"rotate_error_log_size="INT64_PRINTF_FORMAT", " \
 			"store_slave_file_use_link=%d", \
 			g_fdfs_version.major, g_fdfs_version.minor,  \
 			g_fdfs_base_path, g_run_by_group, g_run_by_user, \
@@ -964,6 +990,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_use_storage_id, g_storage_id_count, \
 			g_rotate_error_log, g_error_log_rotate_time.hour, \
 			g_error_log_rotate_time.minute, \
+			g_log_context.rotate_size, \
 			g_store_slave_file_use_link);
 
 #ifdef WITH_HTTPD
