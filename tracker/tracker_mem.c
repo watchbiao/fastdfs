@@ -125,11 +125,12 @@ static int tracker_mem_find_trunk_server(FDFSGroupInfo *pGroup,
 
 static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	FDFSStorageDetail **ppStorageServer, const char *id, \
-	const char *ip_addr, const bool bNeedSleep, bool *bInserted);
+	const char *ip_addr, const bool bNeedSleep, \
+	const bool bNeedLock, bool *bInserted);
 
 static int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 		const char *id, const char *ip_addr, \
-		const bool bNeedSleep, bool *bInserted);
+		const bool bNeedSleep, const bool bNeedLock, bool *bInserted);
 
 static int tracker_mem_add_group_ex(FDFSGroups *pGroups, \
 	TrackerClientInfo *pClientInfo, const char *group_name, \
@@ -918,7 +919,7 @@ static int tracker_load_storages_old(FDFSGroups *pGroups, const char *data_path)
 		}
 
 		if ((result=tracker_mem_add_storage(&clientInfo, NULL, ip_addr, \
-				false, &bInserted)) != 0)
+				false, false, &bInserted)) != 0)
 		{
 			break;
 		}
@@ -1182,7 +1183,7 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 		}
 
 		if ((result=tracker_mem_add_storage(&clientInfo, storage_id, \
-				ip_addr, false, &bInserted)) != 0)
+				ip_addr, false, false, &bInserted)) != 0)
 		{
 			break;
 		}
@@ -3447,7 +3448,7 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 	}
 
 	result = _tracker_mem_add_storage(pGroup, &pNewStorageServer, \
-			new_storage_ip, new_storage_ip, true, &bInserted);
+			new_storage_ip, new_storage_ip, true, true, &bInserted);
 	if (result != 0)
 	{
 		return result;
@@ -3490,14 +3491,15 @@ int tracker_mem_storage_ip_changed(FDFSGroupInfo *pGroup, \
 
 static int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 		const char *id, const char *ip_addr, \
-		const bool bNeedSleep, bool *bInserted)
+		const bool bNeedSleep, const bool bNeedLock, bool *bInserted)
 {
 	int result;
 	FDFSStorageDetail *pStorageServer;
 
 	pStorageServer = NULL;
 	result = _tracker_mem_add_storage(pClientInfo->pGroup, \
-			&pStorageServer, id, ip_addr, bNeedSleep, bInserted);
+			&pStorageServer, id, ip_addr, bNeedSleep, \
+			bNeedLock, bInserted);
 	if (result == 0)
 	{
 		pClientInfo->pStorage = pStorageServer;
@@ -3508,7 +3510,8 @@ static int tracker_mem_add_storage(TrackerClientInfo *pClientInfo, \
 
 static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	FDFSStorageDetail **ppStorageServer, const char *id, \
-	const char *ip_addr, const bool bNeedSleep, bool *bInserted)
+	const char *ip_addr, const bool bNeedSleep, \
+	const bool bNeedLock, bool *bInserted)
 {
 	int result;
 	const char *storage_id;
@@ -3561,7 +3564,7 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 		storage_id = ip_addr;
 	}
 
-	if ((result=pthread_mutex_lock(&mem_thread_lock)) != 0)
+	if (bNeedLock && (result=pthread_mutex_lock(&mem_thread_lock)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"call pthread_mutex_lock fail, " \
@@ -3615,7 +3618,7 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 		*bInserted = true;
 	} while (0);
 
-	if (pthread_mutex_unlock(&mem_thread_lock) != 0)
+	if (bNeedLock && pthread_mutex_unlock(&mem_thread_lock) != 0)
 	{
 		logError("file: "__FILE__", line: %d, "   \
 			"call pthread_mutex_unlock fail", \
@@ -4450,7 +4453,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 	}
 
 	if ((result=tracker_mem_add_storage(pClientInfo, storage_id, ip_addr, \
-			bNeedSleep, &bStorageInserted)) != 0)
+			bNeedSleep, true, &bStorageInserted)) != 0)
 	{
 		return result;
 	}
@@ -4709,7 +4712,8 @@ int tracker_mem_sync_storages(FDFSGroupInfo *pGroup, \
 
 				result = _tracker_mem_add_storage(pGroup, \
 					&pStorageServer, pServer->id, \
-					pServer->ip_addr, true, &bInserted);
+					pServer->ip_addr, true, false, \
+					&bInserted);
 				if (result != 0)
 				{
 					pStorageServer->status = pServer->status;
