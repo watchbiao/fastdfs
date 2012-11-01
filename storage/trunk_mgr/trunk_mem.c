@@ -595,7 +595,7 @@ static int storage_trunk_restore(const int64_t restore_offset)
 
 	logDebug("file: "__FILE__", line: %d, " \
 		"trunk metadata recovering, start offset: " \
-		INT64_PRINTF_FORMAT", recovery file size: " \
+		INT64_PRINTF_FORMAT", need recovery binlog bytes: " \
 		INT64_PRINTF_FORMAT, __LINE__, \
 		restore_offset, trunk_binlog_size - restore_offset);
 
@@ -641,6 +641,15 @@ static int storage_trunk_restore(const int64_t restore_offset)
 
 				result = (reader.binlog_offset >= \
 					trunk_binlog_size) ? 0 : EINVAL;
+				if (result != 0)
+				{
+				logError("file: "__FILE__", line: %d, " \
+					"binlog offset: "INT64_PRINTF_FORMAT \
+					" < binlog size: "INT64_PRINTF_FORMAT \
+					", please check the end of trunk " \
+					"binlog", __LINE__, \
+					reader.binlog_offset, trunk_binlog_size);
+				}
 			}
 		
 			break;
@@ -712,14 +721,15 @@ static int storage_trunk_restore(const int64_t restore_offset)
 				if (avl_tree_delete(&tree_info_by_offset,\
 							&trunkNode) != 1)
 				{
-					trunk_info_dump(&(record.trunk), \
-							buff, sizeof(buff));
-					logWarning("file: "__FILE__", line: %d"\
-						", trunk data line: " \
-						INT64_PRINTF_FORMAT", trunk "\
-						"node not exist, " \
-						"trunk info: %s", \
-						__LINE__, line_count, buff);
+				trunk_info_dump(&(record.trunk), \
+						buff, sizeof(buff));
+				logWarning("file: "__FILE__", line: %d"\
+					", binlog offset: "INT64_PRINTF_FORMAT \
+					", trunk data line: "INT64_PRINTF_FORMAT \
+					" trunk node not exist, " \
+					"trunk info: %s", __LINE__, \
+					reader.binlog_offset, \
+					line_count, buff);
 				}
 			}
 			else if ((result=trunk_delete_space( \
@@ -727,10 +737,11 @@ static int storage_trunk_restore(const int64_t restore_offset)
 			{
 				if (result == ENOENT)
 				{
-					logDebug("file: "__FILE__", line: %d, "\
-						"trunk data line: " \
-						INT64_PRINTF_FORMAT, \
-						__LINE__, line_count);
+				logDebug("file: "__FILE__", line: %d, "\
+					"binlog offset: "INT64_PRINTF_FORMAT \
+					", trunk data line: "INT64_PRINTF_FORMAT,\
+					__LINE__, reader.binlog_offset, \
+					line_count);
 
 					result = 0;
 				}
@@ -760,6 +771,10 @@ static int storage_trunk_restore(const int64_t restore_offset)
 		{
 			avl_tree_destroy(&tree_info_by_offset);
 		}
+
+		logError("file: "__FILE__", line: %d, " \
+			"trunk load fail, errno: %d, error info: %s", \
+			__LINE__, result, STRERROR(result));
 		return result;
 	}
 
