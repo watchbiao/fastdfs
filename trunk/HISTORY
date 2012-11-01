@@ -1,4 +1,7 @@
 
+Version 4.03  2012-11-01
+ * trunk_mgr/trunk_mem.c: add more debug info
+
 Version 4.02  2012-10-30
  * validate file_ext_name and prefix_name when upload file
  * storage.conf add parameter: file_sync_skip_invalid_record
