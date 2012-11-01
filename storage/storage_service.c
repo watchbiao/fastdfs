@@ -2260,8 +2260,6 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		pFileContext->extra_info.upload.trunk_info.path. \
 		store_path_index, new_filename);
 
-	logInfo("pFileContext->filename=%s, new_full_filename=%s", 
-		pFileContext->filename, new_full_filename);
 	if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_TRUNK)
 	{
 		char trunk_buff[FDFS_TRUNK_FILE_INFO_LEN + 1];

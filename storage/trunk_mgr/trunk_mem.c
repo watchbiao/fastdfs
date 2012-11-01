@@ -933,6 +933,17 @@ static int storage_trunk_load()
 				return result;
 			}
 
+			if (bytes == 0)
+			{
+				result = ENOENT;
+				logError("file: "__FILE__", line: %d, " \
+					"file: %s, end of file, expect " \
+					"end line", __LINE__, \
+					trunk_data_filename);
+				close(fd);
+				return result;
+			}
+
 			bytes += len;
 			*(buff + bytes) = '\0';
 			pLineStart = buff;
@@ -975,6 +986,10 @@ static int storage_trunk_load()
 			__LINE__, trunk_data_filename);
 		return EINVAL;
 	}
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"file %s, line count: %d", \
+		__LINE__, trunk_data_filename, line_count);
 
 	return storage_trunk_restore(restore_offset);
 }
