@@ -17,7 +17,6 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
-#include <unistd.h>
 #include "fdfs_define.h"
 #include "logger.h"
 #include "fdfs_global.h"
