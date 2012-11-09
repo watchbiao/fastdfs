@@ -79,7 +79,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		"g_sync_old_done=%d\n"
 		"g_sync_src_id=%s\n"
 		"g_sync_until_timestamp=%s\n"
-		"g_my_server_id=%s\n"
+		"g_my_server_id_str=%s\n"
 		"g_tracker_client_ip=%s\n"
 		"g_last_storage_ip=%s\n"
 		"g_check_file_duplicate=%d\n"
@@ -172,7 +172,7 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 		, g_sync_src_id
 		, formatDatetime(g_sync_until_timestamp, "%Y-%m-%d %H:%M:%S", 
 			szSyncUntilTimestamp, sizeof(szSyncUntilTimestamp))
-                , g_my_server_id
+                , g_my_server_id_str
 		, g_tracker_client_ip
 		, g_last_storage_ip
 		, g_check_file_duplicate

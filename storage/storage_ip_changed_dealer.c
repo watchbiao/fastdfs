@@ -44,7 +44,7 @@ static int storage_do_changelog_req(TrackerServerInfo *pTrackerServer)
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_CHANGELOG_REQ;
 	strcpy(out_buff + sizeof(TrackerHeader), g_group_name);
 	strcpy(out_buff + sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN, \
-		g_my_server_id);
+		g_my_server_id_str);
 	if((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
 		sizeof(out_buff), g_fdfs_network_timeout)) != 0)
 	{

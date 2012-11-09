@@ -1759,7 +1759,7 @@ bool storage_server_is_myself(const FDFSStorageBrief *pStorageBrief)
 {
 	if (g_use_storage_id)
 	{
-		return strcmp(pStorageBrief->id, g_my_server_id) == 0;
+		return strcmp(pStorageBrief->id, g_my_server_id_str) == 0;
 	}
 	else
 	{
@@ -1771,7 +1771,7 @@ bool storage_id_is_myself(const char *storage_id)
 {
 	if (g_use_storage_id)
 	{
-		return strcmp(storage_id, g_my_server_id) == 0;
+		return strcmp(storage_id, g_my_server_id_str) == 0;
 	}
 	else
 	{

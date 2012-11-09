@@ -684,7 +684,7 @@ static int storage_report_my_server_id(TrackerServerInfo *pStorageServer)
 	
 	long2buff(IP_ADDRESS_SIZE, pHeader->pkg_len);
 	pHeader->cmd = STORAGE_PROTO_CMD_REPORT_SERVER_ID;
-	strcpy(out_buff + sizeof(TrackerHeader), g_my_server_id);
+	strcpy(out_buff + sizeof(TrackerHeader), g_my_server_id_str);
 	if ((result=tcpsenddata_nb(pStorageServer->sock, out_buff, \
 		sizeof(TrackerHeader) + FDFS_STORAGE_ID_MAX_SIZE, \
 		g_fdfs_network_timeout)) != 0)

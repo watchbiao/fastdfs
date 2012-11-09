@@ -65,13 +65,14 @@ FDFSStorageStat g_storage_stat;
 int g_stat_change_count = 1;
 int g_sync_change_count = 0;
 
+int g_my_server_id_int = 0; //my server id integer
 int g_storage_join_time = 0;
 int g_sync_until_timestamp = 0;
 bool g_sync_old_done = false;
 char g_sync_src_id[FDFS_STORAGE_ID_MAX_SIZE] = {0};
 
 char g_group_name[FDFS_GROUP_NAME_MAX_LEN + 1] = {0};
-char g_my_server_id[FDFS_STORAGE_ID_MAX_SIZE] = {0}; //my server id
+char g_my_server_id_str[FDFS_STORAGE_ID_MAX_SIZE] = {0}; //my server id string
 char g_tracker_client_ip[IP_ADDRESS_SIZE] = {0}; //storage ip as tracker client
 char g_last_storage_ip[IP_ADDRESS_SIZE] = {0};	 //the last storage ip address
 
@@ -81,6 +82,7 @@ bool g_use_access_log = false;    //if log to access log
 bool g_rotate_access_log = false; //if rotate the access log every day
 bool g_rotate_error_log = false;  //if rotate the error log every day
 bool g_use_storage_id = false;    //identify storage by ID instead of IP address
+byte g_id_type_in_filename = FDFS_ID_TYPE_IP_ADDRESS; //id type of the storage server in the filename
 bool g_store_slave_file_use_link = false; //if store slave file use symbol link
 
 bool g_check_file_duplicate = false;

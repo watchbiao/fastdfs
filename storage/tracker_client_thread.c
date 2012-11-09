@@ -194,15 +194,34 @@ static int tracker_get_my_server_id(TrackerServerInfo *pTrackerServer)
 {
 	if (g_use_storage_id)
 	{
-		return tracker_get_storage_id(pTrackerServer, \
-			g_group_name, g_tracker_client_ip, g_my_server_id);
+    int result;
+		result = tracker_get_storage_id(pTrackerServer, \
+			g_group_name, g_tracker_client_ip, g_my_server_id_str);
+    if (result != 0)
+    {
+      return result;
+    }
+    g_my_server_id_int = atoi(g_my_server_id_str);
 	}
 	else
 	{
-		snprintf(g_my_server_id, sizeof(g_my_server_id), "%s", \
+    struct in_addr ip_addr;
+		snprintf(g_my_server_id_str, sizeof(g_my_server_id_str), "%s", \
 			g_tracker_client_ip);
-		return 0;
+    if (inet_pton(AF_INET, g_tracker_client_ip, &ip_addr) == 1)
+    {
+      g_my_server_id_int = ip_addr.s_addr;
+    }
+    else
+    {
+			logError("file: "__FILE__", line: %d, " \
+				"call inet_pton for ip: %s fail", \
+        __LINE__,g_tracker_client_ip);
+      g_my_server_id_int = INADDR_NONE;
+    }
 	}
+
+	return 0;
 }
 
 static void *tracker_report_thread_entrance(void *arg)
@@ -346,7 +365,7 @@ static void *tracker_report_thread_entrance(void *arg)
 
 		insert_into_local_host_ip(tracker_client_ip);
 
-		if (*g_my_server_id == '\0')
+		if (*g_my_server_id_str == '\0')
 		{
 			if (tracker_get_my_server_id(pTrackerServer) != 0)
 			{
@@ -357,8 +376,8 @@ static void *tracker_report_thread_entrance(void *arg)
 
 		/*
 		//printf("file: "__FILE__", line: %d, " \
-			"tracker_client_ip: %s, g_my_server_id: %s\n", \
-			__LINE__, tracker_client_ip, g_my_server_id);
+			"tracker_client_ip: %s, g_my_server_id_str: %s\n", \
+			__LINE__, tracker_client_ip, g_my_server_id_str);
 		//print_local_host_ip_addrs();
 		*/
 
@@ -753,7 +772,7 @@ static int tracker_start_sync_threads(const FDFSStorageBrief *pStorage)
 {
 	int result;
 
-	if (strcmp(pStorage->id, g_my_server_id) == 0)
+	if (strcmp(pStorage->id, g_my_server_id_str) == 0)
 	{
 		return 0;
 	}
@@ -1324,7 +1343,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 			for (pStorage=pBriefServers; pStorage<pStorageEnd; 
 				pStorage++)
 			{
-				if (strcmp(pStorage->id, g_my_server_id) == 0)
+				if (strcmp(pStorage->id, g_my_server_id_str) == 0)
 				{
 					continue;
 				}
@@ -1770,7 +1789,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 	memset(&targetServer, 0, sizeof(targetServer));
 	pTargetServer = &targetServer;
 
-	strcpy(targetServer.server.id, g_my_server_id);
+	strcpy(targetServer.server.id, g_my_server_id_str);
 	ppFound = (FDFSStorageServer **)bsearch(&pTargetServer, \
 			g_sorted_storages, g_storage_count, \
 			sizeof(FDFSStorageServer *), storage_cmp_by_server_id);
