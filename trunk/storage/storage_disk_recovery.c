@@ -131,7 +131,7 @@ static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 	{
 		result = tracker_get_storage_max_status(&g_tracker_group, \
                 		g_group_name, g_tracker_client_ip, \
-				g_my_server_id, &saved_storage_status);
+				g_my_server_id_str, &saved_storage_status);
 		if (result == ENOENT)
 		{
 			logWarning("file: "__FILE__", line: %d, " \
@@ -250,7 +250,7 @@ static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
 		for (pStorageStat=storageStats; pStorageStat<pStorageEnd; \
 			pStorageStat++)
 		{
-			if (strcmp(pStorageStat->id, g_my_server_id) == 0)
+			if (strcmp(pStorageStat->id, g_my_server_id_str) == 0)
 			{
 				continue;
 			}
@@ -767,7 +767,7 @@ int storage_disk_recovery_restore(const char *pBasePath)
 
 	while (g_continue_flag)
 	{
-		if (storage_report_storage_status(g_my_server_id, \
+		if (storage_report_storage_status(g_my_server_id_str, \
 			g_tracker_client_ip, saved_storage_status) == 0)
 		{
 			break;
@@ -1052,7 +1052,7 @@ int storage_disk_recovery_start(const int store_path_index)
 
 	while (g_continue_flag)
 	{
-		if (storage_report_storage_status(g_my_server_id, \
+		if (storage_report_storage_status(g_my_server_id_str, \
 			g_tracker_client_ip, FDFS_STORAGE_STATUS_RECOVERY) == 0)
 		{
 			break;

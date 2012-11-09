@@ -1945,17 +1945,39 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 {
 	char buff[sizeof(int) * 5];
 	char encoded[sizeof(int) * 8 + 1];
-	char szStorageIp[IP_ADDRESS_SIZE];
 	int len;
-	in_addr_t server_ip;
+	in_addr_t server_id;
 	int64_t masked_file_size;
 	FDFSTrunkFullInfo *pTrunkInfo;
 
 	pTrunkInfo = &(pClientInfo->file_context.extra_info.upload.trunk_info);
-	server_ip = getSockIpaddr(pClientInfo->sock, \
-			szStorageIp, IP_ADDRESS_SIZE);
+  if (g_id_type_in_filename == FDFS_ID_TYPE_SERVER_ID)
+  {
+    server_id = g_my_server_id_int;
+  }
+  else
+  {
+    struct sockaddr_in addr;
+    socklen_t addrlen;
 
-	int2buff(htonl(server_ip), buff);
+    memset(&addr, 0, sizeof(addr));
+    addrlen = sizeof(addr);
+    if (getsockname(pClientInfo->sock, (struct sockaddr *)&addr, \
+          &addrlen) != 0)
+    {
+		  logError("file: "__FILE__", line: %d, " \
+          "call getsockname fail, " \
+          "errno: %d, error info: %s", __LINE__, \
+          errno, STRERROR(errno));
+      server_id = INADDR_NONE;
+    }
+    else
+    {
+      server_id = addr.sin_addr.s_addr;
+    }
+  }
+
+	int2buff(htonl(server_id), buff);
 	int2buff(timestamp, buff+sizeof(int));
 	if ((file_size >> 32) != 0)
 	{

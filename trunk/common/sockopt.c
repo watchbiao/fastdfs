@@ -621,7 +621,7 @@ char *getHostnameByIp(const char *szIpAddr, char *buff, const int bufferSize)
 
 in_addr_t getIpaddrByName(const char *name, char *buff, const int bufferSize)
 {
-    	struct in_addr ip_addr;
+  struct in_addr ip_addr;
 	struct hostent *ent;
 	in_addr_t **addr_list;
 

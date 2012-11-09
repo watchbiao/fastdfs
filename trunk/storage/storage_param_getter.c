@@ -69,6 +69,8 @@ int storage_get_params_from_tracker()
 	int result;
 	bool use_trunk_file;
 	char reserved_space_str[32];
+  char *pIdType;
+  byte id_type_in_filename;
 
 	if ((result=fdfs_get_ini_context_from_tracker(&g_tracker_group, \
 		&iniContext, &g_continue_flag, \
@@ -134,7 +136,19 @@ int storage_get_params_from_tracker()
 			"trunk_init_reload_from_binlog", &iniContext, false);
 	g_store_slave_file_use_link = iniGetBoolValue(NULL, \
 			"store_slave_file_use_link", &iniContext, false);
-	iniFreeContext(&iniContext);
+
+  pIdType = iniGetStrValue(NULL, "id_type_in_filename", \
+      &iniContext);
+  if (pIdType != NULL && strcasecmp(pIdType, "id") == 0)
+  {
+    id_type_in_filename = FDFS_ID_TYPE_SERVER_ID;
+  }
+  else 
+  {
+    id_type_in_filename = FDFS_ID_TYPE_IP_ADDRESS;
+  }
+
+  iniFreeContext(&iniContext);
 
 	if (use_trunk_file && !g_if_use_trunk_file)
 	{
@@ -144,9 +158,11 @@ int storage_get_params_from_tracker()
 		}
 	}
 	g_if_use_trunk_file = use_trunk_file;
+	g_id_type_in_filename = id_type_in_filename;
 
 	logInfo("file: "__FILE__", line: %d, " \
 		"use_storage_id=%d, " \
+		"id_type_in_filename=%s, " \
 		"storage_ip_changed_auto_adjust=%d, " \
 		"store_path=%d, " \
 		"reserved_storage_space=%s, " \
@@ -162,6 +178,7 @@ int storage_get_params_from_tracker()
 		"trunk_init_reload_from_binlog=%d, " \
 		"store_slave_file_use_link=%d", \
 		__LINE__, g_use_storage_id, \
+    g_id_type_in_filename == FDFS_ID_TYPE_SERVER_ID ? "id" : "ip", \
 		g_storage_ip_changed_auto_adjust, \
 		g_store_path_mode, fdfs_storage_reserved_space_to_string( \
 			&g_storage_reserved_space, reserved_space_str), \

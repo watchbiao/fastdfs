@@ -152,6 +152,7 @@ static int tracker_load_storage_ids(const char *filename, \
 		IniContext *pItemContext)
 {
 	char *pStorageIdsFilename;
+	char *pIdType;
 	char *content;
 	char **lines;
 	char *line;
@@ -173,6 +174,17 @@ static int tracker_load_storage_ids(const char *filename, \
 	{
 		return 0;
 	}
+
+	pIdType = iniGetStrValue(NULL, "id_type_in_filename", \
+				pItemContext);
+  if (pIdType != NULL && strcasecmp(pIdType, "id") == 0)
+  {
+    g_id_type_in_filename = FDFS_ID_TYPE_SERVER_ID;
+  }
+  else
+  {
+    g_id_type_in_filename = FDFS_ID_TYPE_IP_ADDRESS;
+  }
 
 	pStorageIdsFilename = iniGetStrValue(NULL, "storage_ids_filename", \
 				pItemContext);
@@ -957,7 +969,9 @@ int tracker_load_from_conf_file(const char *filename, \
 			"trunk_create_file_space_threshold=%d GB, " \
 			"trunk_init_check_occupying=%d, " \
 			"trunk_init_reload_from_binlog=%d, " \
-			"use_storage_id=%d, storage_id_count=%d, " \
+			"use_storage_id=%d, " \
+      "id_type_in_filename=%s, " \
+      "storage_id_count=%d, " \
 			"rotate_error_log=%d, " \
 			"error_log_rotate_time=%02d:%02d, " \
 			"rotate_error_log_size="INT64_PRINTF_FORMAT", " \
@@ -987,7 +1001,8 @@ int tracker_load_from_conf_file(const char *filename, \
 			(int)(g_trunk_create_file_space_threshold / \
 			(FDFS_ONE_MB * 1024)), g_trunk_init_check_occupying, \
 			g_trunk_init_reload_from_binlog, \
-			g_use_storage_id, g_storage_id_count, \
+			g_use_storage_id, g_id_type_in_filename == \
+        FDFS_ID_TYPE_SERVER_ID ? "id" : "ip", g_storage_id_count, \
 			g_rotate_error_log, g_error_log_rotate_time.hour, \
 			g_error_log_rotate_time.minute, \
 			g_log_context.rotate_size, \
