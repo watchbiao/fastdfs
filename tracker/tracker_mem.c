@@ -657,7 +657,7 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path,
 				sizeof(pGroup->last_trunk_server_id), \
 				"%s", pValue);
 			if (g_use_storage_id && (*pValue != '\0' && \
-				!tracker_is_server_id_valid(pValue)))
+				!fdfs_is_server_id_valid(pValue)))
 			{
 				if (tracker_mem_get_storage_id( \
 					pGroup->group_name, pValue, \
@@ -698,7 +698,7 @@ static int tracker_load_groups_new(FDFSGroups *pGroups, const char *data_path,
 			clientInfo.pGroup->group_name);
 		snprintf((*ppTrunkServers)[*nTrunkServerCount].id, \
 			FDFS_STORAGE_ID_MAX_SIZE, "%s", pValue);
-		if (g_use_storage_id && !tracker_is_server_id_valid(pValue))
+		if (g_use_storage_id && !fdfs_is_server_id_valid(pValue))
 		{
 			if ((result=tracker_mem_get_storage_id( \
 				clientInfo.pGroup->group_name, pValue, \
@@ -1364,7 +1364,7 @@ static int tracker_load_storages_new(FDFSGroups *pGroups, const char *data_path)
 		strcpy(pStorageSyncs[nStorageSyncCount].id, pStorage->id);
 		snprintf(pStorageSyncs[nStorageSyncCount].sync_src_id, \
 			FDFS_STORAGE_ID_MAX_SIZE, "%s", psync_src_id);
-		if (g_use_storage_id && !tracker_is_server_id_valid( \
+		if (g_use_storage_id && !fdfs_is_server_id_valid( \
 						psync_src_id))
 		{
 			if ((result=tracker_mem_get_storage_id( \
@@ -1497,7 +1497,7 @@ static int tracker_load_sync_timestamps(FDFSGroups *pGroups, const char *data_pa
 			break;
 		}
 
-		if (g_use_storage_id && !tracker_is_server_id_valid( \
+		if (g_use_storage_id && !fdfs_is_server_id_valid( \
 						src_storage_id))
 		{
 			if ((result=tracker_mem_get_storage_id( \

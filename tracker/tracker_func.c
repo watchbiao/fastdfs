@@ -360,7 +360,7 @@ static int tracker_load_storage_ids(const char *filename, \
 				break;
 			}
 
-			if (!tracker_is_server_id_valid(id))
+			if (!fdfs_is_server_id_valid(id))
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"invalid server id: \"%s\", " \

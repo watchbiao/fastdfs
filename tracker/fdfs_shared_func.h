@@ -45,7 +45,9 @@ bool fdfs_check_reserved_space_path(const int64_t total_mb, \
 	const int64_t free_mb, const int avg_mb, \
 	FDFSStorageReservedSpace *pStorageReservedSpace);
 
-bool tracker_is_server_id_valid(const char *id);
+bool fdfs_is_server_id_valid(const char *id);
+
+int fdfs_get_server_id_type(const int id);
 
 #ifdef __cplusplus
 }

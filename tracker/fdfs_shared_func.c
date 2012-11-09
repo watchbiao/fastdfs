@@ -235,7 +235,7 @@ bool fdfs_check_reserved_space_path(const int64_t total_mb, \
 	}
 }
 
-bool tracker_is_server_id_valid(const char *id)
+bool fdfs_is_server_id_valid(const char *id)
 {
 	long n;
 	char *endptr;
@@ -253,12 +253,24 @@ bool tracker_is_server_id_valid(const char *id)
 		return false;
 	}
 
-	if (n <= 0 || n >= INT_MAX)
+	if (n <= 0 || n > FDFS_MAX_SERVER_ID)
 	{
 		return false;
 	}
 
 	snprintf(buff, sizeof(buff), "%ld", n);
 	return strcmp(buff, id) == 0;
+}
+
+int  fdfs_get_server_id_type(const int id)
+{
+  if (id > 0 && id <= FDFS_MAX_SERVER_ID)
+  {
+    return FDFS_ID_TYPE_SERVER_ID;
+  }
+  else
+  {
+    return FDFS_ID_TYPE_IP_ADDRESS;
+  }
 }
 
