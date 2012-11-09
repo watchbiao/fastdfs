@@ -70,7 +70,6 @@ int storage_get_params_from_tracker()
 	bool use_trunk_file;
 	char reserved_space_str[32];
   char *pIdType;
-  byte id_type_in_filename;
 
 	if ((result=fdfs_get_ini_context_from_tracker(&g_tracker_group, \
 		&iniContext, &g_continue_flag, \
@@ -141,11 +140,18 @@ int storage_get_params_from_tracker()
       &iniContext);
   if (pIdType != NULL && strcasecmp(pIdType, "id") == 0)
   {
-    id_type_in_filename = FDFS_ID_TYPE_SERVER_ID;
+    if (g_use_storage_id)
+    {
+      g_id_type_in_filename = FDFS_ID_TYPE_SERVER_ID;
+    }
+    else
+    {
+      g_id_type_in_filename = FDFS_ID_TYPE_IP_ADDRESS;
+    }
   }
   else 
   {
-    id_type_in_filename = FDFS_ID_TYPE_IP_ADDRESS;
+    g_id_type_in_filename = FDFS_ID_TYPE_IP_ADDRESS;
   }
 
   iniFreeContext(&iniContext);
@@ -158,7 +164,6 @@ int storage_get_params_from_tracker()
 		}
 	}
 	g_if_use_trunk_file = use_trunk_file;
-	g_id_type_in_filename = id_type_in_filename;
 
 	logInfo("file: "__FILE__", line: %d, " \
 		"use_storage_id=%d, " \
