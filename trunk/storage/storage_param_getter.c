@@ -177,7 +177,7 @@ int storage_get_params_from_tracker()
 		g_trunk_init_reload_from_binlog, g_store_slave_file_use_link);
 
 	if (g_use_storage_id && *g_sync_src_id != '\0' && \
-		!tracker_is_server_id_valid(g_sync_src_id))
+		!fdfs_is_server_id_valid(g_sync_src_id))
 	{
 		if ((result=storage_convert_src_server_id()) == 0)
 		{
