@@ -999,7 +999,7 @@ static int tracker_deal_server_get_storage_status(struct fast_task_info *pTask)
 	return 0;
 }
 
-static int tracker_deal_server_get_storage_id(struct fast_task_info *pTask)
+static int tracker_deal_get_storage_id(struct fast_task_info *pTask)
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char ip_addr[IP_ADDRESS_SIZE];
@@ -1067,6 +1067,67 @@ static int tracker_deal_server_get_storage_id(struct fast_task_info *pTask)
 	id_len = strlen(storage_id);
 	pTask->length = sizeof(TrackerHeader) + id_len; 
 	memcpy(pTask->data + sizeof(TrackerHeader), storage_id, id_len);
+
+	return 0;
+}
+
+static int tracker_deal_fetch_storage_ids(struct fast_task_info *pTask)
+{
+	FDFSStorageIdInfo *pIdsStart;
+	FDFSStorageIdInfo *pIdsEnd;
+	FDFSStorageIdInfo *pIdInfo;
+	char *p;
+	int *pCurrentCount;
+	int nPkgLen;
+	int start_index;
+
+	if (!g_use_storage_id)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip addr: %s, operation not supported", \
+			__LINE__, pTask->client_ip);
+		pTask->length = sizeof(TrackerHeader);
+		return EOPNOTSUPP;
+	}
+
+	nPkgLen = pTask->length - sizeof(TrackerHeader);
+	if (nPkgLen != sizeof(int))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"cmd=%d, client ip addr: %s, " \
+			"package size %d is not correct, " \
+			"expect %d bytes", __LINE__, \
+			TRACKER_PROTO_CMD_STORAGE_FETCH_STORAGE_IDS, \
+			pTask->client_ip, nPkgLen);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	start_index = buff2int(pTask->data + sizeof(TrackerHeader));
+	if (start_index < 0 || start_index >= g_storage_id_count)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"client ip addr: %s, invalid offset: %d", \
+			__LINE__, pTask->client_ip, start_index);
+		pTask->length = sizeof(TrackerHeader);
+		return EINVAL;
+	}
+
+	p = pTask->data + sizeof(TrackerHeader);
+	int2buff(g_storage_id_count, p);
+	p += sizeof(int);
+	pCurrentCount = (int *)p;
+	p += sizeof(int);
+
+	pIdsStart = g_storage_ids_by_ip + start_index;
+	pIdsEnd = g_storage_ids_by_ip + g_storage_id_count;
+	for (pIdInfo = pIdsStart; pIdInfo < pIdsEnd; pIdInfo++)
+	{
+		p += sprintf(p, "%s %s %s\n", pIdInfo->id, \
+			pIdInfo->group_name, pIdInfo->ip_addr);
+	}
+
+	pTask->length = p - pTask->data;
 
 	return 0;
 }
@@ -3488,7 +3549,10 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			result = tracker_deal_server_get_storage_status(pTask);
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_GET_SERVER_ID:
-			result = tracker_deal_server_get_storage_id(pTask);
+			result = tracker_deal_get_storage_id(pTask);
+			break;
+		case TRACKER_PROTO_CMD_STORAGE_FETCH_STORAGE_IDS:
+			result = tracker_deal_fetch_storage_ids(pTask);
 			break;
 		case TRACKER_PROTO_CMD_STORAGE_REPLICA_CHG:
 			TRACKER_CHECK_LOGINED(pTask)

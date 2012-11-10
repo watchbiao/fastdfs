@@ -416,7 +416,7 @@ typedef struct
 {
 	char id[FDFS_STORAGE_ID_MAX_SIZE];
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-	in_addr_t ip_addr;
+	char ip_addr[IP_ADDRESS_SIZE];
 } FDFSStorageIdInfo;
 
 typedef struct

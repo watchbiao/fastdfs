@@ -289,8 +289,8 @@ static int fdfs_cmp_group_name_and_ip(const void *p1, const void *p2)
 		return result;
 	}
 
-	return ((FDFSStorageIdInfo *)p1)->ip_addr - \
-		((FDFSStorageIdInfo *)p2)->ip_addr;
+	return strcmp(((FDFSStorageIdInfo *)p1)->ip_addr, \
+		((FDFSStorageIdInfo *)p2)->ip_addr);
 }
 
 static int fdfs_cmp_server_id(const void *p1, const void *p2)
@@ -305,7 +305,7 @@ FDFSStorageIdInfo *fdfs_get_storage_id_by_ip(const char *group_name, \
 	FDFSStorageIdInfo target;
 	memset(&target, 0, sizeof(FDFSStorageIdInfo));
 	snprintf(target.group_name, sizeof(target.group_name), "%s", group_name);
-	target.ip_addr = getIpaddrByName(pIpAddr, NULL, 0);
+	snprintf(target.ip_addr, sizeof(target.ip_addr), "%s", pIpAddr);
 	return (FDFSStorageIdInfo *)bsearch(&target, g_storage_ids_by_ip, \
 		g_storage_id_count, sizeof(FDFSStorageIdInfo), \
 		fdfs_cmp_group_name_and_ip);
@@ -463,9 +463,8 @@ int fdfs_load_storage_ids(char *content, const char *pStorageIdsFilename)
 				pIpAddr++;
 			}
 
-			pStorageIdInfo->ip_addr = getIpaddrByName( \
-							pIpAddr, NULL, 0);
-			if (pStorageIdInfo->ip_addr == INADDR_NONE)
+			if (getIpaddrByName(pIpAddr, pStorageIdInfo->ip_addr, \
+				sizeof(pStorageIdInfo->ip_addr)) == INADDR_NONE)
 			{
 				logError("file: "__FILE__", line: %d, " \
 					"invalid host name: %s", \
