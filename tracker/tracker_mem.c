@@ -533,7 +533,7 @@ static int tracker_mem_get_storage_id(const char *group_name, \
 		const char *pIpAddr, char *storage_id)
 {
 	FDFSStorageIdInfo *pStorageIdInfo;
-	pStorageIdInfo = tracker_get_storage_id_by_ip(group_name, pIpAddr);
+	pStorageIdInfo = fdfs_get_storage_id_by_ip(group_name, pIpAddr);
 	if (pStorageIdInfo == NULL)
 	{
 		return ENOENT;
@@ -3222,7 +3222,7 @@ static FDFSStorageDetail *tracker_mem_get_active_storage_by_ip( \
 		return tracker_mem_get_active_storage_by_id(pGroup, ip_addr);
 	}
 
-	pStorageId = tracker_get_storage_id_by_ip(pGroup->group_name, ip_addr);
+	pStorageId = fdfs_get_storage_id_by_ip(pGroup->group_name, ip_addr);
 	if (pStorageId == NULL)
 	{
 		return NULL;
@@ -3246,7 +3246,7 @@ static FDFSStorageDetail *tracker_mem_get_active_http_server_by_ip( \
 	else
 	{
 		FDFSStorageIdInfo *pStorageId;
-		pStorageId = tracker_get_storage_id_by_ip( \
+		pStorageId = fdfs_get_storage_id_by_ip( \
 				pGroup->group_name, ip_addr);
 		if (pStorageId == NULL)
 		{
@@ -3304,7 +3304,7 @@ FDFSStorageDetail *tracker_mem_get_storage_by_ip(FDFSGroupInfo *pGroup, \
 	if (g_use_storage_id)
 	{
 		FDFSStorageIdInfo *pStorageIdInfo;
-		pStorageIdInfo = tracker_get_storage_id_by_ip( \
+		pStorageIdInfo = fdfs_get_storage_id_by_ip( \
 				pGroup->group_name, ip_addr);
 		if (pStorageIdInfo == NULL)
 		{
@@ -3552,7 +3552,7 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	{
 		if (g_use_storage_id)
 		{
-			result = tracker_check_storage_id( \
+			result = fdfs_check_storage_id( \
 					pGroup->group_name, id);
 			if (result != 0)
 			{
@@ -3572,7 +3572,7 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	else if (g_use_storage_id)
 	{
 		FDFSStorageIdInfo *pStorageIdInfo;
-		pStorageIdInfo = tracker_get_storage_id_by_ip( \
+		pStorageIdInfo = fdfs_get_storage_id_by_ip( \
 				pGroup->group_name, ip_addr);
 		if (pStorageIdInfo == NULL)
 		{
@@ -4304,7 +4304,7 @@ int tracker_mem_add_group_and_storage(TrackerClientInfo *pClientInfo, \
 
 	if (g_use_storage_id)
 	{
-		pStorageIdInfo = tracker_get_storage_id_by_ip( \
+		pStorageIdInfo = fdfs_get_storage_id_by_ip( \
 				pClientInfo->pGroup->group_name, ip_addr);
 		if (pStorageIdInfo == NULL)
 		{

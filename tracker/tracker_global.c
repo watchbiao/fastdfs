@@ -40,10 +40,6 @@ byte g_id_type_in_filename = FDFS_ID_TYPE_IP_ADDRESS; //id type of the storage s
 bool g_rotate_error_log = false;  //if rotate the error log every day
 TimeInfo g_error_log_rotate_time  = {0, 0}; //rotate error log time base
 
-FDFSStorageIdInfo *g_storage_ids_by_ip = NULL;  //sorted by group name and storage IP
-FDFSStorageIdInfo **g_storage_ids_by_id = NULL; //sorted by storage ID
-int g_storage_id_count = 0;
-
 int g_thread_stack_size = 64 * 1024;
 int g_storage_sync_file_max_delay = DEFAULT_STORAGE_SYNC_FILE_MAX_DELAY;
 int g_storage_sync_file_max_time = DEFAULT_STORAGE_SYNC_FILE_MAX_TIME;

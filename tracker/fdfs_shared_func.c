@@ -10,8 +10,13 @@
 #include <string.h>
 #include <limits.h>
 #include "logger.h"
+#include "sockopt.h"
 #include "shared_func.h"
 #include "fdfs_shared_func.h"
+
+FDFSStorageIdInfo *g_storage_ids_by_ip = NULL;  //sorted by group name and storage IP
+FDFSStorageIdInfo **g_storage_ids_by_id = NULL; //sorted by storage ID
+int g_storage_id_count = 0;
 
 int fdfs_get_tracker_leader_index_ex(TrackerServerGroup *pServerGroup, \
 		const char *leaderIp, const int leaderPort)
@@ -272,5 +277,254 @@ int  fdfs_get_server_id_type(const int id)
   {
     return FDFS_ID_TYPE_IP_ADDRESS;
   }
+}
+
+static int fdfs_cmp_group_name_and_ip(const void *p1, const void *p2)
+{
+	int result;
+	result = strcmp(((FDFSStorageIdInfo *)p1)->group_name,
+		((FDFSStorageIdInfo *)p2)->group_name);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	return ((FDFSStorageIdInfo *)p1)->ip_addr - \
+		((FDFSStorageIdInfo *)p2)->ip_addr;
+}
+
+static int fdfs_cmp_server_id(const void *p1, const void *p2)
+{
+	return strcmp((*((FDFSStorageIdInfo **)p1))->id, \
+		(*((FDFSStorageIdInfo **)p2))->id);
+}
+
+FDFSStorageIdInfo *fdfs_get_storage_id_by_ip(const char *group_name, \
+		const char *pIpAddr)
+{
+	FDFSStorageIdInfo target;
+	memset(&target, 0, sizeof(FDFSStorageIdInfo));
+	snprintf(target.group_name, sizeof(target.group_name), "%s", group_name);
+	target.ip_addr = getIpaddrByName(pIpAddr, NULL, 0);
+	return (FDFSStorageIdInfo *)bsearch(&target, g_storage_ids_by_ip, \
+		g_storage_id_count, sizeof(FDFSStorageIdInfo), \
+		fdfs_cmp_group_name_and_ip);
+}
+
+int fdfs_check_storage_id(const char *group_name, const char *id)
+{
+	FDFSStorageIdInfo target;
+	FDFSStorageIdInfo *pTarget;
+	FDFSStorageIdInfo **ppFound;
+
+	memset(&target, 0, sizeof(FDFSStorageIdInfo));
+	snprintf(target.id, sizeof(target.id), "%s", id);
+	pTarget = &target;
+	ppFound = (FDFSStorageIdInfo **)bsearch(&pTarget, g_storage_ids_by_id, \
+		g_storage_id_count, sizeof(FDFSStorageIdInfo *), \
+		fdfs_cmp_server_id);
+	if (ppFound == NULL)
+	{
+		return ENOENT;
+	}
+
+	return strcmp((*ppFound)->group_name, group_name) == 0 ? 0 : EINVAL;
+}
+
+int fdfs_load_storage_ids(char *content, const char *pStorageIdsFilename)
+{
+	char **lines;
+	char *line;
+	char *id;
+	char *group_name;
+	char *pIpAddr;
+	FDFSStorageIdInfo *pStorageIdInfo;
+	FDFSStorageIdInfo **ppStorageIdInfo;
+	FDFSStorageIdInfo **ppStorageIdEnd;
+	int alloc_bytes;
+	int result;
+	int line_count;
+	int i;
+
+	lines = split(content, '\n', 0, &line_count);
+	if (lines == NULL)
+	{
+		return ENOMEM;
+	}
+
+	result = 0;
+	do
+	{
+		g_storage_id_count = 0;
+		for (i=0; i<line_count; i++)
+		{
+			trim(lines[i]);
+			if (*lines[i] == '\0' || *lines[i] == '#')
+			{
+				continue;
+			}
+			g_storage_id_count++;
+		}
+
+		if (g_storage_id_count == 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"config file: %s, no storage id!", \
+				__LINE__, pStorageIdsFilename);
+			result = ENOENT;
+			break;
+		}
+
+		alloc_bytes = sizeof(FDFSStorageIdInfo) * g_storage_id_count;
+		g_storage_ids_by_ip = (FDFSStorageIdInfo *)malloc(alloc_bytes);
+		if (g_storage_ids_by_ip == NULL)
+		{
+			result = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				alloc_bytes, result, STRERROR(result));
+			break;
+		}
+		memset(g_storage_ids_by_ip, 0, alloc_bytes);
+
+		alloc_bytes = sizeof(FDFSStorageIdInfo *) * g_storage_id_count;
+		g_storage_ids_by_id = (FDFSStorageIdInfo **)malloc(alloc_bytes);
+		if (g_storage_ids_by_id == NULL)
+		{
+			result = errno != 0 ? errno : ENOMEM;
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				alloc_bytes, result, STRERROR(result));
+			free(g_storage_ids_by_ip);
+			break;
+		}
+		memset(g_storage_ids_by_id, 0, alloc_bytes);
+
+		pStorageIdInfo = g_storage_ids_by_ip;
+		for (i=0; i<line_count; i++)
+		{
+			line = lines[i];
+			if (*line == '\0' || *line == '#')
+			{
+				continue;
+			}
+
+			id = line;
+			group_name = line;
+			while (!(*group_name == ' ' || *group_name == '\t' \
+				|| *group_name == '\0'))
+			{
+				group_name++;
+			}
+
+			if (*group_name == '\0')
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"config file: %s, line no: %d, " \
+					"content: %s, invalid format, " \
+					"expect group name and ip address!", \
+					__LINE__, pStorageIdsFilename, \
+					i + 1, line);
+				result = EINVAL;
+				break;
+			}
+
+			*group_name = '\0';
+			group_name++;  //skip space char
+			while (*group_name == ' ' || *group_name == '\t')
+			{
+				group_name++;
+			}
+		
+			pIpAddr = group_name;
+			while (!(*pIpAddr == ' ' || *pIpAddr == '\t' \
+				|| *pIpAddr == '\0'))
+			{
+				pIpAddr++;
+			}
+
+			if (*pIpAddr == '\0')
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"config file: %s, line no: %d, " \
+					"content: %s, invalid format, " \
+					"expect ip address!", __LINE__, \
+					pStorageIdsFilename, i + 1, line);
+				result = EINVAL;
+				break;
+			}
+
+			*pIpAddr = '\0';
+			pIpAddr++;  //skip space char
+			while (*pIpAddr == ' ' || *pIpAddr == '\t')
+			{
+				pIpAddr++;
+			}
+
+			pStorageIdInfo->ip_addr = getIpaddrByName( \
+							pIpAddr, NULL, 0);
+			if (pStorageIdInfo->ip_addr == INADDR_NONE)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"invalid host name: %s", \
+					__LINE__, pIpAddr);
+				result = EINVAL;
+				break;
+			}
+
+			if (!fdfs_is_server_id_valid(id))
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"invalid server id: \"%s\", " \
+					"which must be a none zero start " \
+					"integer, such as 100001", __LINE__, id);
+				result = EINVAL;
+				break;
+			}
+
+			snprintf(pStorageIdInfo->id, \
+				sizeof(pStorageIdInfo->id), "%s", id);
+			snprintf(pStorageIdInfo->group_name, \
+				sizeof(pStorageIdInfo->group_name), \
+				"%s", group_name);
+			pStorageIdInfo++;
+		}
+	} while (0);
+
+	freeSplit(lines);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	logInfo("g_storage_id_count: %d", g_storage_id_count);
+	pStorageIdInfo = g_storage_ids_by_ip;
+	for (i=0; i<g_storage_id_count; i++)
+	{
+		char szIpAddr[IP_ADDRESS_SIZE];
+
+		logInfo("%s  %s  %s", pStorageIdInfo->id, \
+			pStorageIdInfo->group_name, inet_ntop( \
+			AF_INET, &pStorageIdInfo->ip_addr, szIpAddr, \
+			sizeof(szIpAddr)));
+
+		pStorageIdInfo++;
+	}
+	
+	ppStorageIdEnd = g_storage_ids_by_id + g_storage_id_count;
+	pStorageIdInfo = g_storage_ids_by_ip;
+	for (ppStorageIdInfo=g_storage_ids_by_id; ppStorageIdInfo < \
+		ppStorageIdEnd; ppStorageIdInfo++)
+	{
+		*ppStorageIdInfo = pStorageIdInfo++;
+	}
+
+	qsort(g_storage_ids_by_ip, g_storage_id_count, \
+		sizeof(FDFSStorageIdInfo), fdfs_cmp_group_name_and_ip);
+	qsort(g_storage_ids_by_id, g_storage_id_count, \
+		sizeof(FDFSStorageIdInfo *), fdfs_cmp_server_id);
+	return result;
 }
 
