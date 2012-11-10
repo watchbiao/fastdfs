@@ -1003,7 +1003,7 @@ static int tracker_deal_get_storage_id(struct fast_task_info *pTask)
 {
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char ip_addr[IP_ADDRESS_SIZE];
-	FDFSStorageIdInfo *FDFSStorageIdInfo;
+	FDFSStorageIdInfo *pFDFSStorageIdInfo;
 	char *storage_id;
 	int nPkgLen;
 	int id_len;
@@ -1044,9 +1044,9 @@ static int tracker_deal_get_storage_id(struct fast_task_info *pTask)
 
 	if (g_use_storage_id)
 	{
-		FDFSStorageIdInfo = fdfs_get_storage_id_by_ip(group_name, \
+		pFDFSStorageIdInfo = fdfs_get_storage_id_by_ip(group_name, \
 						ip_addr);
-		if (FDFSStorageIdInfo == NULL)
+		if (pFDFSStorageIdInfo == NULL)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"cmd=%d, client ip addr: %s, " \
@@ -1057,7 +1057,7 @@ static int tracker_deal_get_storage_id(struct fast_task_info *pTask)
 			return ENOENT;
 		}
 
-		storage_id = FDFSStorageIdInfo->id;
+		storage_id = pFDFSStorageIdInfo->id;
 	}
 	else
 	{
@@ -1123,10 +1123,15 @@ static int tracker_deal_fetch_storage_ids(struct fast_task_info *pTask)
 	pIdsEnd = g_storage_ids_by_ip + g_storage_id_count;
 	for (pIdInfo = pIdsStart; pIdInfo < pIdsEnd; pIdInfo++)
 	{
+		if ((int)(p - pTask->data) > pTask->size - 64)
+		{
+			break;
+		}
 		p += sprintf(p, "%s %s %s\n", pIdInfo->id, \
 			pIdInfo->group_name, pIdInfo->ip_addr);
 	}
 
+	int2buff((int)(pIdInfo - pIdsStart), (char *)pCurrentCount);
 	pTask->length = p - pTask->data;
 
 	return 0;
