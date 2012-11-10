@@ -1098,7 +1098,7 @@ static int tracker_deal_fetch_storage_ids(struct fast_task_info *pTask)
 			"package size %d is not correct, " \
 			"expect %d bytes", __LINE__, \
 			TRACKER_PROTO_CMD_STORAGE_FETCH_STORAGE_IDS, \
-			pTask->client_ip, nPkgLen);
+			pTask->client_ip, nPkgLen, (int)sizeof(int));
 		pTask->length = sizeof(TrackerHeader);
 		return EINVAL;
 	}
@@ -1124,10 +1124,6 @@ static int tracker_deal_fetch_storage_ids(struct fast_task_info *pTask)
 	for (pIdInfo = pIdsStart; pIdInfo < pIdsEnd; pIdInfo++)
 	{
 		if ((int)(p - pTask->data) > pTask->size - 64)
-		{
-			break;
-		}
-		if (pIdInfo - pIdsStart == 1)
 		{
 			break;
 		}
