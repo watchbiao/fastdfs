@@ -19,6 +19,10 @@
 extern "C" {
 #endif
 
+extern FDFSStorageIdInfo *g_storage_ids_by_ip;  //sorted by group name and storage IP
+extern FDFSStorageIdInfo **g_storage_ids_by_id;  //sorted by storage ID
+extern int g_storage_id_count;		  //storage id count
+
 int fdfs_get_tracker_leader_index_ex(TrackerServerGroup *pServerGroup, \
 		const char *leaderIp, const int leaderPort);
 
@@ -48,6 +52,13 @@ bool fdfs_check_reserved_space_path(const int64_t total_mb, \
 bool fdfs_is_server_id_valid(const char *id);
 
 int fdfs_get_server_id_type(const int id);
+
+int fdfs_load_storage_ids(char *content, const char *pStorageIdsFilename);
+
+FDFSStorageIdInfo *fdfs_get_storage_id_by_ip(const char *group_name, \
+		const char *pIpAddr);
+
+int fdfs_check_storage_id(const char *group_name, const char *id);
 
 #ifdef __cplusplus
 }

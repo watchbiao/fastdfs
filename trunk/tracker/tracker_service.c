@@ -1044,7 +1044,7 @@ static int tracker_deal_server_get_storage_id(struct fast_task_info *pTask)
 
 	if (g_use_storage_id)
 	{
-		FDFSStorageIdInfo = tracker_get_storage_id_by_ip(group_name, \
+		FDFSStorageIdInfo = fdfs_get_storage_id_by_ip(group_name, \
 						ip_addr);
 		if (FDFSStorageIdInfo == NULL)
 		{

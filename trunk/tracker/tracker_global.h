@@ -64,10 +64,6 @@ extern byte g_id_type_in_filename; //id type of the storage server in the filena
 extern bool g_rotate_error_log;  //if rotate the error log every day
 extern TimeInfo g_error_log_rotate_time;  //rotate error log time base
 
-extern FDFSStorageIdInfo *g_storage_ids_by_ip;  //sorted by group name and storage IP
-extern FDFSStorageIdInfo **g_storage_ids_by_id;  //sorted by storage ID
-extern int g_storage_id_count;		  //storage id count
-
 extern int g_thread_stack_size;
 extern int g_storage_sync_file_max_delay;
 extern int g_storage_sync_file_max_time;
