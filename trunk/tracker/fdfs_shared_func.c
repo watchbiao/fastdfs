@@ -313,7 +313,7 @@ FDFSStorageIdInfo *fdfs_get_storage_id_by_ip(const char *group_name, \
 		fdfs_cmp_group_name_and_ip);
 }
 
-int fdfs_check_storage_id(const char *group_name, const char *id)
+FDFSStorageIdInfo *fdfs_get_storage_by_id(const char *id)
 {
 	FDFSStorageIdInfo target;
 	FDFSStorageIdInfo *pTarget;
@@ -327,10 +327,25 @@ int fdfs_check_storage_id(const char *group_name, const char *id)
 		fdfs_cmp_server_id);
 	if (ppFound == NULL)
 	{
+		return NULL;
+	}
+	else
+	{
+		return *ppFound;
+	}
+}
+
+int fdfs_check_storage_id(const char *group_name, const char *id)
+{
+	FDFSStorageIdInfo *pFound;
+
+	pFound = fdfs_get_storage_by_id(id);
+	if (pFound == NULL)
+	{
 		return ENOENT;
 	}
 
-	return strcmp((*ppFound)->group_name, group_name) == 0 ? 0 : EINVAL;
+	return strcmp(pFound->group_name, group_name) == 0 ? 0 : EINVAL;
 }
 
 int fdfs_load_storage_ids(char *content, const char *pStorageIdsFilename)
@@ -526,7 +541,7 @@ int fdfs_load_storage_ids(char *content, const char *pStorageIdsFilename)
 	return result;
 }
 
-int fdfs_get_storage_ids_from_tracker(TrackerServerInfo *pTrackerServer)
+int fdfs_get_storage_ids_from_tracker_server(TrackerServerInfo *pTrackerServer)
 {
 #define MAX_REQUEST_LOOP   32
 	TrackerHeader *pHeader;
@@ -546,12 +561,9 @@ int fdfs_get_storage_ids_from_tracker(TrackerServerInfo *pTrackerServer)
 	int start_index;
 	int64_t in_bytes;
 
-	if (pTrackerServer->sock < 0)
+	if ((result=tracker_connect_server(pTrackerServer)) != 0)
 	{
-		if ((result=tracker_connect_server(pTrackerServer)) != 0)
-		{
-			return result;
-		}
+		return result;
 	}
 
 	memset(data_list, 0, sizeof(data_list));
@@ -579,6 +591,7 @@ int fdfs_get_storage_ids_from_tracker(TrackerServerInfo *pTrackerServer)
 		}
 		else
 		{
+			response = NULL;
 			result = fdfs_recv_response(pTrackerServer, \
 				&response, 0, &in_bytes);
 		}
@@ -628,6 +641,11 @@ int fdfs_get_storage_ids_from_tracker(TrackerServerInfo *pTrackerServer)
 		data_list[list_count].length = in_bytes - 2 * sizeof(int);
 		list_count++;
 
+		/*
+		//logInfo("list_count: %d, total_count: %d, current_count: %d", 
+			list_count, total_count, current_count);
+		*/
+
 		start_index += current_count;
 		if (start_index >= total_count)
 		{
@@ -646,12 +664,11 @@ int fdfs_get_storage_ids_from_tracker(TrackerServerInfo *pTrackerServer)
 		}
 	}
 
-	if (result != 0)
-	{
-		close(pTrackerServer->sock);
-		pTrackerServer->sock = -1;
-	}
-	else
+	fdfs_quit(pTrackerServer);
+	close(pTrackerServer->sock);
+	pTrackerServer->sock = -1;
+
+	if (result == 0)
 	{
 		do
 		{
@@ -684,7 +701,7 @@ int fdfs_get_storage_ids_from_tracker(TrackerServerInfo *pTrackerServer)
 			}
 			*p = '\0';
 
-			logInfo("storage ids:\n%s", content);
+			//logInfo("list_count: %d, storage ids:\n%s", list_count, content);
 
 			result = fdfs_load_storage_ids(content, \
 					"storage-ids-from-tracker");
@@ -695,6 +712,54 @@ int fdfs_get_storage_ids_from_tracker(TrackerServerInfo *pTrackerServer)
 	for (i=0; i<list_count; i++)
 	{
 		free(data_list[i].buffer);
+	}
+
+	return result;
+}
+
+int fdfs_get_storage_ids_from_tracker_group(TrackerServerGroup *pTrackerGroup)
+{
+	TrackerServerInfo *pGServer;
+	TrackerServerInfo *pTServer;
+	TrackerServerInfo *pServerStart;
+	TrackerServerInfo *pServerEnd;
+	TrackerServerInfo trackerServer;
+	int result;
+	int leader_index;
+	int i;
+
+	pTServer = &trackerServer;
+	pServerEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
+
+	leader_index = pTrackerGroup->leader_index;
+	if (leader_index >= 0)
+	{
+		pServerStart = pTrackerGroup->servers + leader_index;
+	}
+	else
+	{
+		pServerStart = pTrackerGroup->servers;
+	}
+
+	result = ENOENT;
+	for (i=0; i<5; i++)
+	{
+		for (pGServer=pServerStart; pGServer<pServerEnd; pGServer++)
+		{
+			memcpy(pTServer, pGServer, sizeof(TrackerServerInfo));
+			pTServer->sock = -1;
+			result = fdfs_get_storage_ids_from_tracker_server(pTServer);
+			if (result == 0)
+			{
+				return result;
+			}
+		}
+
+		if (pServerStart != pTrackerGroup->servers)
+		{
+			pServerStart = pTrackerGroup->servers;
+		}
+		sleep(1);
 	}
 
 	return result;

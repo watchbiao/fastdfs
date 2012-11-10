@@ -60,6 +60,7 @@ int tracker_mem_file_unlock();
 
 FDFSGroupInfo *tracker_mem_get_group_ex(FDFSGroups *pGroups, \
 		const char *group_name);
+
 FDFSStorageDetail *tracker_mem_get_storage(FDFSGroupInfo *pGroup, \
 				const char *id);
 FDFSStorageDetail *tracker_mem_get_storage_by_ip(FDFSGroupInfo *pGroup, \
