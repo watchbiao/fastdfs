@@ -5388,7 +5388,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 	int file_timestamp;
 	int storage_ip;
 	int read_server_index;
-  int cmp_res;
+	int cmp_res;
 	struct in_addr ip_addr;
 	time_t current_time;
 	bool bNormalFile;

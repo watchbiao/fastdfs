@@ -1127,6 +1127,11 @@ static int tracker_deal_fetch_storage_ids(struct fast_task_info *pTask)
 		{
 			break;
 		}
+		if (pIdInfo - pIdsStart == 1)
+		{
+			break;
+		}
+
 		p += sprintf(p, "%s %s %s\n", pIdInfo->id, \
 			pIdInfo->group_name, pIdInfo->ip_addr);
 	}

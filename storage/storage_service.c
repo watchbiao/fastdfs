@@ -1951,31 +1951,31 @@ static int storage_gen_filename(StorageClientInfo *pClientInfo, \
 	FDFSTrunkFullInfo *pTrunkInfo;
 
 	pTrunkInfo = &(pClientInfo->file_context.extra_info.upload.trunk_info);
-  if (g_id_type_in_filename == FDFS_ID_TYPE_SERVER_ID)
-  {
-    server_id = g_my_server_id_int;
-  }
-  else
-  {
-    struct sockaddr_in addr;
-    socklen_t addrlen;
+	if (g_id_type_in_filename == FDFS_ID_TYPE_SERVER_ID)
+	{
+		server_id = g_my_server_id_int;
+	}
+	else
+	{
+		struct sockaddr_in addr;
+		socklen_t addrlen;
 
-    memset(&addr, 0, sizeof(addr));
-    addrlen = sizeof(addr);
-    if (getsockname(pClientInfo->sock, (struct sockaddr *)&addr, \
-          &addrlen) != 0)
-    {
-		  logError("file: "__FILE__", line: %d, " \
-          "call getsockname fail, " \
-          "errno: %d, error info: %s", __LINE__, \
-          errno, STRERROR(errno));
-      server_id = INADDR_NONE;
-    }
-    else
-    {
-      server_id = addr.sin_addr.s_addr;
-    }
-  }
+		memset(&addr, 0, sizeof(addr));
+		addrlen = sizeof(addr);
+		if (getsockname(pClientInfo->sock, (struct sockaddr *)&addr, \
+			&addrlen) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"call getsockname fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				errno, STRERROR(errno));
+			server_id = INADDR_NONE;
+		}
+		else
+		{
+			server_id = addr.sin_addr.s_addr;
+		}
+	}
 
 	int2buff(htonl(server_id), buff);
 	int2buff(timestamp, buff+sizeof(int));
@@ -3324,6 +3324,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	int filename_len;
 	int true_filename_len;
 	int crc32;
+	int storage_id;
 	int result;
 	int len;
 	int buff_len;
@@ -3506,6 +3507,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	base64_decode_auto(&g_fdfs_base64_context, filename + \
 		FDFS_LOGIC_FILE_PATH_LEN, FDFS_FILENAME_BASE64_LENGTH, \
 		decode_buff, &buff_len);
+	storage_id = ntohl(buff2int(decode_buff));
 	crc32 = buff2int(decode_buff + sizeof(int) * 4);
 
 	p = pTask->data + sizeof(TrackerHeader);
@@ -3515,6 +3517,31 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	p += FDFS_PROTO_PKG_LEN_SIZE;
 	long2buff(crc32, p);
 	p += FDFS_PROTO_PKG_LEN_SIZE;
+
+	memset(p, 0, IP_ADDRESS_SIZE);
+	if (fdfs_get_server_id_type(storage_id) == FDFS_ID_TYPE_SERVER_ID)
+	{
+		if (g_use_storage_id)
+		{
+			FDFSStorageIdInfo *pStorageIdInfo;
+			char id[16];
+
+			sprintf(id, "%d", storage_id);
+			pStorageIdInfo = fdfs_get_storage_by_id(id);
+			if (pStorageIdInfo != NULL)
+			{
+				strcpy(p, pStorageIdInfo->ip_addr);
+			}
+		}
+	}
+	else
+	{
+		struct in_addr ip_addr;
+		memset(&ip_addr, 0, sizeof(ip_addr));
+		ip_addr.s_addr = storage_id;
+		inet_ntop(AF_INET, &ip_addr, p, IP_ADDRESS_SIZE);
+	}
+	p += IP_ADDRESS_SIZE;
 
 	pClientInfo->total_length = p - pTask->data;
 	return 0;

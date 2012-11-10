@@ -31,6 +31,7 @@
 #include "ini_file_reader.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
+#include "fdfs_shared_func.h"
 #include "storage_global.h"
 #include "storage_func.h"
 #include "storage_param_getter.h"
@@ -1693,6 +1694,15 @@ int storage_func_init(const char *filename, \
 	if ((result=storage_get_params_from_tracker()) != 0)
 	{
 		return result;
+	}
+
+	if (g_use_storage_id)
+	{
+		if ((result=fdfs_get_storage_ids_from_tracker_group( \
+				&g_tracker_group)) != 0)
+		{
+			return result;
+		}
 	}
 
 	if ((result=storage_check_ip_changed()) != 0)
