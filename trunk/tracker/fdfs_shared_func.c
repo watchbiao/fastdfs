@@ -604,8 +604,8 @@ int fdfs_get_storage_ids_from_tracker_server(TrackerServerInfo *pTrackerServer)
 		if (in_bytes < 2 * sizeof(int))
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"recv data length: %d from tracker " \
-				"server %s:%d is invalid", __LINE__, \
+				"tracker server %s:%d, recv data length: %d "\
+				"is invalid", __LINE__, 
 				pTrackerServer->ip_addr, \
 				pTrackerServer->port, (int)in_bytes);
 			result = EINVAL;
@@ -617,8 +617,8 @@ int fdfs_get_storage_ids_from_tracker_server(TrackerServerInfo *pTrackerServer)
 		if (total_count <= start_index)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"total storage count: %d from tracker " \
-				"server %s:%d is invalid, which <= start " \
+				"tracker server %s:%d, total storage " \
+				"count: %d is invalid, which <= start " \
 				"index: %d", __LINE__, pTrackerServer->ip_addr,\
 				pTrackerServer->port, total_count, start_index);
 			result = EINVAL;
@@ -628,8 +628,8 @@ int fdfs_get_storage_ids_from_tracker_server(TrackerServerInfo *pTrackerServer)
 		if (current_count <= 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
-				"current storage count: %d from tracker " \
-				"server %s:%d is invalid, which <= 0", \
+				"tracker server %s:%d, current storage " \
+				"count: %d is invalid, which <= 0", \
 				__LINE__, pTrackerServer->ip_addr,\
 				pTrackerServer->port, current_count);
 			result = EINVAL;

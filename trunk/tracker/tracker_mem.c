@@ -5435,7 +5435,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 	if (filename_len < 32 + (FDFS_FILE_EXT_NAME_MAX_LEN + 1))
 	{
 		storage_ip = INADDR_NONE;
-    *storage_id = '\0';
+		*storage_id = '\0';
 		file_timestamp = 0;
 		bNormalFile = true;
 	}
@@ -5453,14 +5453,14 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 		file_timestamp = buff2int(name_buff+sizeof(int));
 		file_size = buff2long(name_buff + sizeof (int) * 2);
 
-    if (fdfs_get_server_id_type(storage_ip) == FDFS_ID_TYPE_SERVER_ID)
-    {
-      sprintf(storage_id, "%d", storage_ip);
-    }
-    else
-    {
-      *storage_id = '\0';
-    }
+		if (fdfs_get_server_id_type(storage_ip) == FDFS_ID_TYPE_SERVER_ID)
+		{
+			sprintf(storage_id, "%d", storage_ip);
+		}
+		else
+		{
+			*storage_id = '\0';
+		}
 
 		bNormalFile = !(IS_SLAVE_FILE(filename_len, file_size) || \
 				IS_APPENDER_FILE(file_size));
@@ -5481,50 +5481,50 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 #ifdef WITH_HTTPD
 			if (download_type == FDFS_DOWNLOAD_TYPE_TCP)
 			{
-      if (*storage_id != '\0')
-      {
-	  		pStoreSrcServer=tracker_mem_get_active_storage_by_id(\
-            *ppGroup, storage_id);
-      }
-      else
-      {
-			memset(&ip_addr, 0, sizeof(ip_addr));
-			ip_addr.s_addr = storage_ip;
-			pStoreSrcServer=tracker_mem_get_active_storage_by_ip( \
-				*ppGroup, inet_ntop(AF_INET, &ip_addr, \
-				szIpAddr, sizeof(szIpAddr)));
-      }
+				if (*storage_id != '\0')
+				{
+					pStoreSrcServer=tracker_mem_get_active_storage_by_id(\
+						*ppGroup, storage_id);
+				}
+				else
+				{
+					memset(&ip_addr, 0, sizeof(ip_addr));
+					ip_addr.s_addr = storage_ip;
+					pStoreSrcServer=tracker_mem_get_active_storage_by_ip( \
+						*ppGroup, inet_ntop(AF_INET, &ip_addr, \
+						szIpAddr, sizeof(szIpAddr)));
+				}
 			}
 			else
 			{
-      if (*storage_id != '\0')
-      {
-			pStoreSrcServer=tracker_mem_get_active_http_server_by_id( \
+				if (*storage_id != '\0')
+				{
+				pStoreSrcServer=tracker_mem_get_active_http_server_by_id( \
 				*ppGroup, storage_id);
-      }
-      else
-      {
-			memset(&ip_addr, 0, sizeof(ip_addr));
-			ip_addr.s_addr = storage_ip;
-			pStoreSrcServer=tracker_mem_get_active_http_server_by_ip( \
+				}
+				else
+				{
+				memset(&ip_addr, 0, sizeof(ip_addr));
+				ip_addr.s_addr = storage_ip;
+				pStoreSrcServer=tracker_mem_get_active_http_server_by_ip( \
 				*ppGroup, inet_ntop(AF_INET, &ip_addr, \
 				szIpAddr, sizeof(szIpAddr)));
-      }
+				}
 			}
 #else
-      if (*storage_id != '\0')
-      {
-	  		pStoreSrcServer=tracker_mem_get_active_storage_by_id(\
-            *ppGroup, storage_id);
-      }
-      else
-      {
-			  memset(&ip_addr, 0, sizeof(ip_addr));
-			  ip_addr.s_addr = storage_ip;
-	  		pStoreSrcServer=tracker_mem_get_active_storage_by_ip(\
-		  		*ppGroup, inet_ntop(AF_INET, &ip_addr, \
-			  	szIpAddr, sizeof(szIpAddr)));
-      }
+			if (*storage_id != '\0')
+			{
+			pStoreSrcServer=tracker_mem_get_active_storage_by_id(\
+				*ppGroup, storage_id);
+			}
+			else
+			{
+			memset(&ip_addr, 0, sizeof(ip_addr));
+			ip_addr.s_addr = storage_ip;
+			pStoreSrcServer=tracker_mem_get_active_storage_by_ip(\
+				*ppGroup, inet_ntop(AF_INET, &ip_addr, \
+				szIpAddr, sizeof(szIpAddr)));
+			}
 #endif
 			if (pStoreSrcServer != NULL)
 			{
