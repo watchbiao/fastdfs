@@ -60,6 +60,8 @@ FDFSStorageIdInfo *fdfs_get_storage_id_by_ip(const char *group_name, \
 
 int fdfs_check_storage_id(const char *group_name, const char *id);
 
+int fdfs_get_storage_ids_from_tracker(TrackerServerInfo *pTrackerServer);
+
 #ifdef __cplusplus
 }
 #endif

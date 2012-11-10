@@ -12,6 +12,8 @@
 #include "logger.h"
 #include "sockopt.h"
 #include "shared_func.h"
+#include "tracker_proto.h"
+#include "fdfs_global.h"
 #include "fdfs_shared_func.h"
 
 FDFSStorageIdInfo *g_storage_ids_by_ip = NULL;  //sorted by group name and storage IP
@@ -502,12 +504,9 @@ int fdfs_load_storage_ids(char *content, const char *pStorageIdsFilename)
 	pStorageIdInfo = g_storage_ids_by_ip;
 	for (i=0; i<g_storage_id_count; i++)
 	{
-		char szIpAddr[IP_ADDRESS_SIZE];
-
 		logInfo("%s  %s  %s", pStorageIdInfo->id, \
-			pStorageIdInfo->group_name, inet_ntop( \
-			AF_INET, &pStorageIdInfo->ip_addr, szIpAddr, \
-			sizeof(szIpAddr)));
+			pStorageIdInfo->group_name, 
+			pStorageIdInfo->ip_addr);
 
 		pStorageIdInfo++;
 	}
@@ -524,6 +523,180 @@ int fdfs_load_storage_ids(char *content, const char *pStorageIdsFilename)
 		sizeof(FDFSStorageIdInfo), fdfs_cmp_group_name_and_ip);
 	qsort(g_storage_ids_by_id, g_storage_id_count, \
 		sizeof(FDFSStorageIdInfo *), fdfs_cmp_server_id);
+	return result;
+}
+
+int fdfs_get_storage_ids_from_tracker(TrackerServerInfo *pTrackerServer)
+{
+#define MAX_REQUEST_LOOP   32
+	TrackerHeader *pHeader;
+	char out_buff[sizeof(TrackerHeader) + sizeof(int)];
+	char *p;
+	char *response;
+	struct data_info {
+		char *buffer;  //for free
+		char *content;
+		int length;
+	} data_list[MAX_REQUEST_LOOP];
+	int list_count;
+	int total_count;
+	int current_count;
+	int result;
+	int i;
+	int start_index;
+	int64_t in_bytes;
+
+	if (pTrackerServer->sock < 0)
+	{
+		if ((result=tracker_connect_server(pTrackerServer)) != 0)
+		{
+			return result;
+		}
+	}
+
+	memset(data_list, 0, sizeof(data_list));
+	memset(out_buff, 0, sizeof(out_buff));
+	pHeader = (TrackerHeader *)out_buff;
+	p = out_buff + sizeof(TrackerHeader);
+	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_FETCH_STORAGE_IDS;
+	long2buff(sizeof(int), pHeader->pkg_len);
+
+	start_index = 0;
+	list_count = 0;
+	result = 0;
+	while (1)
+	{
+		int2buff(start_index, p);
+		if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"send data to tracker server %s:%d fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				pTrackerServer->ip_addr, \
+				pTrackerServer->port, \
+				result, STRERROR(result));
+		}
+		else
+		{
+			result = fdfs_recv_response(pTrackerServer, \
+				&response, 0, &in_bytes);
+		}
+
+		if (result != 0)
+		{
+			break;
+		}
+
+		if (in_bytes < 2 * sizeof(int))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"recv data length: %d from tracker " \
+				"server %s:%d is invalid", __LINE__, \
+				pTrackerServer->ip_addr, \
+				pTrackerServer->port, (int)in_bytes);
+			result = EINVAL;
+			break;
+		}
+
+		total_count = buff2int(response);
+		current_count = buff2int(response + sizeof(int));
+		if (total_count <= start_index)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"total storage count: %d from tracker " \
+				"server %s:%d is invalid, which <= start " \
+				"index: %d", __LINE__, pTrackerServer->ip_addr,\
+				pTrackerServer->port, total_count, start_index);
+			result = EINVAL;
+			break;
+		}
+
+		if (current_count <= 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"current storage count: %d from tracker " \
+				"server %s:%d is invalid, which <= 0", \
+				__LINE__, pTrackerServer->ip_addr,\
+				pTrackerServer->port, current_count);
+			result = EINVAL;
+			break;
+		}
+
+		data_list[list_count].buffer = response;
+		data_list[list_count].content = response + 2 * sizeof(int);
+		data_list[list_count].length = in_bytes - 2 * sizeof(int);
+		list_count++;
+
+		start_index += current_count;
+		if (start_index >= total_count)
+		{
+			break;
+		}
+
+		if (list_count == MAX_REQUEST_LOOP)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"response data from tracker " \
+				"server %s:%d is too large", \
+				__LINE__, pTrackerServer->ip_addr,\
+				pTrackerServer->port);
+			result = ENOSPC;
+			break;
+		}
+	}
+
+	if (result != 0)
+	{
+		close(pTrackerServer->sock);
+		pTrackerServer->sock = -1;
+	}
+	else
+	{
+		do
+		{
+			int total_length;
+			char *content;
+
+			total_length = 0;
+			for (i=0; i<list_count; i++)
+			{
+				total_length += data_list[i].length;
+			}
+
+			content = (char *)malloc(total_length + 1);
+			if (content == NULL)
+			{
+				result = errno != 0 ? errno : ENOMEM;
+				logError("file: "__FILE__", line: %d, " \
+					"malloc %d bytes fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, total_length + 1, \
+					result, STRERROR(result));
+				break;
+			}
+
+			p = content;
+			for (i=0; i<list_count; i++)
+			{
+				memcpy(p, data_list[i].content, data_list[i].length);
+				p += data_list[i].length;
+			}
+			*p = '\0';
+
+			logInfo("storage ids:\n%s", content);
+
+			result = fdfs_load_storage_ids(content, \
+					"storage-ids-from-tracker");
+			free(content);
+		} while (0);
+	}
+
+	for (i=0; i<list_count; i++)
+	{
+		free(data_list[i].buffer);
+	}
+
 	return result;
 }
 
