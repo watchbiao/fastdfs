@@ -2223,10 +2223,32 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	ip_addr.s_addr = ntohl(buff2int(buff));
 	if (fdfs_get_server_id_type(ip_addr.s_addr) == FDFS_ID_TYPE_SERVER_ID)
 	{
-		*(pFileInfo->source_ip_addr) = '\0';
+		pFileInfo->source_id = ip_addr.s_addr;
+		if (g_storage_ids_by_id != NULL && g_storage_id_count > 0)
+		{
+			char id[16];
+			FDFSStorageIdInfo *pStorageId;
+
+			sprintf(id, "%d", pFileInfo->source_id);
+			pStorageId = fdfs_get_storage_by_id(id);
+			if (pStorageId != NULL)
+			{
+				strcpy(pFileInfo->source_ip_addr, \
+					pStorageId->ip_addr);
+			}
+			else
+			{
+				*(pFileInfo->source_ip_addr) = '\0';
+			}
+		}
+		else
+		{
+			*(pFileInfo->source_ip_addr) = '\0';
+		}
 	}
 	else
 	{
+		pFileInfo->source_id = 0;
 		inet_ntop(AF_INET, &ip_addr, pFileInfo->source_ip_addr, \
 				IP_ADDRESS_SIZE);
 	}
