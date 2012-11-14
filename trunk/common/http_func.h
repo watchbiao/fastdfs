@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <unistd.h>
 #include "common_define.h"
 
 #ifdef __cplusplus
