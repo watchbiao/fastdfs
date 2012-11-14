@@ -96,14 +96,10 @@ static int tracker_load_store_lookup(const char *filename, \
 	return 0;
 }
 
-static int tracker_load_storage_id_info(const char *filename, \
+static int tracker_load_storage_id_info(const char *config_filename, \
 		IniContext *pItemContext)
 {
-	char *pStorageIdsFilename;
 	char *pIdType;
-	char *content;
-	int64_t file_size;
-	int result;
 
 	g_use_storage_id = iniGetBoolValue(NULL, "use_storage_id", \
 				pItemContext, false);
@@ -123,67 +119,7 @@ static int tracker_load_storage_id_info(const char *filename, \
 		g_id_type_in_filename = FDFS_ID_TYPE_IP_ADDRESS;
 	}
 
-	pStorageIdsFilename = iniGetStrValue(NULL, "storage_ids_filename", \
-				pItemContext);
-	if (pStorageIdsFilename == NULL)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"conf file \"%s\" must have item " \
-			"\"storage_ids_filename\"!", __LINE__, filename);
-		return ENOENT;
-	}
-
-	if (*pStorageIdsFilename == '\0')
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"conf file \"%s\", storage_ids_filename is emtpy!", \
-			__LINE__, filename);
-		return EINVAL;
-	}
-
-	if (*pStorageIdsFilename == '/')  //absolute path
-	{
-		result = getFileContent(pStorageIdsFilename, \
-				&content, &file_size);
-	}
-	else
-	{
-		const char *lastSlash = strrchr(filename, '/');
-		if (lastSlash == NULL)
-		{
-			result = getFileContent(pStorageIdsFilename, \
-					&content, &file_size);
-		}
-		else
-		{
-			char filepath[MAX_PATH_SIZE];
-			char full_filename[MAX_PATH_SIZE];
-			int len;
-
-			len = lastSlash - filename;
-			if (len >= sizeof(filepath))
-			{
-				logError("file: "__FILE__", line: %d, " \
-					"conf filename: \"%s\" is too long!", \
-					__LINE__, filename);
-				return ENOSPC;
-			}
-			memcpy(filepath, filename, len);
-			*(filepath + len) = '\0';
-			snprintf(full_filename, sizeof(full_filename), \
-				"%s/%s", filepath, pStorageIdsFilename);
-			result = getFileContent(full_filename, \
-					&content, &file_size);
-		}
-	}
-	if (result != 0)
-	{
-		return result;
-	}
-
-	result = fdfs_load_storage_ids(content, pStorageIdsFilename);
-	free(content);
-	return result;
+	return fdfs_load_storage_ids_from_file(config_filename, pItemContext);
 }
 
 int tracker_load_from_conf_file(const char *filename, \

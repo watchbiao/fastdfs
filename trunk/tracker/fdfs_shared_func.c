@@ -765,3 +765,74 @@ int fdfs_get_storage_ids_from_tracker_group(TrackerServerGroup *pTrackerGroup)
 	return result;
 }
 
+int fdfs_load_storage_ids_from_file(const char *config_filename, \
+		IniContext *pItemContext)
+{
+	char *pStorageIdsFilename;
+	char *content;
+	int64_t file_size;
+	int result;
+
+	pStorageIdsFilename = iniGetStrValue(NULL, "storage_ids_filename", \
+				pItemContext);
+	if (pStorageIdsFilename == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"conf file \"%s\" must have item " \
+			"\"storage_ids_filename\"!", __LINE__, config_filename);
+		return ENOENT;
+	}
+
+	if (*pStorageIdsFilename == '\0')
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"conf file \"%s\", storage_ids_filename is emtpy!", \
+			__LINE__, config_filename);
+		return EINVAL;
+	}
+
+	if (*pStorageIdsFilename == '/')  //absolute path
+	{
+		result = getFileContent(pStorageIdsFilename, \
+				&content, &file_size);
+	}
+	else
+	{
+		const char *lastSlash = strrchr(config_filename, '/');
+		if (lastSlash == NULL)
+		{
+			result = getFileContent(pStorageIdsFilename, \
+					&content, &file_size);
+		}
+		else
+		{
+			char filepath[MAX_PATH_SIZE];
+			char full_filename[MAX_PATH_SIZE];
+			int len;
+
+			len = lastSlash - config_filename;
+			if (len >= sizeof(filepath))
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"conf filename: \"%s\" is too long!", \
+					__LINE__, config_filename);
+				return ENOSPC;
+			}
+			memcpy(filepath, config_filename, len);
+			*(filepath + len) = '\0';
+			snprintf(full_filename, sizeof(full_filename), \
+				"%s/%s", filepath, pStorageIdsFilename);
+			result = getFileContent(full_filename, \
+					&content, &file_size);
+		}
+	}
+	if (result != 0)
+	{
+		return result;
+	}
+
+	result = fdfs_load_storage_ids(content, pStorageIdsFilename);
+	free(content);
+	return result;
+}
+
