@@ -10,7 +10,6 @@
 #include "common_define.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <time.h>
@@ -53,8 +52,11 @@
 #include "hash.h"
 #include "sockopt.h"
 
-//#define USE_SELECT
+#ifdef WIN32
+#define USE_SELECT
+#else
 #define USE_POLL
+#endif
 
 #ifdef OS_LINUX
 #ifndef TCP_KEEPIDLE

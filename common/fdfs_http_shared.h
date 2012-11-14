@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <unistd.h>
 #include "ini_file_reader.h"
 #include "hash.h"
 
