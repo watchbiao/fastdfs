@@ -151,6 +151,8 @@ typedef void (*FreeDataFunc)(void *ptr);
 typedef int (*CompareFunc)(void *p1, void *p2);
 typedef void* (*MallocFunc)(size_t size);
 
+#define TO_UPPERCASE(c)  (((c) >= 'a' && (c) <= 'z') ? (c) - 32 : c)
+
 #ifdef WIN32
 #define strcasecmp	_stricmp
 #endif
