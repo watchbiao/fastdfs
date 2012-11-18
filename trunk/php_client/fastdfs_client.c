@@ -4079,11 +4079,11 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	{
 		op_type = STORAGE_SET_METADATA_FLAG_MERGE;
 	}
-	else if (toupper(*op_type_str) == STORAGE_SET_METADATA_FLAG_MERGE)
+	else if (TO_UPPERCASE(*op_type_str) == STORAGE_SET_METADATA_FLAG_MERGE)
 	{
 		op_type = STORAGE_SET_METADATA_FLAG_MERGE;
 	}
-	else if (toupper(*op_type_str) == STORAGE_SET_METADATA_FLAG_OVERWRITE)
+	else if (TO_UPPERCASE(*op_type_str) == STORAGE_SET_METADATA_FLAG_OVERWRITE)
 	{
 		op_type = STORAGE_SET_METADATA_FLAG_OVERWRITE;
 	}

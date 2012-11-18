@@ -48,7 +48,7 @@ FAST_HEADER_FILES = ../common/common_define.h ../common/hash.h \
                     ../common/pthread_func.h ../common/ini_file_reader.h \
                     ../common/sockopt.h ../common/sched_thread.h \
                     ../common/http_func.h ../common/md5.h ../common/_os_bits.h \
-                    ../common/local_ip_func.h
+                    ../common/local_ip_func.h ../common/avl_tree.h
 
 FDFS_HEADER_FILES = ../common/fdfs_define.h ../common/fdfs_global.h \
                     ../common/mime_file_parser.h ../common/fdfs_http_shared.h \
