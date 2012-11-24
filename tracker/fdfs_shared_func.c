@@ -515,11 +515,12 @@ int fdfs_load_storage_ids(char *content, const char *pStorageIdsFilename)
 		return result;
 	}
 
-	logInfo("g_storage_id_count: %d", g_storage_id_count);
+	logInfo("file: "__FILE__", line: %d, " \
+		"g_storage_id_count: %d", __LINE__, g_storage_id_count);
 	pStorageIdInfo = g_storage_ids_by_ip;
 	for (i=0; i<g_storage_id_count; i++)
 	{
-		logInfo("%s  %s  %s", pStorageIdInfo->id, \
+		logDebug("%s  %s  %s", pStorageIdInfo->id, \
 			pStorageIdInfo->group_name, 
 			pStorageIdInfo->ip_addr);
 
