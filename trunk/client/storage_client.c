@@ -2257,7 +2257,8 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	pFileInfo->file_size = buff2long(buff + sizeof(int) * 2);
 
 	if (IS_SLAVE_FILE(filename_len, pFileInfo->file_size) || \
-	    IS_APPENDER_FILE(pFileInfo->file_size))
+	    IS_APPENDER_FILE(pFileInfo->file_size) || \
+	    (*(pFileInfo->source_ip_addr) == '\0' && get_from_server))
 	{ //slave file or appender file
 		if (get_from_server)
 		{
