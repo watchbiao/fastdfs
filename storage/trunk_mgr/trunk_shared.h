@@ -92,6 +92,8 @@ int storage_split_filename(const char *logic_filename, \
 		int *filename_len, char *true_filename, char **ppStorePath);
 int storage_split_filename_ex(const char *logic_filename, \
 		int *filename_len, char *true_filename, int *store_path_index);
+int storage_split_filename_no_check(const char *logic_filename, \
+		int *filename_len, char *true_filename, int *store_path_index);
 
 void trunk_file_info_encode(const FDFSTrunkFileInfo *pTrunkFile, char *str);
 void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile);

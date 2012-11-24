@@ -142,13 +142,13 @@ int storage_load_paths_from_conf_file(IniContext *pItemContext)
 	return 0;
 }
 
-#define SPLIT_FILENAME_BODY(logic_filename, \
-		filename_len, true_filename, store_path_index) \
+#define SPLIT_FILENAME_BODY(logic_filename, filename_len, true_filename, \
+	store_path_index, check_path_index) \
+	do \
+	{ \
 	char buff[3]; \
 	char *pEnd; \
  \
-	do \
-	{ \
 	if (*filename_len <= FDFS_LOGIC_FILE_PATH_LEN) \
 	{ \
 		logError("file: "__FILE__", line: %d, " \
@@ -186,7 +186,8 @@ int storage_load_paths_from_conf_file(IniContext *pItemContext)
 		return EINVAL; \
 	} \
  \
-	if (store_path_index < 0 || store_path_index >= g_fdfs_path_count) \
+	if (check_path_index && (store_path_index < 0 || \
+		store_path_index >= g_fdfs_path_count)) \
 	{ \
 		logError("file: "__FILE__", line: %d, " \
 			"filename: %s is invalid, " \
@@ -198,7 +199,7 @@ int storage_load_paths_from_conf_file(IniContext *pItemContext)
 	*filename_len -= 4; \
 	memcpy(true_filename, logic_filename + 4, (*filename_len) + 1); \
  \
-	} while (0);
+	} while (0)
 
 
 int storage_split_filename(const char *logic_filename, \
@@ -206,8 +207,8 @@ int storage_split_filename(const char *logic_filename, \
 {
 	int store_path_index;
 
-	SPLIT_FILENAME_BODY(logic_filename, \
-		filename_len, true_filename, store_path_index)
+	SPLIT_FILENAME_BODY(logic_filename, filename_len, true_filename, \
+		store_path_index, true);
 
 	*ppStorePath = g_fdfs_store_paths[store_path_index];
 
@@ -218,7 +219,16 @@ int storage_split_filename_ex(const char *logic_filename, \
 		int *filename_len, char *true_filename, int *store_path_index)
 {
 	SPLIT_FILENAME_BODY(logic_filename, \
-		filename_len, true_filename, *store_path_index)
+		filename_len, true_filename, *store_path_index, true);
+
+	return 0;
+}
+
+int storage_split_filename_no_check(const char *logic_filename, \
+		int *filename_len, char *true_filename, int *store_path_index)
+{
+	SPLIT_FILENAME_BODY(logic_filename, \
+		filename_len, true_filename, *store_path_index, false);
 
 	return 0;
 }
