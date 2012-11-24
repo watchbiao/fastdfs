@@ -43,6 +43,7 @@
 #include "trunk_mem.h"
 #include "trunk_sync.h"
 #include "storage_disk_recovery.h"
+#include "tracker_client.h"
 
 #ifdef WITH_HTTPD
 #include "fdfs_http_shared.h"
@@ -119,6 +120,53 @@ static int storage_open_stat_file();
 static int storage_close_stat_file();
 static int storage_make_data_dirs(const char *pBasePath, bool *pathCreated);
 static int storage_check_and_make_data_dirs();
+
+static int tracker_get_my_server_id()
+{
+	if (g_use_storage_id)
+	{
+		TrackerServerInfo *pTrackerServer;
+		int result;
+
+		pTrackerServer = tracker_get_connection();
+		if (pTrackerServer == NULL)
+		{
+			return errno != 0 ? errno : ECONNREFUSED;
+		}
+
+		result = tracker_get_storage_id(pTrackerServer, \
+			g_group_name, g_tracker_client_ip, g_my_server_id_str);
+		tracker_disconnect_server(pTrackerServer);
+		if (result != 0)
+		{
+			return result;
+		}
+		g_my_server_id_int = atoi(g_my_server_id_str);
+	}
+	else
+	{
+		struct in_addr ip_addr;
+		snprintf(g_my_server_id_str, sizeof(g_my_server_id_str), "%s", \
+			g_tracker_client_ip);
+		if (inet_pton(AF_INET, g_tracker_client_ip, &ip_addr) == 1)
+		{
+			g_my_server_id_int = ip_addr.s_addr;
+		}
+		else
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"call inet_pton for ip: %s fail", \
+			__LINE__,g_tracker_client_ip);
+			g_my_server_id_int = INADDR_NONE;
+		}
+	}
+
+	logDebug("file: "__FILE__", line: %d, " \
+		"tracker_client_ip: %s, my_server_id_str: %s, " \
+		"my_server_id_int: %d", __LINE__, \
+		g_tracker_client_ip, g_my_server_id_str, g_my_server_id_int);
+	return 0;
+}
 
 static char *get_storage_stat_filename(const void *pArg, char *full_filename)
 {
@@ -1692,6 +1740,11 @@ int storage_func_init(const char *filename, \
 	}
 
 	if ((result=storage_get_params_from_tracker()) != 0)
+	{
+		return result;
+	}
+
+	if ((result=tracker_get_my_server_id()) != 0)
 	{
 		return result;
 	}

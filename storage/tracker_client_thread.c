@@ -190,40 +190,6 @@ static int tracker_rename_mark_files(const char *old_ip_addr, \
 	return result;
 }
 
-static int tracker_get_my_server_id(TrackerServerInfo *pTrackerServer)
-{
-	if (g_use_storage_id)
-	{
-    int result;
-		result = tracker_get_storage_id(pTrackerServer, \
-			g_group_name, g_tracker_client_ip, g_my_server_id_str);
-    if (result != 0)
-    {
-      return result;
-    }
-    g_my_server_id_int = atoi(g_my_server_id_str);
-	}
-	else
-	{
-    struct in_addr ip_addr;
-		snprintf(g_my_server_id_str, sizeof(g_my_server_id_str), "%s", \
-			g_tracker_client_ip);
-    if (inet_pton(AF_INET, g_tracker_client_ip, &ip_addr) == 1)
-    {
-      g_my_server_id_int = ip_addr.s_addr;
-    }
-    else
-    {
-			logError("file: "__FILE__", line: %d, " \
-				"call inet_pton for ip: %s fail", \
-        __LINE__,g_tracker_client_ip);
-      g_my_server_id_int = INADDR_NONE;
-    }
-	}
-
-	return 0;
-}
-
 static void *tracker_report_thread_entrance(void *arg)
 {
 	TrackerServerInfo *pTrackerServer;
@@ -364,15 +330,6 @@ static void *tracker_report_thread_entrance(void *arg)
 		}
 
 		insert_into_local_host_ip(tracker_client_ip);
-
-		if (*g_my_server_id_str == '\0')
-		{
-			if (tracker_get_my_server_id(pTrackerServer) != 0)
-			{
-				sleep(g_heart_beat_interval);
-				continue;
-			}
-		}
 
 		/*
 		//printf("file: "__FILE__", line: %d, " \
