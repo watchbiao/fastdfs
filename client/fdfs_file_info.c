@@ -18,7 +18,6 @@
 
 int main(int argc, char *argv[])
 {
-	TrackerServerInfo *pTrackerServer;
 	char *conf_filename;
 	char file_id[128];
 	int result;
@@ -39,17 +38,9 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
-	pTrackerServer = tracker_get_connection();
-	if (pTrackerServer == NULL)
-	{
-		fdfs_client_destroy();
-		return errno != 0 ? errno : ECONNREFUSED;
-	}
-
 	snprintf(file_id, sizeof(file_id), "%s", argv[2]);
-
-	result = storage_query_file_info_ex1(pTrackerServer, NULL, \
-				file_id, &file_info, false);
+	memset(&file_info, 0, sizeof(file_info));
+	result = fdfs_get_file_info_ex1(file_id, true, &file_info);
 	if (result != 0)
 	{
 		printf("query file info fail, " \
@@ -60,6 +51,7 @@ int main(int argc, char *argv[])
 	{
 		char szDatetime[32];
 
+		printf("source storage id: %d\n", file_info.source_id);
 		printf("source ip address: %s\n", file_info.source_ip_addr);
 		printf("file create timestamp: %s\n", formatDatetime(
 			file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \

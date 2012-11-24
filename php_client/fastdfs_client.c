@@ -4275,7 +4275,7 @@ static void php_fdfs_get_file_info_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		}
 	}
 
-	result = fdfs_get_file_info(group_name, remote_filename, &file_info);
+	result = fdfs_get_file_info_ex(group_name, remote_filename, true, &file_info);
 	pContext->err_no = result;
 	if (result != 0)
 	{
@@ -4283,6 +4283,8 @@ static void php_fdfs_get_file_info_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	}
 
 	array_init(return_value);
+	add_assoc_long_ex(return_value, "source_id", \
+		sizeof("source_id"), file_info.source_id);
 	add_assoc_long_ex(return_value, "create_timestamp", \
 		sizeof("create_timestamp"), file_info.create_timestamp);
 	add_assoc_long_ex(return_value, "file_size", \
