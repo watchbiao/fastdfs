@@ -123,6 +123,20 @@ static int storage_check_and_make_data_dirs();
 
 static int tracker_get_my_server_id()
 {
+	struct in_addr ip_addr;
+
+	if (inet_pton(AF_INET, g_tracker_client_ip, &ip_addr) == 1)
+	{
+		g_server_id_in_filename = ip_addr.s_addr;
+	}
+	else
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call inet_pton for ip: %s fail", \
+		__LINE__,g_tracker_client_ip);
+		g_server_id_in_filename = INADDR_NONE;
+	}
+
 	if (g_use_storage_id)
 	{
 		TrackerServerInfo *pTrackerServer;
@@ -141,30 +155,22 @@ static int tracker_get_my_server_id()
 		{
 			return result;
 		}
-		g_my_server_id_int = atoi(g_my_server_id_str);
+
+		if (g_id_type_in_filename == FDFS_ID_TYPE_SERVER_ID)
+		{
+			g_server_id_in_filename = atoi(g_my_server_id_str);
+		}
 	}
 	else
 	{
-		struct in_addr ip_addr;
 		snprintf(g_my_server_id_str, sizeof(g_my_server_id_str), "%s", \
 			g_tracker_client_ip);
-		if (inet_pton(AF_INET, g_tracker_client_ip, &ip_addr) == 1)
-		{
-			g_my_server_id_int = ip_addr.s_addr;
-		}
-		else
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"call inet_pton for ip: %s fail", \
-			__LINE__,g_tracker_client_ip);
-			g_my_server_id_int = INADDR_NONE;
-		}
 	}
 
-	logDebug("file: "__FILE__", line: %d, " \
+	logInfo("file: "__FILE__", line: %d, " \
 		"tracker_client_ip: %s, my_server_id_str: %s, " \
-		"my_server_id_int: %d", __LINE__, \
-		g_tracker_client_ip, g_my_server_id_str, g_my_server_id_int);
+		"g_server_id_in_filename: %d", __LINE__, \
+		g_tracker_client_ip, g_my_server_id_str, g_server_id_in_filename);
 	return 0;
 }
 
