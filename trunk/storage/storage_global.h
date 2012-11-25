@@ -116,13 +116,13 @@ extern bool g_sync_old_done;     //if old files synced to me done
 extern char g_sync_src_id[FDFS_STORAGE_ID_MAX_SIZE]; //the source storage server id
 
 extern char g_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-extern int  g_my_server_id_int; //my server id integer
 extern char g_my_server_id_str[FDFS_STORAGE_ID_MAX_SIZE]; //my server id string
 extern char g_tracker_client_ip[IP_ADDRESS_SIZE]; //storage ip as tracker client
 extern char g_last_storage_ip[IP_ADDRESS_SIZE];	//the last storage ip address
 
 extern LogContext g_access_log_context;
 
+extern in_addr_t g_server_id_in_filename;
 extern bool g_store_slave_file_use_link; //if store slave file use symbol link
 extern bool g_use_storage_id;  //identify storage by ID instead of IP address
 extern byte g_id_type_in_filename; //id type of the storage server in the filename

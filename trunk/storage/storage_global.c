@@ -65,7 +65,6 @@ FDFSStorageStat g_storage_stat;
 int g_stat_change_count = 1;
 int g_sync_change_count = 0;
 
-int g_my_server_id_int = 0; //my server id integer
 int g_storage_join_time = 0;
 int g_sync_until_timestamp = 0;
 bool g_sync_old_done = false;
@@ -78,6 +77,7 @@ char g_last_storage_ip[IP_ADDRESS_SIZE] = {0};	 //the last storage ip address
 
 LogContext g_access_log_context = {LOG_INFO, STDERR_FILENO, NULL};
 
+in_addr_t g_server_id_in_filename = 0;
 bool g_use_access_log = false;    //if log to access log
 bool g_rotate_access_log = false; //if rotate the access log every day
 bool g_rotate_error_log = false;  //if rotate the error log every day
