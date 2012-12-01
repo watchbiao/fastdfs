@@ -12,6 +12,8 @@ static struct fast_task_queue g_free_queue;
 
 static struct fast_task_info *g_mpool = NULL;
 
+#define ALIGNED_TASK_INFO_SIZE  MEM_ALIGN(sizeof(struct fast_task_info))
+
 int task_queue_init(struct fast_task_queue *pQueue)
 {
 	int result;
@@ -36,10 +38,13 @@ int free_queue_init(const int max_connections, const int min_buff_size, \
 	struct fast_task_info *pTask;
 	char *p;
 	char *pCharEnd;
+	int64_t total_size;
 	int block_size;
 	int alloc_size;
-	int64_t total_size;
 	int result;
+	int aligned_min_size;
+	int aligned_max_size;
+	int aligned_arg_size;
 
 	if ((result=init_pthread_lock(&(g_free_queue.lock))) != 0)
 	{
@@ -49,10 +54,12 @@ int free_queue_init(const int max_connections, const int min_buff_size, \
 		return result;
 	}
 
-	block_size = sizeof(struct fast_task_info) + arg_size;
+	aligned_min_size = MEM_ALIGN(min_buff_size);
+	aligned_max_size = MEM_ALIGN(max_buff_size);
+	aligned_arg_size = MEM_ALIGN(arg_size);
+	block_size = ALIGNED_TASK_INFO_SIZE + aligned_arg_size;
 	alloc_size = block_size * max_connections;
-
-	if (max_buff_size > min_buff_size)
+	if (aligned_max_size > aligned_min_size)
 	{
 		total_size = alloc_size;
 		g_free_queue.malloc_whole_block = false;
@@ -83,11 +90,12 @@ int free_queue_init(const int max_connections, const int min_buff_size, \
 			}
 		}
 
-		total_size = alloc_size+(int64_t)min_buff_size*max_connections;
+		total_size = alloc_size + (int64_t)aligned_min_size * \
+				max_connections;
 		if (total_size <= max_data_size)
 		{
 			g_free_queue.malloc_whole_block = true;
-			block_size += min_buff_size;
+			block_size += aligned_min_size;
 		}
 		else
 		{
@@ -111,12 +119,12 @@ int free_queue_init(const int max_connections, const int min_buff_size, \
 	for (p=(char *)g_mpool; p<pCharEnd; p += block_size)
 	{
 		pTask = (struct fast_task_info *)p;
-		pTask->size = min_buff_size;
+		pTask->size = aligned_min_size;
 
-		pTask->arg = p + sizeof(struct fast_task_info);
+		pTask->arg = p + ALIGNED_TASK_INFO_SIZE;
 		if (g_free_queue.malloc_whole_block)
 		{
-			pTask->data = (char *)pTask->arg + arg_size;
+			pTask->data = (char *)pTask->arg + aligned_arg_size;
 		}
 		else
 		{
@@ -143,9 +151,9 @@ int free_queue_init(const int max_connections, const int min_buff_size, \
 	}
 
 	g_free_queue.max_connections = max_connections;
-	g_free_queue.min_buff_size = min_buff_size;
-	g_free_queue.max_buff_size = max_buff_size;
-	g_free_queue.arg_size = arg_size;
+	g_free_queue.min_buff_size = aligned_min_size;
+	g_free_queue.max_buff_size = aligned_max_size;
+	g_free_queue.arg_size = aligned_arg_size;
 	g_free_queue.head = g_mpool;
 	g_free_queue.tail->next = NULL;
 
@@ -166,8 +174,7 @@ void free_queue_destroy()
 		int block_size;
 		struct fast_task_info *pTask;
 
-		block_size = sizeof(struct fast_task_info) + \
-					g_free_queue.arg_size;
+		block_size = ALIGNED_TASK_INFO_SIZE + g_free_queue.arg_size;
 		pCharEnd = ((char *)g_mpool) + block_size * \
 				g_free_queue.max_connections;
 		for (p=(char *)g_mpool; p<pCharEnd; p += block_size)
