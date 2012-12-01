@@ -131,7 +131,7 @@ typedef struct
 
 typedef struct
 {
-	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 8];  //for 8 bytes alignment
 	int64_t total_mb;  //total disk storage in MB
 	int64_t free_mb;  //free disk storage in MB
 	int64_t trunk_free_mb;  //trunk free disk storage in MB
@@ -258,22 +258,23 @@ typedef struct
 typedef struct StructFDFSStorageDetail
 {
 	char status;
+	char padding;  //just for padding
 	char id[FDFS_STORAGE_ID_MAX_SIZE];
 	char ip_addr[IP_ADDRESS_SIZE];
-	char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
 	char version[FDFS_VERSION_SIZE];
+	char domain_name[FDFS_DOMAIN_NAME_MAX_SIZE];
 
 	struct StructFDFSStorageDetail *psync_src_server;
-	time_t sync_until_timestamp;
+	int64_t *path_total_mbs; //total disk storage in MB
+	int64_t *path_free_mbs;  //free disk storage in MB
 
-	time_t join_time;  //storage join timestamp (create timestamp)
-	time_t up_time;    //startup timestamp
 	int64_t total_mb;  //total disk storage in MB
 	int64_t free_mb;  //free disk storage in MB
 	int64_t changelog_offset;  //changelog file offset
 
-	int64_t *path_total_mbs; //total disk storage in MB
-	int64_t *path_free_mbs;  //free disk storage in MB
+	time_t sync_until_timestamp;
+	time_t join_time;  //storage join timestamp (create timestamp)
+	time_t up_time;    //startup timestamp
 
 	int store_path_count;  //store base path count of each storage server
 	int subdir_count_per_path;
@@ -298,7 +299,7 @@ typedef struct StructFDFSStorageDetail
 
 typedef struct
 {
-	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 8];   //for 8 bytes alignment
 	int64_t total_mb;  //total disk storage in MB
 	int64_t free_mb;  //free disk storage in MB
 	int64_t trunk_free_mb;  //trunk free disk storage in MB
@@ -351,7 +352,7 @@ typedef struct
 	byte store_server;  //store to which storage server, from conf file
 	byte download_server; //download from which storage server, from conf file
 	byte store_path;  //store to which path, from conf file
-	char store_group[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char store_group[FDFS_GROUP_NAME_MAX_LEN + 8];  //for 8 bytes aliginment
 } FDFSGroups;
 
 typedef struct
@@ -415,7 +416,7 @@ typedef struct
 typedef struct
 {
 	char id[FDFS_STORAGE_ID_MAX_SIZE];
-	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 8];  //for 8 bytes alignment
 	char ip_addr[IP_ADDRESS_SIZE];
 } FDFSStorageIdInfo;
 

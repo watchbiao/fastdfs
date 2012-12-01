@@ -1,7 +1,8 @@
 
-Version 4.04  2012-11-25
+Version 4.04  2012-11-30
  * bug fixed: get storage server id when storage daemon init
  * storage id in filename use global variable
+ * dynamic alloc memory 8 bytes alignment
 
 Version 4.03  2012-11-18
  * trunk_mgr/trunk_mem.c: log error and add more debug info

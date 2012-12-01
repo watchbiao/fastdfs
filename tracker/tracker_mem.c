@@ -289,7 +289,6 @@ static int tracker_malloc_storage_path_mbs(FDFSStorageDetail *pStorage, \
 	}
 
 	alloc_bytes = sizeof(int64_t) * store_path_count;
-
 	pStorage->path_total_mbs = (int64_t *)malloc(alloc_bytes);
 	if (pStorage->path_total_mbs == NULL)
 	{

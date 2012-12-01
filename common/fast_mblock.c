@@ -29,7 +29,8 @@ int fast_mblock_init(struct fast_mblock_man *mblock, const int element_size, \
 	else
 	{
 		int block_size;
-		block_size = sizeof(struct fast_mblock_node) + element_size;
+		block_size = MEM_ALIGN(sizeof(struct fast_mblock_node) \
+			+ element_size);
 		mblock->alloc_elements_once = (1024 * 1024) / block_size;
 	}
 
@@ -58,7 +59,8 @@ static int fast_mblock_prealloc(struct fast_mblock_man *mblock)
 	int block_size;
 	int alloc_size;
 
-	block_size = sizeof(struct fast_mblock_node) + mblock->element_size;
+	block_size = MEM_ALIGN(sizeof(struct fast_mblock_node) + \
+			mblock->element_size);
 	alloc_size = sizeof(struct fast_mblock_malloc) + block_size * \
 			mblock->alloc_elements_once;
 
