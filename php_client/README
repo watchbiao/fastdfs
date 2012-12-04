@@ -951,7 +951,7 @@ return true for success, false for error
 
 
 boolean fastdfs_tracker_close_all_connections()
-connect all connections to the tracker servers
+close all connections to the tracker servers
 return true for success, false for error
 
 
@@ -1989,7 +1989,7 @@ return true for success, false for error
 
 
 boolean FastDFS::tracker_close_all_connections()
-connect all connections to the tracker servers
+close all connections to the tracker servers
 return true for success, false for error
 
 
