@@ -16,6 +16,12 @@
 #include "fdfs_client.h"
 #include "logger.h"
 
+static void usage(char *argv[])
+{
+	printf("Usage: %s <config_filename> <local_filename> " \
+		"[storage_ip:port] [store_path_index]\n", argv[0]);
+}
+
 int main(int argc, char *argv[])
 {
 	char *conf_filename;
@@ -27,9 +33,9 @@ int main(int argc, char *argv[])
 	TrackerServerInfo storageServer;
 	char file_id[128];
 	
-	if (argc < 3)
+	if (argc < 3 || argc == 4)
 	{
-		printf("Usage: %s <config_filename> <local_filename>\n", argv[0]);
+		usage(argv);
 		return 1;
 	}
 
@@ -49,8 +55,30 @@ int main(int argc, char *argv[])
 		return errno != 0 ? errno : ECONNREFUSED;
 	}
 
+	local_filename = argv[2];
+	if (argc >= 5)
+	{
+		const char *pPort;
+		const char *pIpAndPort;
 
-	if ((result=tracker_query_storage_store(pTrackerServer, \
+		pIpAndPort = argv[3];
+		pPort = strchr(pIpAndPort, ':');
+		if (pPort == NULL)
+		{
+			fdfs_client_destroy();
+			fprintf(stderr, "invalid storage ip address and " \
+				"port: %s\n", pIpAndPort);
+			usage(argv);
+			return 1;
+		}
+
+		storageServer.sock = -1;
+		snprintf(storageServer.ip_addr, sizeof(storageServer.ip_addr), \
+			 "%.*s", pPort - pIpAndPort, pIpAndPort);
+		storageServer.port = atoi(pPort + 1);
+		store_path_index = atoi(argv[4]);
+	}
+	else if ((result=tracker_query_storage_store(pTrackerServer, \
 	                &storageServer, &store_path_index)) != 0)
 	{
 		fdfs_client_destroy();
@@ -61,7 +89,6 @@ int main(int argc, char *argv[])
 	}
 
 	strcpy(group_name, "");
-	local_filename = argv[2];
 	result = storage_upload_by_filename1(pTrackerServer, \
 			&storageServer, store_path_index, \
 			local_filename, NULL, \
