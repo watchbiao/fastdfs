@@ -29,29 +29,38 @@ typedef struct
 	char ip_addr[IP_ADDRESS_SIZE];
 } ConnectionInfo;
 
-typedef void (*conn_pool_init_func)(void *conn);
-typedef int (*conn_pool_connect_func)(void *conn, const int connect_timeout);
-typedef void (*conn_pool_disconnect_func)(void *conn);
-
-typedef struct tagConnectionPool {
-	conn_pool_connect_func connect_func;
-	conn_pool_disconnect_func disconnect_func;
-	int conn_size;
-	HashArray hash_array;  //key is ip:port, value is ConnectionNode
-} ConnectionPool;
+struct tagConnectionManager;
 
 typedef struct tagConnectionNode {
-	void *conn;
+	ConnectionInfo *conn;
+	struct tagConnectionManager *manager;
 	struct tagConnectionNode *next;
 } ConnectionNode;
 
-int conn_pool_init(ConnectionPool *cp, conn_pool_connect_func connect_func, 
-	conn_pool_disconnect_func disconnect_func, const int conn_size);
+typedef struct tagConnectionManager {
+	ConnectionNode *head;
+	int total_count;  //total connections
+	int free_count;   //free connections
+} ConnectionManager;
 
+typedef struct tagConnectionPool {
+	HashArray hash_array;  //key is ip:port, value is ConnectionManager
+	int max_count_per_entry;  //0 means no limit
+} ConnectionPool;
+
+int conn_pool_init(ConnectionPool *cp, const int max_count_per_entry);
 void conn_pool_destroy(ConnectionPool *cp);
 
-ConnectionNode *conn_pool_get_connection(ConnectionPool *cp, const void *conn);
-void conn_pool_close_connection(ConnectionPool *cp, ConnectionNode *conn_node);
+ConnectionInfo *conn_pool_get_connection(ConnectionPool *cp, 
+	const ConnectionInfo *conn);
+
+void conn_pool_close_connection(ConnectionPool *cp, ConnectionInfo *conn);
+
+
+void conn_pool_disconnect_server(ConnectionInfo *pConnection);
+
+int conn_pool_connect_server(ConnectionInfo *pConnection, \
+		const int connect_timeout);
 
 #ifdef __cplusplus
 }

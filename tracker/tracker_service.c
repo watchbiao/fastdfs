@@ -335,7 +335,7 @@ static int tracker_check_and_sync(struct fast_task_info *pTask, \
 		leader_index = g_tracker_servers.leader_index;
 		if (leader_index >= 0)
 		{
-			TrackerServerInfo *pTServer;
+			ConnectionInfo *pTServer;
 			pTServer = g_tracker_servers.servers + leader_index;
 			snprintf(pDestServer->id, FDFS_STORAGE_ID_MAX_SIZE, \
 				"%s", pTServer->ip_addr);
@@ -795,7 +795,7 @@ static int tracker_deal_notify_next_leader(struct fast_task_info *pTask)
 {
 	char *pIpAndPort;
 	char *ipAndPort[2];
-	TrackerServerInfo leader;
+	ConnectionInfo leader;
 	int server_index;
 	
 	if (pTask->length - sizeof(TrackerHeader) != FDFS_PROTO_IP_PORT_SIZE)
@@ -859,7 +859,7 @@ static int tracker_deal_commit_next_leader(struct fast_task_info *pTask)
 {
 	char *pIpAndPort;
 	char *ipAndPort[2];
-	TrackerServerInfo leader;
+	ConnectionInfo leader;
 	int server_index;
 	
 	if (pTask->length - sizeof(TrackerHeader) != FDFS_PROTO_IP_PORT_SIZE)
@@ -1181,8 +1181,8 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 {
 	TrackerStorageJoinBodyResp *pJoinBodyResp;
 	TrackerStorageJoinBody *pBody;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pTrackerEnd;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pTrackerEnd;
 	char *p;
 	char *pSeperator;
 	FDFSStorageJoinBody joinBody;

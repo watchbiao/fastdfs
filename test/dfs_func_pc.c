@@ -10,15 +10,15 @@
 #include "dfs_func.h"
 #include "fdfs_client.h"
 
-static TrackerServerInfo *pTrackerServer;
-static TrackerServerInfo storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
+static ConnectionInfo *pTrackerServer;
+static ConnectionInfo storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
 static int storage_server_count = 0;
 
-static TrackerServerInfo *getConnectedStorageServer(
-		TrackerServerInfo *pStorageServer, int *err_no)
+static ConnectionInfo *getConnectedStorageServer(
+		ConnectionInfo *pStorageServer, int *err_no)
 {
-	TrackerServerInfo *pEnd;
-	TrackerServerInfo *pServer;
+	ConnectionInfo *pEnd;
+	ConnectionInfo *pServer;
 
 	pEnd = storage_servers + storage_server_count;
 	for (pServer=storage_servers; pServer<pEnd; pServer++)
@@ -43,7 +43,7 @@ static TrackerServerInfo *getConnectedStorageServer(
 	}
 
 	pServer = pEnd;
-	memcpy(pServer, pStorageServer, sizeof(TrackerServerInfo));
+	memcpy(pServer, pStorageServer, sizeof(ConnectionInfo));
 	pServer->sock = -1;
 	if ((*err_no=tracker_connect_server(pServer)) != 0)
 	{
@@ -75,8 +75,8 @@ int dfs_init(const int proccess_index, const char *conf_filename)
 
 void dfs_destroy()
 {
-	TrackerServerInfo *pEnd;
-	TrackerServerInfo *pServer;
+	ConnectionInfo *pEnd;
+	ConnectionInfo *pServer;
 
 	fdfs_quit(pTrackerServer);
 	tracker_disconnect_server(pTrackerServer);
@@ -100,8 +100,8 @@ int upload_file(const char *file_buff, const int file_size, char *file_id,
 		char *storage_ip)
 {
 	int result;
-	TrackerServerInfo storageServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo storageServer;
+	ConnectionInfo *pStorageServer;
 	int store_path_index;
 
 	if ((result=tracker_query_storage_store(pTrackerServer, &storageServer,
@@ -127,8 +127,8 @@ int upload_file(const char *file_buff, const int file_size, char *file_id,
 int download_file(const char *file_id, int *file_size, char *storage_ip)
 {
 	int result;
-	TrackerServerInfo storageServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo storageServer;
+	ConnectionInfo *pStorageServer;
 	int64_t file_bytes;
 
 	if ((result=tracker_query_storage_fetch1(pTrackerServer, 
@@ -154,8 +154,8 @@ int download_file(const char *file_id, int *file_size, char *storage_ip)
 int delete_file(const char *file_id, char *storage_ip)
 {
 	int result;
-	TrackerServerInfo storageServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo storageServer;
+	ConnectionInfo *pStorageServer;
 
 	if ((result=tracker_query_storage_update1(pTrackerServer, 
 			&storageServer, file_id)) != 0)

@@ -139,7 +139,7 @@ static int tracker_get_my_server_id()
 
 	if (g_use_storage_id)
 	{
-		TrackerServerInfo *pTrackerServer;
+		ConnectionInfo *pTrackerServer;
 		int result;
 
 		pTrackerServer = tracker_get_connection();
@@ -968,8 +968,8 @@ int storage_func_init(const char *filename, \
 	int64_t buff_size;
 	int64_t rotate_access_log_size;
 	int64_t rotate_error_log_size;
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pEnd;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pEnd;
 
 	/*
 	while (nThreadCount > 0)

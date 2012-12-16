@@ -29,8 +29,8 @@ static int downloadFileCallback(void *arg, const int64_t file_size, const char *
 int upload_file(const char *file_buff, const int file_size, char *file_id, char *storage_ip)
 {
 	int result;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo storageServer;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo storageServer;
 	int store_path_index;
 
 	pTrackerServer = tracker_get_connection();
@@ -70,8 +70,8 @@ int upload_file(const char *file_buff, const int file_size, char *file_id, char 
 int download_file(const char *file_id, int *file_size, char *storage_ip)
 {
 	int result;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo storageServer;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo storageServer;
 	int64_t file_bytes;
 
 	pTrackerServer = tracker_get_connection();
@@ -110,8 +110,8 @@ int download_file(const char *file_id, int *file_size, char *storage_ip)
 int delete_file(const char *file_id, char *storage_ip)
 {
 	int result;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo storageServer;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo storageServer;
 
 	pTrackerServer = tracker_get_connection();
 	if (pTrackerServer == NULL)

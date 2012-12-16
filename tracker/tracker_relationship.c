@@ -31,7 +31,7 @@
 
 bool g_if_leader_self = false;  //if I am leader
 
-static int fdfs_ping_leader(TrackerServerInfo *pTrackerServer)
+static int fdfs_ping_leader(ConnectionInfo *pTrackerServer)
 {
 	TrackerHeader header;
 	int result;
@@ -137,8 +137,8 @@ static int relationship_cmp_tracker_status(const void *p1, const void *p2)
 {
 	TrackerRunningStatus *pStatus1;
 	TrackerRunningStatus *pStatus2;
-	TrackerServerInfo *pTrackerServer1;
-	TrackerServerInfo *pTrackerServer2;
+	ConnectionInfo *pTrackerServer1;
+	ConnectionInfo *pTrackerServer2;
 	int sub;
 
 	pStatus1 = (TrackerRunningStatus *)p1;
@@ -174,8 +174,8 @@ static int relationship_cmp_tracker_status(const void *p1, const void *p2)
 
 static int relationship_get_tracker_leader(TrackerRunningStatus *pTrackerStatus)
 {
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pTrackerEnd;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pTrackerEnd;
 	TrackerRunningStatus *pStatus;
 	TrackerRunningStatus trackerStatus[FDFS_MAX_TRACKERS];
 	int count;
@@ -236,8 +236,8 @@ static int relationship_get_tracker_leader(TrackerRunningStatus *pTrackerStatus)
 	do_notify_leader_changed(pTrackerServer, pLeader, \
 		TRACKER_PROTO_CMD_TRACKER_COMMIT_NEXT_LEADER, bConnectFail)
 
-static int do_notify_leader_changed(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pLeader, const char cmd, bool *bConnectFail)
+static int do_notify_leader_changed(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pLeader, const char cmd, bool *bConnectFail)
 {
 	char out_buff[sizeof(TrackerHeader) + FDFS_PROTO_IP_PORT_SIZE];
 	char in_buff[1];
@@ -303,10 +303,10 @@ static int do_notify_leader_changed(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-static int relationship_notify_leader_changed(TrackerServerInfo *pLeader)
+static int relationship_notify_leader_changed(ConnectionInfo *pLeader)
 {
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pTrackerEnd;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pTrackerEnd;
 	int result;
 	bool bConnectFail;
 	int success_count;
@@ -430,7 +430,7 @@ static int relationship_ping_leader()
 {
 	int result;
 	int leader_index;
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo *pTrackerServer;
 
 	if (g_if_leader_self)
 	{

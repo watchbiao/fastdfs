@@ -14,17 +14,66 @@
 #include "shared_func.h"
 #include "connection_pool.h"
 
-int conn_pool_init(ConnectionPool *cp, conn_pool_connect_func connect_func, 
-	conn_pool_disconnect_func disconnect_func, const int conn_size)
+int conn_pool_init(ConnectionPool *cp, const int max_count_per_entry)
 {
-	cp->connect_func = connect_func;
-	cp->disconnect_func = diconnect_func;
-	cp->conn_size = conn_size;
+	cp->max_count_per_entry = max_count_per_entry;
 
 	return hash_init(&(cp->hash_array), simple_hash, 10, 0.75);
 }
 
-void conn_pool_destroy(ConnectionPool *cp);
+void conn_pool_destroy(ConnectionPool *cp)
 {
+}
+
+void conn_pool_disconnect_server(ConnectionInfo *pConnection)
+{
+	if (pConnection->sock >= 0)
+	{
+		close(pConnection->sock);
+		pConnection->sock = -1;
+	}
+}
+
+int conn_pool_connect_server(ConnectionInfo *pConnection, \
+		const int connect_timeout)
+{
+	int result;
+
+	if (pConnection->sock >= 0)
+	{
+		close(pConnection->sock);
+	}
+
+	pConnection->sock = socket(AF_INET, SOCK_STREAM, 0);
+	if(pConnection->sock < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"socket create failed, errno: %d, " \
+			"error info: %s", __LINE__, errno, STRERROR(errno));
+		return errno != 0 ? errno : EPERM;
+	}
+
+	if ((result=tcpsetnonblockopt(pConnection->sock)) != 0)
+	{
+		close(pConnection->sock);
+		pConnection->sock = -1;
+		return result;
+	}
+
+	if ((result=connectserverbyip_nb(pConnection->sock, \
+		pConnection->ip_addr, pConnection->port, \
+		connect_timeout)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"connect to %s:%d fail, errno: %d, " \
+			"error info: %s", __LINE__, pConnection->ip_addr, \
+			pConnection->port, result, STRERROR(result));
+
+		close(pConnection->sock);
+		pConnection->sock = -1;
+		return result;
+	}
+
+	return 0;
 }
 

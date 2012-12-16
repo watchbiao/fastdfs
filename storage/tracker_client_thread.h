@@ -23,15 +23,15 @@ int tracker_report_destroy();
 int tracker_report_thread_start();
 int kill_tracker_report_threads();
 
-int tracker_report_join(TrackerServerInfo *pTrackerServer, \
+int tracker_report_join(ConnectionInfo *pTrackerServer, \
 		const int tracker_index, const bool sync_old_done);
-int tracker_report_storage_status(TrackerServerInfo *pTrackerServer, \
+int tracker_report_storage_status(ConnectionInfo *pTrackerServer, \
 		FDFSStorageBrief *briefServer);
-int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
+int tracker_sync_src_req(ConnectionInfo *pTrackerServer, \
 		StorageBinLogReader *pReader);
-int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
+int tracker_sync_diff_servers(ConnectionInfo *pTrackerServer, \
 		FDFSStorageBrief *briefServers, const int server_count);
-int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer);
+int tracker_deal_changelog_response(ConnectionInfo *pTrackerServer);
 
 #ifdef __cplusplus
 }

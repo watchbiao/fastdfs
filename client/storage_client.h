@@ -64,8 +64,8 @@ extern "C" {
 *	remote_filename: return the new created filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_upload_by_filename_ex(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const int store_path_index, \
+int storage_upload_by_filename_ex(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const int store_path_index, \
 		const char cmd, const char *local_filename, \
 		const char *file_ext_name, const FDFSMetaData *meta_list, \
 		const int meta_count, char *group_name, char *remote_filename);
@@ -148,15 +148,15 @@ typedef int (*UploadCallback) (void *arg, const int64_t file_size, int sock);
 		callback, arg, file_size, file_ext_name, meta_list, \
 		meta_count, group_name, remote_filename)
 
-int storage_upload_by_callback_ex(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const int store_path_index, \
+int storage_upload_by_callback_ex(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const int store_path_index, \
 		const char cmd, UploadCallback callback, void *arg, \
 		const int64_t file_size, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
 		char *group_name, char *remote_filename);
 
-int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
-	TrackerServerInfo *pStorageServer, const int store_path_index, \
+int storage_do_upload_file(ConnectionInfo *pTrackerServer, \
+	ConnectionInfo *pStorageServer, const int store_path_index, \
 	const char cmd, const int upload_type, const char *file_buff, \
 	void *arg, const int64_t file_size, const char *master_filename, \
 	const char *prefix_name, const char *file_ext_name, \
@@ -172,8 +172,8 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 *	filename: filename on storage server
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_delete_file(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
+int storage_delete_file(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer, \
 			const char *group_name, const char *filename);
 
 /**
@@ -223,8 +223,8 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 *       file_size: return file size (bytes)
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_do_download_file_ex(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		const int download_type, \
 		const char *group_name, const char *remote_filename, \
 		const int64_t file_offset, const int64_t download_bytes, \
@@ -241,8 +241,8 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 *       file_size: return file size (bytes)
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_download_file_to_file(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		const char *group_name, const char *remote_filename, \
 		const char *local_filename, int64_t *file_size);
 
@@ -272,8 +272,8 @@ typedef int (*DownloadCallback) (void *arg, const int64_t file_size, \
 *       file_size: return file size (bytes)
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_download_file_ex(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		const char *group_name, const char *remote_filename, \
 		const int64_t file_offset, const int64_t download_bytes, \
 		DownloadCallback callback, void *arg, int64_t *file_size);
@@ -294,8 +294,8 @@ int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
 *				the metadata item not exist, otherwise update it
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
+int storage_set_metadata(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer, \
 			const char *group_name, const char *filename, \
 			const FDFSMetaData *meta_list, const int meta_count, \
 			const char op_flag);
@@ -311,8 +311,8 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 *       meta_count: return meta item count
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer,  \
+int storage_get_metadata(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer,  \
 			const char *group_name, const char *filename, \
 			FDFSMetaData **meta_list, \
 			int *meta_count);
@@ -334,8 +334,8 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 *	remote_filename: return the new created filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_upload_slave_by_filename(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *local_filename,\
+int storage_upload_slave_by_filename(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *local_filename,\
 		const char *master_filename, const char *prefix_name, \
 		const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
@@ -358,8 +358,8 @@ int storage_upload_slave_by_filename(TrackerServerInfo *pTrackerServer, \
 *	remote_filename: return the new created filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_upload_slave_by_filebuff(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *file_buff, \
+int storage_upload_slave_by_filebuff(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_size, const char *master_filename, \
 		const char *prefix_name, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
@@ -383,8 +383,8 @@ int storage_upload_slave_by_filebuff(TrackerServerInfo *pTrackerServer, \
 *	remote_filename: return the new created filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_upload_slave_by_callback(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_upload_slave_by_callback(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		UploadCallback callback, void *arg, \
 		const int64_t file_size, const char *master_filename, \
 		const char *prefix_name, const char *file_ext_name, \
@@ -402,8 +402,8 @@ int storage_upload_slave_by_callback(TrackerServerInfo *pTrackerServer, \
 *	appender_filename: the appender filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_append_by_filename(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *local_filename,\
+int storage_append_by_filename(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *local_filename,\
 		const char *group_name, const char *appender_filename);
 
 
@@ -419,8 +419,8 @@ int storage_append_by_filename(TrackerServerInfo *pTrackerServer, \
 *	appender_filename: the appender filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_append_by_callback(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_append_by_callback(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		UploadCallback callback, void *arg, const int64_t file_size, \
 		const char *group_name, const char *appender_filename);
 
@@ -436,8 +436,8 @@ int storage_append_by_callback(TrackerServerInfo *pTrackerServer, \
 *	appender_filename: the appender filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_append_by_filebuff(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *file_buff, \
+int storage_append_by_filebuff(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_size, const char *group_name, \
 		const char *appender_filename);
 
@@ -453,8 +453,8 @@ int storage_append_by_filebuff(TrackerServerInfo *pTrackerServer, \
 *	appender_filename: the appender filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_modify_by_filename(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *local_filename,\
+int storage_modify_by_filename(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *local_filename,\
 		const int64_t file_offset, const char *group_name, \
 		const char *appender_filename);
 
@@ -472,8 +472,8 @@ int storage_modify_by_filename(TrackerServerInfo *pTrackerServer, \
 *	appender_filename: the appender filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_modify_by_callback(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_modify_by_callback(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		UploadCallback callback, void *arg, \
 		const int64_t file_offset, const int64_t file_size, \
 		const char *group_name, const char *appender_filename);
@@ -491,8 +491,8 @@ int storage_modify_by_callback(TrackerServerInfo *pTrackerServer, \
 *	appender_filename: the appender filename
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_modify_by_filebuff(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *file_buff, \
+int storage_modify_by_filebuff(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_offset, const int64_t file_size, \
 		const char *group_name, const char *appender_filename);
 
@@ -507,8 +507,8 @@ int storage_modify_by_filebuff(TrackerServerInfo *pTrackerServer, \
 *       truncated_file_size: truncated file size
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_truncate_file(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, 
+int storage_truncate_file(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, 
 		const char *group_name, const char *appender_filename, \
 		const int64_t truncated_file_size);
 
@@ -529,8 +529,8 @@ int storage_truncate_file(TrackerServerInfo *pTrackerServer, \
 *	bSilence: when this file not exist, do not log error on storage server
 * return: 0 success, !=0 fail, return the error code
 **/
-int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer,  \
+int storage_query_file_info_ex(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer,  \
 			const char *group_name, const char *filename, \
 			FDFSFileInfo *pFileInfo, const bool bSilence);
 
@@ -547,8 +547,8 @@ int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
 *	remote_filename: filename on storage server
 * return: 0 file exist, !=0 not exist, return the error code
 **/
-int storage_file_exist(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer,  \
+int storage_file_exist(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer,  \
 			const char *group_name, const char *remote_filename);
 /**
 * get file info from the filename return by storage server

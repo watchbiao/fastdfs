@@ -34,21 +34,21 @@ static int storage_cmp_by_ip_and_port(const void *p1, const void *p2)
 {
 	int res;
 
-	res = strcmp(((TrackerServerInfo *)p1)->ip_addr, \
-			((TrackerServerInfo *)p2)->ip_addr);
+	res = strcmp(((ConnectionInfo *)p1)->ip_addr, \
+			((ConnectionInfo *)p2)->ip_addr);
 	if (res != 0)
 	{
 		return res;
 	}
 
-	return ((TrackerServerInfo *)p1)->port - \
-			((TrackerServerInfo *)p2)->port;
+	return ((ConnectionInfo *)p1)->port - \
+			((ConnectionInfo *)p2)->port;
 }
 
 static void insert_into_sorted_servers(TrackerServerGroup *pTrackerGroup, \
-		TrackerServerInfo *pInsertedServer)
+		ConnectionInfo *pInsertedServer)
 {
-	TrackerServerInfo *pDestServer;
+	ConnectionInfo *pDestServer;
 	for (pDestServer=pTrackerGroup->servers+pTrackerGroup->server_count; \
 		pDestServer>pTrackerGroup->servers; pDestServer--)
 	{
@@ -56,14 +56,14 @@ static void insert_into_sorted_servers(TrackerServerGroup *pTrackerGroup, \
 			pDestServer-1) > 0)
 		{
 			memcpy(pDestServer, pInsertedServer, \
-				sizeof(TrackerServerInfo));
+				sizeof(ConnectionInfo));
 			return;
 		}
 
-		memcpy(pDestServer, pDestServer-1, sizeof(TrackerServerInfo));
+		memcpy(pDestServer, pDestServer-1, sizeof(ConnectionInfo));
 	}
 
-	memcpy(pDestServer, pInsertedServer, sizeof(TrackerServerInfo));
+	memcpy(pDestServer, pInsertedServer, sizeof(ConnectionInfo));
 }
 
 static int copy_tracker_servers(TrackerServerGroup *pTrackerGroup, \
@@ -71,12 +71,12 @@ static int copy_tracker_servers(TrackerServerGroup *pTrackerGroup, \
 {
 	char **ppSrc;
 	char **ppEnd;
-	TrackerServerInfo destServer;
+	ConnectionInfo destServer;
 	char *pSeperator;
 	char szHost[128];
 	int nHostLen;
 
-	memset(&destServer, 0, sizeof(TrackerServerInfo));
+	memset(&destServer, 0, sizeof(ConnectionInfo));
 	destServer.sock = -1;
 
 	ppEnd = ppTrackerServers + pTrackerGroup->server_count;
@@ -119,7 +119,7 @@ static int copy_tracker_servers(TrackerServerGroup *pTrackerGroup, \
 
 		if (bsearch(&destServer, pTrackerGroup->servers, \
 			pTrackerGroup->server_count, \
-			sizeof(TrackerServerInfo), \
+			sizeof(ConnectionInfo), \
 			storage_cmp_by_ip_and_port) == NULL)
 		{
 			insert_into_sorted_servers(pTrackerGroup, &destServer);
@@ -129,7 +129,7 @@ static int copy_tracker_servers(TrackerServerGroup *pTrackerGroup, \
 
 	/*
 	{
-	TrackerServerInfo *pServer;
+	ConnectionInfo *pServer;
 	for (pServer=pTrackerGroup->servers; pServer<pTrackerGroup->servers+ \
 		pTrackerGroup->server_count;	pServer++)
 	{
@@ -158,20 +158,20 @@ int fdfs_load_tracker_group_ex(TrackerServerGroup *pTrackerGroup, \
 		return ENOENT;
 	}
 
-	pTrackerGroup->servers = (TrackerServerInfo *)malloc( \
-		sizeof(TrackerServerInfo) * pTrackerGroup->server_count);
+	pTrackerGroup->servers = (ConnectionInfo *)malloc( \
+		sizeof(ConnectionInfo) * pTrackerGroup->server_count);
 	if (pTrackerGroup->servers == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			(int)sizeof(TrackerServerInfo) * \
+			(int)sizeof(ConnectionInfo) * \
 			pTrackerGroup->server_count);
 		pTrackerGroup->server_count = 0;
 		return errno != 0 ? errno : ENOMEM;
 	}
 
 	memset(pTrackerGroup->servers, 0, \
-		sizeof(TrackerServerInfo) * pTrackerGroup->server_count);
+		sizeof(ConnectionInfo) * pTrackerGroup->server_count);
 	if ((result=copy_tracker_servers(pTrackerGroup, conf_filename, \
 			ppTrackerServers)) != 0)
 	{
@@ -356,11 +356,11 @@ int fdfs_copy_tracker_group(TrackerServerGroup *pDestTrackerGroup, \
 		TrackerServerGroup *pSrcTrackerGroup)
 {
 	int bytes;
-	TrackerServerInfo *pDestServer;
-	TrackerServerInfo *pDestServerEnd;
+	ConnectionInfo *pDestServer;
+	ConnectionInfo *pDestServerEnd;
 
-	bytes = sizeof(TrackerServerInfo) * pSrcTrackerGroup->server_count;
-	pDestTrackerGroup->servers = (TrackerServerInfo *)malloc(bytes);
+	bytes = sizeof(ConnectionInfo) * pSrcTrackerGroup->server_count;
+	pDestTrackerGroup->servers = (ConnectionInfo *)malloc(bytes);
 	if (pDestTrackerGroup->servers == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -386,9 +386,9 @@ int fdfs_copy_tracker_group(TrackerServerGroup *pDestTrackerGroup, \
 bool fdfs_tracker_group_equals(TrackerServerGroup *pGroup1, \
         TrackerServerGroup *pGroup2)
 {
-    TrackerServerInfo *pServer1;
-    TrackerServerInfo *pServer2;
-    TrackerServerInfo *pEnd1;
+    ConnectionInfo *pServer1;
+    ConnectionInfo *pServer2;
+    ConnectionInfo *pEnd1;
 
     if (pGroup1->server_count != pGroup1->server_count)
     {

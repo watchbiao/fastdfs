@@ -69,8 +69,8 @@ static pthread_mutex_t stat_count_thread_lock;
 
 static void *work_thread_entrance(void* arg);
 
-extern int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *master_filename,\
+extern int storage_client_create_link(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *master_filename,\
 		const char *src_filename, const int src_filename_len, \
 		const char *src_file_sig, const int src_file_sig_len, \
 		const char *group_name, const char *prefix_name, \
@@ -2099,9 +2099,9 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 {
 	int result;
 	int src_store_path_index;
-	TrackerServerInfo trackerServer;
-	TrackerServerInfo storageServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo trackerServer;
+	ConnectionInfo storageServer;
+	ConnectionInfo *pStorageServer;
 	StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
 	SourceFileInfo sourceFileInfo;

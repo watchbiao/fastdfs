@@ -19,7 +19,7 @@
 #include "fdfs_global.h"
 #include "fdfs_client.h"
 
-static TrackerServerInfo *pTrackerServer;
+static ConnectionInfo *pTrackerServer;
 
 static int list_all_groups(const char *group_name);
 

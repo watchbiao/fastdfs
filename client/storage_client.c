@@ -65,10 +65,10 @@ static int the_base64_context_inited = 0;
 		ppStorageServer, TRACKER_PROTO_CMD_SERVICE_QUERY_UPDATE, \
 		group_name, filename, pNewStorage, new_connection)
 
-static int storage_get_connection(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo **ppStorageServer, const byte cmd, \
+static int storage_get_connection(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo **ppStorageServer, const byte cmd, \
 		const char *group_name, const char *filename, \
-		TrackerServerInfo *pNewStorage, bool *new_connection)
+		ConnectionInfo *pNewStorage, bool *new_connection)
 {
 	int result;
 	if (*ppStorageServer == NULL)
@@ -131,9 +131,9 @@ static int storage_get_connection(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-static int storage_get_upload_connection(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo **ppStorageServer, const char *group_name, \
-		TrackerServerInfo *pNewStorage, int *store_path_index, \
+static int storage_get_upload_connection(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo **ppStorageServer, char *group_name, \
+		ConnectionInfo *pNewStorage, int *store_path_index, \
 		bool *new_connection)
 {
 	int result;
@@ -150,7 +150,7 @@ static int storage_get_upload_connection(TrackerServerInfo *pTrackerServer, \
 		if (*group_name == '\0')
 		{
 			result = tracker_query_storage_store_without_group( \
-				pTrackerServer, pNewStorage, \
+				pTrackerServer, pNewStorage, group_name, \
 				store_path_index);
 		}
 		else
@@ -200,8 +200,8 @@ static int storage_get_upload_connection(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int storage_get_metadata1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer,  \
+int storage_get_metadata1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer,  \
 		const char *file_id, \
 		FDFSMetaData **meta_list, int *meta_count)
 {
@@ -211,15 +211,15 @@ int storage_get_metadata1(TrackerServerInfo *pTrackerServer, \
 			group_name, filename, meta_list, meta_count);
 }
 
-int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer,  \
+int storage_get_metadata(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer,  \
 			const char *group_name, const char *filename, \
 			FDFSMetaData **meta_list, \
 			int *meta_count)
 {
 	TrackerHeader *pHeader;
 	int result;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
 	int64_t in_bytes;
 	int filename_len;
@@ -309,8 +309,8 @@ int storage_get_metadata(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_query_file_info_ex1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer,  const char *file_id, \
+int storage_query_file_info_ex1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer,  const char *file_id, \
 		FDFSFileInfo *pFileInfo, const bool bSilence)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
@@ -318,14 +318,14 @@ int storage_query_file_info_ex1(TrackerServerInfo *pTrackerServer, \
 			group_name, filename, pFileInfo, bSilence);
 }
 
-int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer,  \
+int storage_query_file_info_ex(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer,  \
 			const char *group_name, const char *filename, \
 			FDFSFileInfo *pFileInfo, const bool bSilence)
 {
 	TrackerHeader *pHeader;
 	int result;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
 	char in_buff[3 * FDFS_PROTO_PKG_LEN_SIZE + IP_ADDRESS_SIZE];
 	char buff[64];
@@ -437,8 +437,8 @@ int storage_query_file_info_ex(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_delete_file1(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
+int storage_delete_file1(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer, \
 			const char *file_id)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
@@ -447,8 +447,8 @@ int storage_delete_file1(TrackerServerInfo *pTrackerServer, \
 			pStorageServer, group_name, filename);
 }
 
-int storage_truncate_file1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, 
+int storage_truncate_file1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, 
 		const char *appender_file_id, \
 		const int64_t truncated_file_size)
 {
@@ -459,13 +459,13 @@ int storage_truncate_file1(TrackerServerInfo *pTrackerServer, \
 			truncated_file_size);
 }
 
-int storage_delete_file(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
+int storage_delete_file(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer, \
 			const char *group_name, const char *filename)
 {
 	TrackerHeader *pHeader;
 	int result;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
 	char in_buff[1];
 	char *pBuff;
@@ -538,8 +538,8 @@ int storage_delete_file(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_do_download_file1_ex(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_do_download_file1_ex(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		const int download_type, const char *file_id, \
 		const int64_t file_offset, const int64_t download_bytes, \
 		char **file_buff, void *arg, int64_t *file_size)
@@ -551,8 +551,8 @@ int storage_do_download_file1_ex(TrackerServerInfo *pTrackerServer, \
 		file_offset, download_bytes, file_buff, arg, file_size);
 }
 
-int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_do_download_file_ex(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		const int download_type, \
 		const char *group_name, const char *remote_filename, \
 		const int64_t file_offset, const int64_t download_bytes, \
@@ -560,7 +560,7 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 {
 	TrackerHeader *pHeader;
 	int result;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+128];
 	char *p;
 	int out_bytes;
@@ -716,8 +716,8 @@ int storage_do_download_file_ex(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_download_file_to_file1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_download_file_to_file1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		const char *file_id, \
 		const char *local_filename, int64_t *file_size)
 {
@@ -728,8 +728,8 @@ int storage_download_file_to_file1(TrackerServerInfo *pTrackerServer, \
 			local_filename, file_size);
 }
 
-int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
+int storage_download_file_to_file(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer, \
 			const char *group_name, const char *remote_filename, \
 			const char *local_filename, int64_t *file_size)
 {
@@ -740,8 +740,8 @@ int storage_download_file_to_file(TrackerServerInfo *pTrackerServer, \
 			&pLocalFilename, NULL, file_size);
 }
 
-int storage_upload_by_filename1_ex(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const int store_path_index, \
+int storage_upload_by_filename1_ex(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const int store_path_index, \
 		const char cmd, const char *local_filename, \
 		const char *file_ext_name, const FDFSMetaData *meta_list, \
 		const int meta_count, const char *group_name, char *file_id)
@@ -778,8 +778,8 @@ int storage_upload_by_filename1_ex(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_do_upload_file1(TrackerServerInfo *pTrackerServer, \
-	TrackerServerInfo *pStorageServer, const int store_path_index, \
+int storage_do_upload_file1(ConnectionInfo *pTrackerServer, \
+	ConnectionInfo *pStorageServer, const int store_path_index, \
 	const char cmd, const int upload_type, \
 	const char *file_buff, void *arg, const int64_t file_size, \
 	const char *file_ext_name, const FDFSMetaData *meta_list, \
@@ -838,8 +838,8 @@ meta data bytes: each meta data seperated by \x01,
                  name and value seperated by \x02
 file size bytes: file content
 **/
-int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
-	TrackerServerInfo *pStorageServer, const int store_path_index, \
+int storage_do_upload_file(ConnectionInfo *pTrackerServer, \
+	ConnectionInfo *pStorageServer, const int store_path_index, \
 	const char cmd, const int upload_type, const char *file_buff, \
 	void *arg, const int64_t file_size, const char *master_filename, \
 	const char *prefix_name, const char *file_ext_name, \
@@ -854,7 +854,7 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	int64_t total_send_bytes;
 	char in_buff[128];
 	char *pInBuff;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	bool new_connection;
 	bool bUploadSlave;
 	int new_store_path;
@@ -1073,8 +1073,8 @@ int storage_do_upload_file(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_upload_by_callback_ex(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const int store_path_index, \
+int storage_upload_by_callback_ex(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const int store_path_index, \
 		const char cmd, UploadCallback callback, void *arg, \
 		const int64_t file_size, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
@@ -1087,8 +1087,8 @@ int storage_upload_by_callback_ex(TrackerServerInfo *pTrackerServer, \
 		group_name, remote_filename);
 }
 
-int storage_upload_by_callback1_ex(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const int store_path_index, \
+int storage_upload_by_callback1_ex(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const int store_path_index, \
 		const char cmd, UploadCallback callback, void *arg, \
 		const int64_t file_size, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
@@ -1127,8 +1127,8 @@ int storage_upload_by_callback1_ex(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_upload_by_filename_ex(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const int store_path_index, \
+int storage_upload_by_filename_ex(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const int store_path_index, \
 		const char cmd, const char *local_filename, \
 		const char *file_ext_name, const FDFSMetaData *meta_list, \
 		const int meta_count, char *group_name, char *remote_filename)
@@ -1161,8 +1161,8 @@ int storage_upload_by_filename_ex(TrackerServerInfo *pTrackerServer, \
 			meta_list, meta_count, group_name, remote_filename);
 }
 
-int storage_set_metadata1(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
+int storage_set_metadata1(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer, \
 			const char *file_id, \
 			const FDFSMetaData *meta_list, const int meta_count, \
 			const char op_flag)
@@ -1185,15 +1185,15 @@ filename
 meta data bytes: each meta data seperated by \x01,
                  name and value seperated by \x02
 **/
-int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer, \
+int storage_set_metadata(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer, \
 			const char *group_name, const char *filename, \
 			const FDFSMetaData *meta_list, const int meta_count, \
 			const char op_flag)
 {
 	TrackerHeader *pHeader;
 	int result;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	char out_buff[sizeof(TrackerHeader)+2*FDFS_PROTO_PKG_LEN_SIZE+\
 			FDFS_GROUP_NAME_MAX_LEN+128];
 	char in_buff[1];
@@ -1306,8 +1306,8 @@ int storage_set_metadata(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_download_file_ex1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_download_file_ex1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		const char *file_id, \
 		const int64_t file_offset, const int64_t download_bytes, \
 		DownloadCallback callback, void *arg, int64_t *file_size)
@@ -1319,8 +1319,8 @@ int storage_download_file_ex1(TrackerServerInfo *pTrackerServer, \
 		callback, arg, file_size);
 }
 
-int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_download_file_ex(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		const char *group_name, const char *remote_filename, \
 		const int64_t file_offset, const int64_t download_bytes, \
 		DownloadCallback callback, void *arg, int64_t *file_size)
@@ -1332,8 +1332,8 @@ int storage_download_file_ex(TrackerServerInfo *pTrackerServer, \
 		file_offset, download_bytes, &pCallback, arg, file_size);
 }
 
-int tracker_query_storage_fetch1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int tracker_query_storage_fetch1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		const char *file_id)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
@@ -1342,8 +1342,8 @@ int tracker_query_storage_fetch1(TrackerServerInfo *pTrackerServer, \
 		pStorageServer, group_name, filename);
 }
 
-int tracker_query_storage_update1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int tracker_query_storage_update1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		const char *file_id)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
@@ -1365,8 +1365,8 @@ master filename len: master filename
 source filename len: source filename without group name
 source file signature len: source file signature
 **/
-int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *master_filename,\
+int storage_client_create_link(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *master_filename,\
 		const char *src_filename, const int src_filename_len, \
 		const char *src_file_sig, const int src_file_sig_len, \
 		const char *group_name, const char *prefix_name, \
@@ -1384,7 +1384,7 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	int master_filename_len;
 	int64_t in_bytes;
 	char *pInBuff;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	bool new_connection;
 
 	*remote_filename = '\0';
@@ -1527,8 +1527,8 @@ int storage_client_create_link(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int tracker_query_storage_list1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const int nMaxServerCount, \
+int tracker_query_storage_list1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const int nMaxServerCount, \
 		int *server_count, const char *file_id)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
@@ -1537,8 +1537,8 @@ int tracker_query_storage_list1(TrackerServerInfo *pTrackerServer, \
 		server_count, group_name, filename);
 }
 
-int storage_upload_slave_by_filename(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *local_filename,\
+int storage_upload_slave_by_filename(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *local_filename,\
 		const char *master_filename, const char *prefix_name, \
 		const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
@@ -1579,8 +1579,8 @@ int storage_upload_slave_by_filename(TrackerServerInfo *pTrackerServer, \
 			group_name, remote_filename);
 }
 
-int storage_upload_slave_by_callback(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_upload_slave_by_callback(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		UploadCallback callback, void *arg, \
 		const int64_t file_size, const char *master_filename, \
 		const char *prefix_name, const char *file_ext_name, \
@@ -1602,8 +1602,8 @@ int storage_upload_slave_by_callback(TrackerServerInfo *pTrackerServer, \
 			group_name, remote_filename);
 }
 
-int storage_upload_slave_by_filebuff(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *file_buff, \
+int storage_upload_slave_by_filebuff(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_size, const char *master_filename, \
 		const char *prefix_name, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
@@ -1624,8 +1624,8 @@ int storage_upload_slave_by_filebuff(TrackerServerInfo *pTrackerServer, \
 			group_name, remote_filename);
 }
 
-int storage_upload_slave_by_filename1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *local_filename,\
+int storage_upload_slave_by_filename1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *local_filename,\
 		const char *master_file_id, const char *prefix_name, \
 		const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
@@ -1656,8 +1656,8 @@ int storage_upload_slave_by_filename1(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_upload_slave_by_filebuff1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *file_buff, \
+int storage_upload_slave_by_filebuff1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_size, const char *master_file_id, \
 		const char *prefix_name, const char *file_ext_name, \
 		const FDFSMetaData *meta_list, const int meta_count, \
@@ -1688,8 +1688,8 @@ int storage_upload_slave_by_filebuff1(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_upload_slave_by_callback1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_upload_slave_by_callback1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		UploadCallback callback, void *arg, \
 		const int64_t file_size, const char *master_file_id, \
 		const char *prefix_name, const char *file_ext_name, \
@@ -1728,8 +1728,8 @@ STORAGE_PROTO_CMD_APPEND_FILE:
 master filename bytes: appender filename
 file size bytes: file content
 **/
-int storage_do_append_file(TrackerServerInfo *pTrackerServer, \
-	TrackerServerInfo *pStorageServer, const int upload_type, \
+int storage_do_append_file(ConnectionInfo *pTrackerServer, \
+	ConnectionInfo *pStorageServer, const int upload_type, \
 	const char *file_buff, void *arg, const int64_t file_size, \
 	const char *group_name, const char *appender_filename)
 {
@@ -1739,7 +1739,7 @@ int storage_do_append_file(TrackerServerInfo *pTrackerServer, \
 	char *p;
 	int64_t in_bytes;
 	int64_t total_send_bytes;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	bool new_connection;
 	int appender_filename_len;
 
@@ -1862,8 +1862,8 @@ STORAGE_PROTO_CMD_APPEND_FILE:
 master filename bytes: appender filename
 file size bytes: file content
 **/
-int storage_do_modify_file(TrackerServerInfo *pTrackerServer, \
-	TrackerServerInfo *pStorageServer, const int upload_type, \
+int storage_do_modify_file(ConnectionInfo *pTrackerServer, \
+	ConnectionInfo *pStorageServer, const int upload_type, \
 	const char *file_buff, void *arg, const int64_t file_offset, \
 	const int64_t file_size, const char *group_name, \
 	const char *appender_filename)
@@ -1874,7 +1874,7 @@ int storage_do_modify_file(TrackerServerInfo *pTrackerServer, \
 	char *p;
 	int64_t in_bytes;
 	int64_t total_send_bytes;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	bool new_connection;
 	int appender_filename_len;
 
@@ -1991,8 +1991,8 @@ int storage_do_modify_file(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-int storage_append_by_filename(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *local_filename,\
+int storage_append_by_filename(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *local_filename,\
 		const char *group_name, const char *appender_filename)
 {
 	struct stat stat_buf;
@@ -2017,8 +2017,8 @@ int storage_append_by_filename(TrackerServerInfo *pTrackerServer, \
 		NULL, stat_buf.st_size, group_name, appender_filename);
 }
 
-int storage_append_by_callback(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_append_by_callback(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		UploadCallback callback, void *arg, const int64_t file_size, \
 		const char *group_name, const char *appender_filename)
 {
@@ -2033,8 +2033,8 @@ int storage_append_by_callback(TrackerServerInfo *pTrackerServer, \
 			file_size, group_name, appender_filename);
 }
 
-int storage_append_by_filebuff(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *file_buff, \
+int storage_append_by_filebuff(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_size, const char *group_name, \
 		const char *appender_filename)
 {
@@ -2049,8 +2049,8 @@ int storage_append_by_filebuff(TrackerServerInfo *pTrackerServer, \
 			file_size, group_name, appender_filename);
 }
 
-int storage_append_by_filename1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *local_filename,\
+int storage_append_by_filename1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *local_filename,\
 		const char *appender_file_id)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(appender_file_id)
@@ -2059,8 +2059,8 @@ int storage_append_by_filename1(TrackerServerInfo *pTrackerServer, \
 			pStorageServer, local_filename, group_name, filename);
 }
 
-int storage_append_by_filebuff1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *file_buff, \
+int storage_append_by_filebuff1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_size, const char *appender_file_id)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(appender_file_id)
@@ -2070,8 +2070,8 @@ int storage_append_by_filebuff1(TrackerServerInfo *pTrackerServer, \
 			group_name, filename);
 }
 
-int storage_append_by_callback1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_append_by_callback1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		UploadCallback callback, void *arg, \
 		const int64_t file_size, const char *appender_file_id)
 {
@@ -2082,8 +2082,8 @@ int storage_append_by_callback1(TrackerServerInfo *pTrackerServer, \
 			group_name, filename);
 }
 
-int storage_modify_by_filename(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *local_filename,\
+int storage_modify_by_filename(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *local_filename,\
 		const int64_t file_offset, const char *group_name, \
 		const char *appender_filename)
 {
@@ -2110,8 +2110,8 @@ int storage_modify_by_filename(TrackerServerInfo *pTrackerServer, \
 		group_name, appender_filename);
 }
 
-int storage_modify_by_callback(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_modify_by_callback(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		UploadCallback callback, void *arg, const int64_t file_offset,\
 		const int64_t file_size, const char *group_name, \
 		const char *appender_filename)
@@ -2127,8 +2127,8 @@ int storage_modify_by_callback(TrackerServerInfo *pTrackerServer, \
 			file_offset, file_size, group_name, appender_filename);
 }
 
-int storage_modify_by_filebuff(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *file_buff, \
+int storage_modify_by_filebuff(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_offset, const int64_t file_size, \
 		const char *group_name, const char *appender_filename)
 {
@@ -2143,8 +2143,8 @@ int storage_modify_by_filebuff(TrackerServerInfo *pTrackerServer, \
 			file_offset, file_size, group_name, appender_filename);
 }
 
-int storage_modify_by_filename1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *local_filename,\
+int storage_modify_by_filename1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *local_filename,\
 		const int64_t file_offset, const char *appender_file_id)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(appender_file_id)
@@ -2154,8 +2154,8 @@ int storage_modify_by_filename1(TrackerServerInfo *pTrackerServer, \
 			group_name, filename);
 }
 
-int storage_modify_by_filebuff1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const char *file_buff, \
+int storage_modify_by_filebuff1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const char *file_buff, \
 		const int64_t file_offset, const int64_t file_size, \
 		const char *appender_file_id)
 {
@@ -2166,8 +2166,8 @@ int storage_modify_by_filebuff1(TrackerServerInfo *pTrackerServer, \
 			group_name, filename);
 }
 
-int storage_modify_by_callback1(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, \
+int storage_modify_by_callback1(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, \
 		UploadCallback callback, void *arg, \
 		const int64_t file_offset, const int64_t file_size, \
 		const char *appender_file_id)
@@ -2262,7 +2262,7 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	{ //slave file or appender file
 		if (get_from_server)
 		{
-			TrackerServerInfo trackerServer;
+			ConnectionInfo trackerServer;
 
 			result = tracker_get_connection_r(&trackerServer);
 			if (result != 0)
@@ -2300,8 +2300,8 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	return 0;
 }
 
-int storage_file_exist(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer,  \
+int storage_file_exist(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer,  \
 			const char *group_name, const char *remote_filename)
 {
 	FDFSFileInfo file_info;
@@ -2309,8 +2309,8 @@ int storage_file_exist(TrackerServerInfo *pTrackerServer, \
 			pStorageServer, group_name, remote_filename, &file_info);
 }
 
-int storage_file_exist1(TrackerServerInfo *pTrackerServer, \
-			TrackerServerInfo *pStorageServer,  \
+int storage_file_exist1(ConnectionInfo *pTrackerServer, \
+			ConnectionInfo *pStorageServer,  \
 			const char *file_id)
 {
 	FDFS_SPLIT_GROUP_NAME_AND_FILENAME(file_id)
@@ -2318,8 +2318,8 @@ int storage_file_exist1(TrackerServerInfo *pTrackerServer, \
 			group_name, filename);
 }
 
-int storage_truncate_file(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, 
+int storage_truncate_file(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, 
 		const char *group_name, const char *appender_filename, \
 		const int64_t truncated_file_size)
 {
@@ -2328,7 +2328,7 @@ int storage_truncate_file(TrackerServerInfo *pTrackerServer, \
 	char out_buff[512];
 	char *p;
 	int64_t in_bytes;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	bool new_connection;
 	int appender_filename_len;
 

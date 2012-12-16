@@ -286,7 +286,7 @@ static void php_fdfs_tracker_get_connection_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		FDFSPhpContext *pContext)
 {
 	int argc;
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo *pTrackerServer;
 
 	argc = ZEND_NUM_ARGS();
 	if (argc != 0)
@@ -370,7 +370,7 @@ static void php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	char *ip_addr;
 	int ip_len;
 	long port;
-	TrackerServerInfo server_info;
+	ConnectionInfo server_info;
 
 	argc = ZEND_NUM_ARGS();
 	if (argc != 2)
@@ -554,14 +554,14 @@ static int php_fdfs_get_upload_callback_from_hash(HashTable *callback_hash, \
 }
 
 static int php_fdfs_get_server_from_hash(HashTable *tracker_hash, \
-		TrackerServerInfo *pTrackerServer)
+		ConnectionInfo *pTrackerServer)
 {
 	zval **data;
 	zval ***ppp;
 	char *ip_addr;
 	int ip_len;
 
-	memset(pTrackerServer, 0, sizeof(TrackerServerInfo));
+	memset(pTrackerServer, 0, sizeof(ConnectionInfo));
 	data = NULL;
 	ppp = &data;
 	if (zend_hash_find(tracker_hash, "ip_addr", sizeof("ip_addr"), \
@@ -628,7 +628,7 @@ static void php_fastdfs_active_test_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	int argc;
 	zval *server_info;
 	HashTable *tracker_hash;
-	TrackerServerInfo server;
+	ConnectionInfo server;
 
 	argc = ZEND_NUM_ARGS();
 	if (argc != 1)
@@ -677,8 +677,8 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	zval *group_info_array;
 	zval *server_info_array;
 	HashTable *tracker_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo *pTrackerServer;
 	FDFSGroupStat group_stats[FDFS_MAX_GROUPS];
 	FDFSGroupStat *pGroupStat;
 	FDFSGroupStat *pGroupEnd;
@@ -1086,13 +1086,14 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 		FDFSPhpContext *pContext)
 {
 	int argc;
+	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char *group_name;
 	int group_nlen;
 	zval *tracker_obj;
 	HashTable *tracker_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
 	int store_path_index;
 	int saved_tracker_sock;
 	int result;
@@ -1145,13 +1146,16 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 
 	if (group_name != NULL && group_nlen > 0)
 	{
+		snprintf(new_group_name, sizeof(new_group_name), "%s", group_name);
 		result = tracker_query_storage_store_with_group(pTrackerServer,\
-                	group_name, &storage_server, &store_path_index);
+                	new_group_name, &storage_server, &store_path_index);
 	}
 	else
 	{
+		*new_group_name = '\0';
 		result = tracker_query_storage_store_without_group( \
-			pTrackerServer, &storage_server, &store_path_index);
+			pTrackerServer, &storage_server, new_group_name, \
+			&store_path_index);
 	}
 
 	if (tracker_hash != NULL && pTrackerServer->sock != \
@@ -1184,15 +1188,16 @@ static void php_fdfs_tracker_query_storage_store_list_impl( \
 {
 	int argc;
 	char *group_name;
+	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	int group_nlen;
 	zval *server_info_array;
 	zval *tracker_obj;
 	HashTable *tracker_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pServerEnd;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pServerEnd;
 	int store_path_index;
 	int saved_tracker_sock;
 	int result;
@@ -1246,16 +1251,18 @@ static void php_fdfs_tracker_query_storage_store_list_impl( \
 
 	if (group_name != NULL && group_nlen > 0)
 	{
+		snprintf(new_group_name, sizeof(new_group_name), "%s", group_name);
 		result = tracker_query_storage_store_list_with_group(pTrackerServer,\
-                	group_name, storage_servers, FDFS_MAX_SERVERS_EACH_GROUP, \
+                	new_group_name, storage_servers, FDFS_MAX_SERVERS_EACH_GROUP, \
 			&storage_count, &store_path_index);
 	}
 	else
 	{
+		*new_group_name = '\0';
 		result = tracker_query_storage_store_list_without_group( \
 			pTrackerServer, storage_servers, \
 			FDFS_MAX_SERVERS_EACH_GROUP, &storage_count, \
-			&store_path_index);
+			new_group_name, &store_path_index);
 	}
 
 	if (tracker_hash != NULL && pTrackerServer->sock != \
@@ -1305,9 +1312,9 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 	int filename_len;
 	zval *tracker_obj;
 	HashTable *tracker_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
 	int result;
 	int min_param_count;
 	int max_param_count;
@@ -1489,10 +1496,10 @@ static void php_fdfs_storage_delete_file_impl( \
 	zval *storage_obj;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	int result;
 	int min_param_count;
 	int max_param_count;
@@ -1643,10 +1650,10 @@ static void php_fdfs_storage_truncate_file_impl( \
 	zval *storage_obj;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	int result;
 	int min_param_count;
 	int max_param_count;
@@ -1804,10 +1811,10 @@ static void php_fdfs_storage_download_file_to_callback_impl( \
 	zval *storage_obj;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	HashTable *callback_hash;
 	php_fdfs_callback_t php_callback;
 	int result;
@@ -1977,10 +1984,10 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 	zval *storage_obj;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	int result;
 	int min_param_count;
 	int max_param_count;
@@ -2156,10 +2163,10 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 	zval *storage_obj;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	int result;
 	int min_param_count;
 	int max_param_count;
@@ -2317,10 +2324,10 @@ static void php_fdfs_storage_get_metadata_impl( \
 	zval *storage_obj;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	FDFSMetaData *meta_list;
 	FDFSMetaData *pMetaData;
 	FDFSMetaData *pMetaEnd;
@@ -2487,10 +2494,10 @@ static void php_fdfs_storage_file_exist_impl( \
 	zval *storage_obj;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	int result;
 	int min_param_count;
 	int max_param_count;
@@ -2642,11 +2649,11 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 	zval *tracker_obj;
 	zval *server_info_array;
 	HashTable *tracker_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pServerEnd;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_servers[FDFS_MAX_SERVERS_EACH_GROUP];
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pServerEnd;
 	int result;
 	int server_count;
 	int min_param_count;
@@ -2895,10 +2902,10 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	zval *group_name_obj;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	FDFSMetaData *meta_list;
 	int meta_count;
 	int store_path_index;
@@ -3175,10 +3182,10 @@ static void php_fdfs_storage_upload_slave_file_impl( \
 	char *group_name;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	FDFSMetaData *meta_list;
 	int meta_count;
 	int filename_len;
@@ -3480,10 +3487,10 @@ static void php_fdfs_storage_append_file_impl( \
 	char *group_name;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 128];
 	int filename_len;
 	int group_name_len;
@@ -3707,10 +3714,10 @@ static void php_fdfs_storage_modify_file_impl( \
 	char *group_name;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 128];
 	int filename_len;
 	int group_name_len;
@@ -3936,10 +3943,10 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	zval *storage_obj;
 	HashTable *tracker_hash;
 	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
+	ConnectionInfo tracker_server;
+	ConnectionInfo storage_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	FDFSMetaData *meta_list;
 	int meta_count;
 	int min_param_count;

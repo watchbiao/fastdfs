@@ -45,20 +45,20 @@ static pthread_t *report_tids = NULL;
 static int *src_storage_status = NULL; //returned by tracker server
 static signed char *my_report_status = NULL;  //returned by tracker server
 
-static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
+static int tracker_heart_beat(ConnectionInfo *pTrackerServer, \
 		int *pstat_chg_sync_count, bool *bServerPortChanged);
-static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
+static int tracker_report_df_stat(ConnectionInfo *pTrackerServer, \
 		bool *bServerPortChanged);
-static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer, \
+static int tracker_report_sync_timestamp(ConnectionInfo *pTrackerServer, \
 		bool *bServerPortChanged);
 
-static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer);
-static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer);
-static int tracker_sync_notify(TrackerServerInfo *pTrackerServer);
-static int tracker_storage_changelog_req(TrackerServerInfo *pTrackerServer);
-static int tracker_report_trunk_fid(TrackerServerInfo *pTrackerServer);
-static int tracker_fetch_trunk_fid(TrackerServerInfo *pTrackerServer);
-static int tracker_report_trunk_free_space(TrackerServerInfo *pTrackerServer);
+static int tracker_sync_dest_req(ConnectionInfo *pTrackerServer);
+static int tracker_sync_dest_query(ConnectionInfo *pTrackerServer);
+static int tracker_sync_notify(ConnectionInfo *pTrackerServer);
+static int tracker_storage_changelog_req(ConnectionInfo *pTrackerServer);
+static int tracker_report_trunk_fid(ConnectionInfo *pTrackerServer);
+static int tracker_fetch_trunk_fid(ConnectionInfo *pTrackerServer);
+static int tracker_report_trunk_free_space(ConnectionInfo *pTrackerServer);
 
 static bool tracker_insert_into_sorted_servers( \
 		FDFSStorageServer *pInsertedServer);
@@ -125,7 +125,7 @@ int kill_tracker_report_threads()
 	return kill_res;
 }
 
-static void thracker_report_thread_exit(TrackerServerInfo *pTrackerServer)
+static void thracker_report_thread_exit(ConnectionInfo *pTrackerServer)
 {
 	int result;
 	int i;
@@ -192,7 +192,7 @@ static int tracker_rename_mark_files(const char *old_ip_addr, \
 
 static void *tracker_report_thread_entrance(void *arg)
 {
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo *pTrackerServer;
 	char my_server_id[FDFS_STORAGE_ID_MAX_SIZE];
 	char tracker_client_ip[IP_ADDRESS_SIZE];
 	char szFailPrompt[36];
@@ -214,7 +214,7 @@ static void *tracker_report_thread_entrance(void *arg)
 	bServerPortChanged = (g_last_server_port != 0) && \
 				(g_server_port != g_last_server_port);
 
-	pTrackerServer = (TrackerServerInfo *)arg;
+	pTrackerServer = (ConnectionInfo *)arg;
 	pTrackerServer->sock = -1;
 	tracker_index = pTrackerServer - g_tracker_group.servers;
 
@@ -605,7 +605,7 @@ static bool tracker_insert_into_sorted_servers( \
 	return true;
 }
 
-int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
+int tracker_sync_diff_servers(ConnectionInfo *pTrackerServer, \
 		FDFSStorageBrief *briefServers, const int server_count)
 {
 	TrackerHeader resp;
@@ -670,7 +670,7 @@ int tracker_sync_diff_servers(TrackerServerInfo *pTrackerServer, \
 	return resp.status;
 }
 
-int tracker_report_storage_status(TrackerServerInfo *pTrackerServer, \
+int tracker_report_storage_status(ConnectionInfo *pTrackerServer, \
 		FDFSStorageBrief *briefServer)
 {
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
@@ -746,7 +746,7 @@ static int tracker_start_sync_threads(const FDFSStorageBrief *pStorage)
 	return result;
 }
 
-static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
+static int tracker_merge_servers(ConnectionInfo *pTrackerServer, \
 		FDFSStorageBrief *briefServers, const int server_count)
 {
 	FDFSStorageBrief *pServer;
@@ -899,8 +899,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 					"storage servers of group \"%s\" " \
 					"exceeds max: %d", \
 					__LINE__, pTrackerServer->ip_addr, \
-					pTrackerServer->port, \
-					pTrackerServer->group_name, \
+					pTrackerServer->port, g_group_name, \
 					FDFS_MAX_SERVERS_EACH_GROUP);
 				result = ENOSPC;
 			}
@@ -954,8 +953,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 					"group \"%s\", " \
 					"enter impossible statement branch", \
 					__LINE__, pTrackerServer->ip_addr, \
-					pTrackerServer->port, \
-					pTrackerServer->group_name);
+					pTrackerServer->port, g_group_name);
 			}
 
 			pServer++;
@@ -990,7 +988,7 @@ static int tracker_merge_servers(TrackerServerInfo *pTrackerServer, \
 			diffServers, pDiffServer - diffServers);
 }
 
-static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
+static int tracker_check_response(ConnectionInfo *pTrackerServer, \
 	bool *bServerPortChanged)
 {
 	int64_t nInPackLen;
@@ -1089,7 +1087,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
 		{
 			if (g_tracker_group.leader_index >= 0)
 			{
-			TrackerServerInfo *pTrackerLeader;
+			ConnectionInfo *pTrackerLeader;
 			pTrackerLeader = g_tracker_group.servers + \
 					g_tracker_group.leader_index;
 			logWarning("file: "__FILE__", line: %d, " \
@@ -1325,7 +1323,7 @@ static int tracker_check_response(TrackerServerInfo *pTrackerServer, \
                 pBriefServers, server_count);
 }
 
-int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
+int tracker_sync_src_req(ConnectionInfo *pTrackerServer, \
 			StorageBinLogReader *pReader)
 {
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
@@ -1394,7 +1392,7 @@ int tracker_sync_src_req(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
+static int tracker_sync_dest_req(ConnectionInfo *pTrackerServer)
 {
 	TrackerHeader header;
 	TrackerStorageSyncReqBody syncReqbody;
@@ -1448,7 +1446,7 @@ static int tracker_sync_dest_req(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
-static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer)
+static int tracker_sync_dest_query(ConnectionInfo *pTrackerServer)
 {
 	TrackerHeader header;
 	TrackerStorageSyncReqBody syncReqbody;
@@ -1503,7 +1501,7 @@ static int tracker_sync_dest_query(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
-static int tracker_report_trunk_fid(TrackerServerInfo *pTrackerServer)
+static int tracker_report_trunk_fid(ConnectionInfo *pTrackerServer)
 {
 	char out_buff[sizeof(TrackerHeader)+sizeof(int)];
 	TrackerHeader *pHeader;
@@ -1547,7 +1545,7 @@ static int tracker_report_trunk_fid(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
-static int tracker_report_trunk_free_space(TrackerServerInfo *pTrackerServer)
+static int tracker_report_trunk_free_space(ConnectionInfo *pTrackerServer)
 {
 	char out_buff[sizeof(TrackerHeader) + 8];
 	TrackerHeader *pHeader;
@@ -1590,7 +1588,7 @@ static int tracker_report_trunk_free_space(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
-static int tracker_fetch_trunk_fid(TrackerServerInfo *pTrackerServer)
+static int tracker_fetch_trunk_fid(ConnectionInfo *pTrackerServer)
 {
 	char out_buff[sizeof(TrackerHeader)];
 	char in_buff[4];
@@ -1657,7 +1655,7 @@ static int tracker_fetch_trunk_fid(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
-static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
+static int tracker_sync_notify(ConnectionInfo *pTrackerServer)
 {
 	char out_buff[sizeof(TrackerHeader)+sizeof(TrackerStorageSyncReqBody)];
 	TrackerHeader *pHeader;
@@ -1704,7 +1702,7 @@ static int tracker_sync_notify(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
-int tracker_report_join(TrackerServerInfo *pTrackerServer, \
+int tracker_report_join(ConnectionInfo *pTrackerServer, \
 			const int tracker_index, const bool sync_old_done)
 {
 	char out_buff[sizeof(TrackerHeader) + sizeof(TrackerStorageJoinBody) + \
@@ -1714,8 +1712,8 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 	TrackerStorageJoinBodyResp respBody;
 	char *pInBuff;
 	char *p;
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pServerEnd;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pServerEnd;
 	FDFSStorageServer *pTargetServer;
 	FDFSStorageServer **ppFound;
 	FDFSStorageServer targetServer;
@@ -1847,7 +1845,7 @@ int tracker_report_join(TrackerServerInfo *pTrackerServer, \
 	}
 }
 
-static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer, \
+static int tracker_report_sync_timestamp(ConnectionInfo *pTrackerServer, \
 		bool *bServerPortChanged)
 {
 	char out_buff[sizeof(TrackerHeader) + (FDFS_STORAGE_ID_MAX_SIZE + 4) * \
@@ -1896,7 +1894,7 @@ static int tracker_report_sync_timestamp(TrackerServerInfo *pTrackerServer, \
 	return tracker_check_response(pTrackerServer, bServerPortChanged);
 }
 
-static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
+static int tracker_report_df_stat(ConnectionInfo *pTrackerServer, \
 		bool *bServerPortChanged)
 {
 	char out_buff[sizeof(TrackerHeader) + \
@@ -2006,7 +2004,7 @@ static int tracker_report_df_stat(TrackerServerInfo *pTrackerServer, \
 	return tracker_check_response(pTrackerServer, bServerPortChanged);
 }
 
-static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
+static int tracker_heart_beat(ConnectionInfo *pTrackerServer, \
 		int *pstat_chg_sync_count, bool *bServerPortChanged)
 {
 	char out_buff[sizeof(TrackerHeader) + sizeof(FDFSStorageStatBuff)];
@@ -2128,7 +2126,7 @@ static int tracker_heart_beat(TrackerServerInfo *pTrackerServer, \
 	return tracker_check_response(pTrackerServer, bServerPortChanged);
 }
 
-static int tracker_storage_changelog_req(TrackerServerInfo *pTrackerServer)
+static int tracker_storage_changelog_req(ConnectionInfo *pTrackerServer)
 {
 	char out_buff[sizeof(TrackerHeader)];
 	TrackerHeader *pHeader;
@@ -2155,7 +2153,7 @@ static int tracker_storage_changelog_req(TrackerServerInfo *pTrackerServer)
 	return tracker_deal_changelog_response(pTrackerServer);
 }
 
-int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
+int tracker_deal_changelog_response(ConnectionInfo *pTrackerServer)
 {
 #define FDFS_CHANGELOG_FIELDS  5
 	int64_t nInPackLen;
@@ -2277,8 +2275,8 @@ int tracker_deal_changelog_response(TrackerServerInfo *pTrackerServer)
 
 int tracker_report_thread_start()
 {
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pServerEnd;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pServerEnd;
 	pthread_attr_t pattr;
 	pthread_t tid;
 	int result;

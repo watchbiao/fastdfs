@@ -49,7 +49,7 @@ typedef struct
 *	pTrackerGroup: the tracker group
 * return: != NULL for success, NULL for fail
 **/
-TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup);
+ConnectionInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup);
 
 
 #define tracker_get_connection_r(pTrackerServer) \
@@ -63,7 +63,7 @@ TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup);
 * return: 0 success, !=0 fail
 **/
 int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
-		TrackerServerInfo *pTrackerServer);
+		ConnectionInfo *pTrackerServer);
 
 #define tracker_get_all_connections() \
 	tracker_get_all_connections_ex((&g_tracker_group))
@@ -95,7 +95,7 @@ void tracker_close_all_connections_ex(TrackerServerGroup *pTrackerGroup);
 *	pDest: return the group info
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_list_one_group(TrackerServerInfo *pTrackerServer, \
+int tracker_list_one_group(ConnectionInfo *pTrackerServer, \
 		const char *group_name, FDFSGroupStat *pDest);
 
 
@@ -108,7 +108,7 @@ int tracker_list_one_group(TrackerServerInfo *pTrackerServer, \
 *	group_count: return group count
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
+int tracker_list_groups(ConnectionInfo *pTrackerServer, \
 		FDFSGroupStat *group_stats, const int max_groups, \
 		int *group_count);
 
@@ -123,15 +123,15 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 *	storage_count: return storage count
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
+int tracker_list_servers(ConnectionInfo *pTrackerServer, \
 		const char *szGroupName, const char *szStorageId, \
 		FDFSStorageInfo *storage_infos, const int max_storages, \
 		int *storage_count);
 
 #define tracker_query_storage_store(pTrackerServer, pStorageServer, \
-		store_path_index) \
+		group_name, store_path_index) \
 	 tracker_query_storage_store_without_group(pTrackerServer, \
-		pStorageServer, store_path_index)
+		pStorageServer, group_name, store_path_index)
 /**
 * query storage server to upload file
 * params:
@@ -140,8 +140,9 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 *       store_path_index: return the index of path on the storage server
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
-		TrackerServerInfo *pStorageServer, int *store_path_index);
+int tracker_query_storage_store_without_group(ConnectionInfo *pTrackerServer,
+		ConnectionInfo *pStorageServer, char *group_name, 
+		int *store_path_index);
 
 /**
 * query storage servers/list to upload file
@@ -155,9 +156,9 @@ int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 **/
 #define tracker_query_storage_store_list_without_group( \
 		pTrackerServer, storageServers, nMaxServerCount, \
-		storage_count, store_path_index) \
+		storage_count, group_name, store_path_index) \
 	tracker_query_storage_store_list_with_group( \
-		pTrackerServer, NULL, storageServers, nMaxServerCount, \
+		pTrackerServer, group_name, storageServers, nMaxServerCount, \
 		storage_count, store_path_index)
 
 /**
@@ -169,8 +170,8 @@ int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 *       store_path_index: return the index of path on the storage server
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
-		const char *group_name, TrackerServerInfo *pStorageServer, \
+int tracker_query_storage_store_with_group(ConnectionInfo *pTrackerServer, \
+		const char *group_name, ConnectionInfo *pStorageServer, \
 		int *store_path_index);
 
 /**
@@ -185,8 +186,8 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 * return: 0 success, !=0 fail, return the error code
 **/
 int tracker_query_storage_store_list_with_group( \
-	TrackerServerInfo *pTrackerServer, const char *group_name, \
-	TrackerServerInfo *storageServers, const int nMaxServerCount, \
+	ConnectionInfo *pTrackerServer, const char *group_name, \
+	ConnectionInfo *storageServers, const int nMaxServerCount, \
 	int *storage_count, int *store_path_index);
 
 /**
@@ -230,8 +231,8 @@ int tracker_query_storage_store_list_with_group( \
 *       filename: filename on storage server
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const byte cmd, \
+int tracker_do_query_storage(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const byte cmd, \
 		const char *group_name, const char *filename);
 
 /**
@@ -245,9 +246,9 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 *       filename: filename on storage server
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const int nMaxServerCount, \
-		int *server_count, const char *group_name, const char *filename);
+int tracker_query_storage_list(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const int nMaxServerCount, \
+		int *server_count, char *group_name, const char *filename);
 
 /**
 * delete a storage server from cluster
@@ -284,7 +285,7 @@ int tracker_set_trunk_server(TrackerServerGroup *pTrackerGroup, \
 *	pDestBuff: return the storage server brief info
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_get_storage_status(TrackerServerInfo *pTrackerServer, \
+int tracker_get_storage_status(ConnectionInfo *pTrackerServer, \
 		const char *group_name, const char *ip_addr, \
 		FDFSStorageBrief *pDestBuff);
 
@@ -298,7 +299,7 @@ int tracker_get_storage_status(TrackerServerInfo *pTrackerServer, \
 *	storage_id: return the storage server id
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_get_storage_id(TrackerServerInfo *pTrackerServer, \
+int tracker_get_storage_id(ConnectionInfo *pTrackerServer, \
 		const char *group_name, const char *ip_addr, \
 		char *storage_id);
 

@@ -12,6 +12,7 @@
 #define _TRACKER_PROTO_H_
 
 #include "tracker_types.h"
+#include "connection_pool.h"
 #include "ini_file_reader.h"
 
 #define TRACKER_PROTO_CMD_STORAGE_JOIN              81
@@ -212,7 +213,7 @@ extern "C" {
 *	connect_timeout: connect timeout in seconds
 * return: 0 success, !=0 fail, return the error code
 **/
-int tracker_connect_server_ex(TrackerServerInfo *pTrackerServer, \
+int tracker_connect_server_ex(ConnectionInfo *pTrackerServer, \
 		const int connect_timeout);
 
 /**
@@ -221,7 +222,7 @@ int tracker_connect_server_ex(TrackerServerInfo *pTrackerServer, \
 *	pTrackerServer: tracker server
 * return:
 **/
-void tracker_disconnect_server(TrackerServerInfo *pTrackerServer);
+void tracker_disconnect_server(ConnectionInfo *pTrackerServer);
 
 int fdfs_validate_group_name(const char *group_name);
 int fdfs_validate_filename(const char *filename);
@@ -229,17 +230,17 @@ int metadata_cmp_by_name(const void *p1, const void *p2);
 
 const char *get_storage_status_caption(const int status);
 
-int fdfs_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes);
+int fdfs_recv_header(ConnectionInfo *pTrackerServer, int64_t *in_bytes);
 
-int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
+int fdfs_recv_response(ConnectionInfo *pTrackerServer, \
 		char **buff, const int buff_size, \
 		int64_t *in_bytes);
-int fdfs_quit(TrackerServerInfo *pTrackerServer);
+int fdfs_quit(ConnectionInfo *pTrackerServer);
 
 #define fdfs_active_test(pTrackerServer) \
 	fdfs_deal_no_body_cmd(pTrackerServer, FDFS_PROTO_CMD_ACTIVE_TEST)
 
-int fdfs_deal_no_body_cmd(TrackerServerInfo *pTrackerServer, const int cmd);
+int fdfs_deal_no_body_cmd(ConnectionInfo *pTrackerServer, const int cmd);
 
 int fdfs_deal_no_body_cmd_ex(const char *ip_addr, const int port, const int cmd);
 
