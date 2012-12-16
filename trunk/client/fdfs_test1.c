@@ -54,9 +54,9 @@ int main(int argc, char *argv[])
 {
 	char *conf_filename;
 	char *local_filename;
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo *pTrackerServer;
 	int result;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	FDFSMetaData meta_list[32];
 	int meta_count;
@@ -150,9 +150,9 @@ int main(int argc, char *argv[])
 		}
 
 		{
-		TrackerServerInfo storageServers[FDFS_MAX_SERVERS_EACH_GROUP];
-		TrackerServerInfo *pServer;
-		TrackerServerInfo *pServerEnd;
+		ConnectionInfo storageServers[FDFS_MAX_SERVERS_EACH_GROUP];
+		ConnectionInfo *pServer;
+		ConnectionInfo *pServerEnd;
 		int storage_count;
 
 		strcpy(group_name, "group1");
@@ -168,15 +168,16 @@ int main(int argc, char *argv[])
 				printf("\tserver %d. group_name=%s, " \
 				       "ip_addr=%s, port=%d\n", \
 					(int)(pServer - storageServers) + 1, \
-					pServer->group_name, \
-					pServer->ip_addr, pServer->port);
+					group_name, pServer->ip_addr, \
+					pServer->port);
 			}
 			printf("\n");
 		}
 		}
 
+		*group_name = '\0';
 		if ((result=tracker_query_storage_store(pTrackerServer, \
-		                &storageServer, &store_path_index)) != 0)
+		                &storageServer, group_name, &store_path_index)) != 0)
 		{
 			fdfs_client_destroy();
 			printf("tracker_query_storage fail, " \
@@ -186,8 +187,7 @@ int main(int argc, char *argv[])
 		}
 
 		printf("group_name=%s, ip_addr=%s, port=%d\n", \
-			storageServer.group_name, \
-			storageServer.ip_addr, \
+			group_name, storageServer.ip_addr, \
 			storageServer.port);
 
 		if ((result=tracker_connect_server(&storageServer)) != 0)
@@ -415,7 +415,7 @@ int main(int argc, char *argv[])
 		snprintf(file_id, sizeof(file_id), "%s", argv[3]);
 		if (strcmp(operation, "query_servers") == 0)
 		{
-			TrackerServerInfo storageServers[FDFS_MAX_SERVERS_EACH_GROUP];
+			ConnectionInfo storageServers[FDFS_MAX_SERVERS_EACH_GROUP];
 			int server_count;
 
 			result = tracker_query_storage_list1(pTrackerServer, \

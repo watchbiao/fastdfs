@@ -55,9 +55,9 @@ int main(int argc, char *argv[])
 {
 	char *conf_filename;
 	char *local_filename;
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo *pTrackerServer;
 	int result;
-	TrackerServerInfo storageServer;
+	ConnectionInfo storageServer;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char remote_filename[256];
 	char appender_filename[256];
@@ -130,9 +130,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	*group_name = '\0';
 	store_path_index = 0;
 	if ((result=tracker_query_storage_store(pTrackerServer, \
-			&storageServer, &store_path_index)) != 0)
+			&storageServer, group_name, &store_path_index)) != 0)
 	{
 		fdfs_client_destroy();
 		printf("tracker_query_storage fail, " \
@@ -142,8 +143,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("group_name=%s, ip_addr=%s, port=%d\n", \
-		storageServer.group_name, \
-		storageServer.ip_addr, \
+		group_name, storageServer.ip_addr, \
 		storageServer.port);
 
 	if ((result=tracker_connect_server(&storageServer)) != 0)
@@ -168,7 +168,6 @@ int main(int argc, char *argv[])
 	meta_count++;
 
 	file_ext_name = fdfs_get_file_ext_name(local_filename);
-	strcpy(group_name, "");
 
 	if (upload_type == FDFS_UPLOAD_BY_FILE)
 	{

@@ -23,8 +23,8 @@ int g_storage_id_count = 0;
 int fdfs_get_tracker_leader_index_ex(TrackerServerGroup *pServerGroup, \
 		const char *leaderIp, const int leaderPort)
 {
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pEnd;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pEnd;
 
 	if (pServerGroup->server_count == 0)
 	{
@@ -542,7 +542,7 @@ int fdfs_load_storage_ids(char *content, const char *pStorageIdsFilename)
 	return result;
 }
 
-int fdfs_get_storage_ids_from_tracker_server(TrackerServerInfo *pTrackerServer)
+int fdfs_get_storage_ids_from_tracker_server(ConnectionInfo *pTrackerServer)
 {
 #define MAX_REQUEST_LOOP   32
 	TrackerHeader *pHeader;
@@ -720,11 +720,11 @@ int fdfs_get_storage_ids_from_tracker_server(TrackerServerInfo *pTrackerServer)
 
 int fdfs_get_storage_ids_from_tracker_group(TrackerServerGroup *pTrackerGroup)
 {
-	TrackerServerInfo *pGServer;
-	TrackerServerInfo *pTServer;
-	TrackerServerInfo *pServerStart;
-	TrackerServerInfo *pServerEnd;
-	TrackerServerInfo trackerServer;
+	ConnectionInfo *pGServer;
+	ConnectionInfo *pTServer;
+	ConnectionInfo *pServerStart;
+	ConnectionInfo *pServerEnd;
+	ConnectionInfo trackerServer;
 	int result;
 	int leader_index;
 	int i;
@@ -747,7 +747,7 @@ int fdfs_get_storage_ids_from_tracker_group(TrackerServerGroup *pTrackerGroup)
 	{
 		for (pGServer=pServerStart; pGServer<pServerEnd; pGServer++)
 		{
-			memcpy(pTServer, pGServer, sizeof(TrackerServerInfo));
+			memcpy(pTServer, pGServer, sizeof(ConnectionInfo));
 			pTServer->sock = -1;
 			result = fdfs_get_storage_ids_from_tracker_server(pTServer);
 			if (result == 0)

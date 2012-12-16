@@ -249,8 +249,8 @@ static int fdfs_dump_global_vars(char *buff, const int buffSize)
 static int fdfs_dump_tracker_servers(char *buff, const int buffSize)
 {
 	int total_len;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pTrackerEnd;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pTrackerEnd;
 
 	total_len = snprintf(buff, buffSize, \
 		"\ng_tracker_group.server_count=%d, " \

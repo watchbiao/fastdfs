@@ -33,9 +33,9 @@
 
 static int storage_convert_src_server_id()
 {
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pServerEnd;
-	TrackerServerInfo tracker_server;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pServerEnd;
+	ConnectionInfo tracker_server;
 	int result;
 
 	result = ENOENT;
@@ -44,7 +44,7 @@ static int storage_convert_src_server_id()
 		pTrackerServer<pServerEnd; pTrackerServer++)
 	{
 		memcpy(&tracker_server, pTrackerServer, \
-			sizeof(TrackerServerInfo));
+			sizeof(ConnectionInfo));
 		tracker_server.sock = -1;
                 if ((result=tracker_connect_server(&tracker_server)) != 0)
 		{

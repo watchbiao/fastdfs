@@ -28,8 +28,8 @@
 
 int tracker_get_all_connections_ex(TrackerServerGroup *pTrackerGroup)
 {
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pEnd;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pEnd;
 	int success_count;
 
 	success_count = 0;
@@ -52,8 +52,8 @@ int tracker_get_all_connections_ex(TrackerServerGroup *pTrackerGroup)
 
 void tracker_close_all_connections_ex(TrackerServerGroup *pTrackerGroup)
 {
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pEnd;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pEnd;
 
 	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
@@ -62,12 +62,12 @@ void tracker_close_all_connections_ex(TrackerServerGroup *pTrackerGroup)
 	}
 }
 
-TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
+ConnectionInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 {
-	TrackerServerInfo *pCurrentServer;
-	TrackerServerInfo *pResult;
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pEnd;
+	ConnectionInfo *pCurrentServer;
+	ConnectionInfo *pResult;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pEnd;
 	int server_index;
 
 	server_index = pTrackerGroup->server_index;
@@ -127,11 +127,11 @@ TrackerServerInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 }
 
 int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
-		TrackerServerInfo *pTrackerServer)
+		ConnectionInfo *pTrackerServer)
 {
-	TrackerServerInfo *pCurrentServer;
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pEnd;
+	ConnectionInfo *pCurrentServer;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pEnd;
 	int server_index;
 	int result;
 
@@ -144,7 +144,7 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 	do
 	{
 	pCurrentServer = pTrackerGroup->servers + server_index;
-	memcpy(pTrackerServer, pCurrentServer, sizeof(TrackerServerInfo));
+	memcpy(pTrackerServer, pCurrentServer, sizeof(ConnectionInfo));
 	pTrackerServer->sock = -1;
 	if ((result=tracker_connect_server(pTrackerServer)) == 0)
 	{
@@ -154,7 +154,7 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pCurrentServer+1; pServer<pEnd; pServer++)
 	{
-		memcpy(pTrackerServer, pServer, sizeof(TrackerServerInfo));
+		memcpy(pTrackerServer, pServer, sizeof(ConnectionInfo));
 		pTrackerServer->sock = -1;
 		if ((result=tracker_connect_server(pTrackerServer)) == 0)
 		{
@@ -171,7 +171,7 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 
 	for (pServer=pTrackerGroup->servers; pServer<pCurrentServer; pServer++)
 	{
-		memcpy(pTrackerServer, pServer, sizeof(TrackerServerInfo));
+		memcpy(pTrackerServer, pServer, sizeof(ConnectionInfo));
 		pTrackerServer->sock = -1;
 		if ((result=tracker_connect_server(pTrackerServer)) == 0)
 		{
@@ -191,7 +191,7 @@ int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 	return result;
 }
 
-int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
+int tracker_list_servers(ConnectionInfo *pTrackerServer, \
 		const char *szGroupName, const char *szStorageId, \
 		FDFSStorageInfo *storage_infos, const int max_storages, \
 		int *storage_count)
@@ -415,7 +415,7 @@ int tracker_list_servers(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int tracker_list_one_group(TrackerServerInfo *pTrackerServer, \
+int tracker_list_one_group(ConnectionInfo *pTrackerServer, \
 		const char *group_name, FDFSGroupStat *pDest)
 {
 	TrackerHeader *pHeader;
@@ -491,7 +491,7 @@ int tracker_list_one_group(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
+int tracker_list_groups(ConnectionInfo *pTrackerServer, \
 		FDFSGroupStat *group_stats, const int max_groups, \
 		int *group_count)
 {
@@ -593,8 +593,8 @@ int tracker_list_groups(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const byte cmd, \
+int tracker_do_query_storage(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const byte cmd, \
 		const char *group_name, const char *filename)
 {
 	TrackerHeader *pHeader;
@@ -613,7 +613,7 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 		}
 	}
 
-	memset(pStorageServer, 0, sizeof(TrackerServerInfo));
+	memset(pStorageServer, 0, sizeof(ConnectionInfo));
 	pStorageServer->sock = -1;
 
 	memset(out_buff, 0, sizeof(out_buff));
@@ -665,8 +665,6 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 		return EINVAL;
 	}
 
-	memcpy(pStorageServer->group_name, in_buff, \
-			FDFS_GROUP_NAME_MAX_LEN);
 	memcpy(pStorageServer->ip_addr, in_buff + \
 			FDFS_GROUP_NAME_MAX_LEN, IP_ADDRESS_SIZE-1);
 	pStorageServer->port = (int)buff2long(in_buff + \
@@ -674,13 +672,13 @@ int tracker_do_query_storage(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
-		TrackerServerInfo *pStorageServer, const int nMaxServerCount, \
-		int *server_count, const char *group_name, const char *filename)
+int tracker_query_storage_list(ConnectionInfo *pTrackerServer, \
+		ConnectionInfo *pStorageServer, const int nMaxServerCount, \
+		int *server_count, char *group_name, const char *filename)
 {
 	TrackerHeader *pHeader;
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pServerEnd;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pServerEnd;
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 128];
 	char in_buff[sizeof(TrackerHeader) + \
 		TRACKER_QUERY_STORAGE_FETCH_BODY_LEN + \
@@ -758,11 +756,11 @@ int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
 		return ENOSPC;
 	}
 
-	memset(pStorageServer, 0, nMaxServerCount * sizeof(TrackerServerInfo));
+	memset(pStorageServer, 0, nMaxServerCount * sizeof(ConnectionInfo));
 	pStorageServer->sock = -1;
 
-	memcpy(pStorageServer->group_name, pInBuff, \
-			FDFS_GROUP_NAME_MAX_LEN);
+	memcpy(group_name, pInBuff, FDFS_GROUP_NAME_MAX_LEN);
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
 	pInBuff += FDFS_GROUP_NAME_MAX_LEN;
 	memcpy(pStorageServer->ip_addr, pInBuff, IP_ADDRESS_SIZE - 1);
 	pInBuff += IP_ADDRESS_SIZE - 1;
@@ -781,8 +779,9 @@ int tracker_query_storage_list(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
-		TrackerServerInfo *pStorageServer, int *store_path_index)
+int tracker_query_storage_store_without_group(ConnectionInfo *pTrackerServer,
+		ConnectionInfo *pStorageServer, char *group_name, 
+		int *store_path_index)
 {
 	TrackerHeader header;
 	char in_buff[sizeof(TrackerHeader) + \
@@ -799,7 +798,7 @@ int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 		}
 	}
 
-	memset(pStorageServer, 0, sizeof(TrackerServerInfo));
+	memset(pStorageServer, 0, sizeof(ConnectionInfo));
 	pStorageServer->sock = -1;
 
 	memset(&header, 0, sizeof(header));
@@ -840,8 +839,8 @@ int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 		return EINVAL;
 	}
 
-	memcpy(pStorageServer->group_name, in_buff, \
-			FDFS_GROUP_NAME_MAX_LEN);
+	memcpy(group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
+	*(group_name + FDFS_GROUP_NAME_MAX_LEN) = '\0';
 	memcpy(pStorageServer->ip_addr, in_buff + \
 			FDFS_GROUP_NAME_MAX_LEN, IP_ADDRESS_SIZE-1);
 	pStorageServer->port = (int)buff2long(in_buff + \
@@ -852,8 +851,8 @@ int tracker_query_storage_store_without_group(TrackerServerInfo *pTrackerServer,
 	return 0;
 }
 
-int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
-		const char *group_name, TrackerServerInfo *pStorageServer, \
+int tracker_query_storage_store_with_group(ConnectionInfo *pTrackerServer, \
+		const char *group_name, ConnectionInfo *pStorageServer, \
 		int *store_path_index)
 {
 	TrackerHeader *pHeader;
@@ -872,7 +871,7 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 		}
 	}
 
-	memset(pStorageServer, 0, sizeof(TrackerServerInfo));
+	memset(pStorageServer, 0, sizeof(ConnectionInfo));
 	pStorageServer->sock = -1;
 
 	pHeader = (TrackerHeader *)out_buff;
@@ -919,8 +918,6 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 		return EINVAL;
 	}
 
-	memcpy(pStorageServer->group_name, in_buff, \
-			FDFS_GROUP_NAME_MAX_LEN);
 	memcpy(pStorageServer->ip_addr, in_buff + \
 			FDFS_GROUP_NAME_MAX_LEN, IP_ADDRESS_SIZE-1);
 	pStorageServer->port = (int)buff2long(in_buff + \
@@ -932,12 +929,12 @@ int tracker_query_storage_store_with_group(TrackerServerInfo *pTrackerServer, \
 }
 
 int tracker_query_storage_store_list_with_group( \
-	TrackerServerInfo *pTrackerServer, const char *group_name, \
-	TrackerServerInfo *storageServers, const int nMaxServerCount, \
+	ConnectionInfo *pTrackerServer, const char *group_name, \
+	ConnectionInfo *storageServers, const int nMaxServerCount, \
 	int *storage_count, int *store_path_index)
 {
-	TrackerServerInfo *pStorageServer;
-	TrackerServerInfo *pServerEnd;
+	ConnectionInfo *pStorageServer;
+	ConnectionInfo *pServerEnd;
 	TrackerHeader *pHeader;
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN];
 	char in_buff[sizeof(TrackerHeader) + FDFS_MAX_SERVERS_EACH_GROUP * \
@@ -1036,7 +1033,7 @@ int tracker_query_storage_store_list_with_group( \
 		return ENOSPC;
 	}
 
-	memset(storageServers, 0, sizeof(TrackerServerInfo) * nMaxServerCount);
+	memset(storageServers, 0, sizeof(ConnectionInfo) * nMaxServerCount);
 
 	memcpy(returned_group_name, in_buff, FDFS_GROUP_NAME_MAX_LEN);
 	p = in_buff + FDFS_GROUP_NAME_MAX_LEN;
@@ -1047,9 +1044,6 @@ int tracker_query_storage_store_list_with_group( \
 		pStorageServer++)
 	{
 		pStorageServer->sock = -1;
-		memcpy(pStorageServer->group_name, returned_group_name, \
-				FDFS_GROUP_NAME_MAX_LEN);
-
 		memcpy(pStorageServer->ip_addr, p, IP_ADDRESS_SIZE - 1);
 		p += IP_ADDRESS_SIZE - 1;
 
@@ -1066,9 +1060,9 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 		const char *group_name, const char *storage_id)
 {
 	TrackerHeader *pHeader;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pEnd;
+	ConnectionInfo tracker_server;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pEnd;
 	FDFSStorageInfo storage_infos[1];
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 			FDFS_STORAGE_ID_MAX_SIZE];
@@ -1084,7 +1078,7 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
 	{
-		memcpy(&tracker_server, pServer, sizeof(TrackerServerInfo));
+		memcpy(&tracker_server, pServer, sizeof(ConnectionInfo));
 		tracker_server.sock = -1;
 		if ((result=tracker_connect_server(&tracker_server)) != 0)
 		{
@@ -1133,7 +1127,7 @@ int tracker_delete_storage(TrackerServerGroup *pTrackerGroup, \
 	result = 0;
 	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
 	{
-		memcpy(&tracker_server, pServer, sizeof(TrackerServerInfo));
+		memcpy(&tracker_server, pServer, sizeof(ConnectionInfo));
 		tracker_server.sock = -1;
 		if ((result=tracker_connect_server(&tracker_server)) != 0)
 		{
@@ -1187,9 +1181,9 @@ int tracker_set_trunk_server(TrackerServerGroup *pTrackerGroup, \
 		char *new_trunk_server_id)
 {
 	TrackerHeader *pHeader;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pEnd;
+	ConnectionInfo tracker_server;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pEnd;
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 			FDFS_STORAGE_ID_MAX_SIZE];
 	char in_buff[FDFS_STORAGE_ID_MAX_SIZE];
@@ -1223,7 +1217,7 @@ int tracker_set_trunk_server(TrackerServerGroup *pTrackerGroup, \
 	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
 	{
-		memcpy(&tracker_server, pServer, sizeof(TrackerServerInfo));
+		memcpy(&tracker_server, pServer, sizeof(ConnectionInfo));
 		tracker_server.sock = -1;
 		if ((result=tracker_connect_server(&tracker_server)) != 0)
 		{
@@ -1274,7 +1268,7 @@ int tracker_set_trunk_server(TrackerServerGroup *pTrackerGroup, \
 	return result;
 }
 
-int tracker_get_storage_status(TrackerServerInfo *pTrackerServer, \
+int tracker_get_storage_status(ConnectionInfo *pTrackerServer, \
 		const char *group_name, const char *ip_addr, \
 		FDFSStorageBrief *pDestBuff)
 {
@@ -1354,7 +1348,7 @@ int tracker_get_storage_status(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int tracker_get_storage_id(TrackerServerInfo *pTrackerServer, \
+int tracker_get_storage_id(ConnectionInfo *pTrackerServer, \
 		const char *group_name, const char *ip_addr, \
 		char *storage_id)
 {
@@ -1442,9 +1436,9 @@ int tracker_get_storage_max_status(TrackerServerGroup *pTrackerGroup, \
 		const char *group_name, const char *ip_addr, \
 		char *storage_id, int *status)
 {
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo *pServer;
-	TrackerServerInfo *pEnd;
+	ConnectionInfo tracker_server;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pEnd;
 	FDFSStorageBrief storage_brief;
 	int result;
 
@@ -1456,7 +1450,7 @@ int tracker_get_storage_max_status(TrackerServerGroup *pTrackerGroup, \
 	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
 	for (pServer=pTrackerGroup->servers; pServer<pEnd; pServer++)
 	{
-		memcpy(&tracker_server, pServer, sizeof(TrackerServerInfo));
+		memcpy(&tracker_server, pServer, sizeof(ConnectionInfo));
 		tracker_server.sock = -1;
 		if ((result=tracker_connect_server(&tracker_server)) != 0)
 		{

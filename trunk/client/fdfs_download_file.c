@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 {
 	char *conf_filename;
 	char *local_filename;
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo *pTrackerServer;
 	int result;
 	char file_id[128];
 	int64_t file_size;

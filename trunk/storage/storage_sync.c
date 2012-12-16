@@ -77,7 +77,7 @@ FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename bytes : filename
 file size bytes: file content
 **/
-static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
+static int storage_sync_copy_file(ConnectionInfo *pStorageServer, \
 	StorageBinLogReader *pReader, const StorageBinLogRecord *pRecord, \
 	char proto_cmd)
 {
@@ -211,7 +211,7 @@ static int storage_sync_copy_file(TrackerServerInfo *pStorageServer, \
 		int2buff(pRecord->timestamp, p);
 		p += 4;
 
-		sprintf(p, "%s", pStorageServer->group_name);
+		sprintf(p, "%s", g_group_name);
 		p += FDFS_GROUP_NAME_MAX_LEN;
 		memcpy(p, pRecord->filename, pRecord->filename_len);
 		p += pRecord->filename_len;
@@ -295,7 +295,7 @@ FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename bytes : filename
 file size bytes: file content
 **/
-static int storage_sync_modify_file(TrackerServerInfo *pStorageServer, \
+static int storage_sync_modify_file(ConnectionInfo *pStorageServer, \
 	StorageBinLogReader *pReader, StorageBinLogRecord *pRecord, \
 	const char cmd)
 {
@@ -405,7 +405,7 @@ static int storage_sync_modify_file(TrackerServerInfo *pStorageServer, \
 		int2buff(pRecord->timestamp, p);
 		p += 4;
 
-		sprintf(p, "%s", pStorageServer->group_name);
+		sprintf(p, "%s", g_group_name);
 		p += FDFS_GROUP_NAME_MAX_LEN;
 		memcpy(p, pRecord->filename, pRecord->filename_len);
 		p += pRecord->filename_len;
@@ -464,7 +464,7 @@ static int storage_sync_modify_file(TrackerServerInfo *pStorageServer, \
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 filename bytes : filename
 **/
-static int storage_sync_truncate_file(TrackerServerInfo *pStorageServer, \
+static int storage_sync_truncate_file(ConnectionInfo *pStorageServer, \
 	StorageBinLogReader *pReader, StorageBinLogRecord *pRecord)
 {
 #define FIELD_COUNT  3
@@ -569,7 +569,7 @@ static int storage_sync_truncate_file(TrackerServerInfo *pStorageServer, \
 		int2buff(pRecord->timestamp, p);
 		p += 4;
 
-		sprintf(p, "%s", pStorageServer->group_name);
+		sprintf(p, "%s", g_group_name);
 		p += FDFS_GROUP_NAME_MAX_LEN;
 		memcpy(p, pRecord->filename, pRecord->filename_len);
 		p += pRecord->filename_len;
@@ -604,7 +604,7 @@ send pkg format:
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 remain bytes: filename
 **/
-static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
+static int storage_sync_delete_file(ConnectionInfo *pStorageServer, \
 			const StorageBinLogRecord *pRecord)
 {
 	TrackerHeader *pHeader;
@@ -670,7 +670,7 @@ static int storage_sync_delete_file(TrackerServerInfo *pStorageServer, \
 /**
 FDFS_STORAGE_ID_MAX_SIZE bytes: my server id
 **/
-static int storage_report_my_server_id(TrackerServerInfo *pStorageServer)
+static int storage_report_my_server_id(ConnectionInfo *pStorageServer)
 {
 	int result;
 	TrackerHeader *pHeader;
@@ -710,7 +710,7 @@ FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 dest filename length: dest filename
 source filename length: source filename
 **/
-static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
+static int storage_sync_link_file(ConnectionInfo *pStorageServer, \
 		StorageBinLogRecord *pRecord)
 {
 	TrackerHeader *pHeader;
@@ -934,7 +934,7 @@ static int storage_sync_link_file(TrackerServerInfo *pStorageServer, \
 	} \
 
 static int storage_sync_data(StorageBinLogReader *pReader, \
-			TrackerServerInfo *pStorageServer, \
+			ConnectionInfo *pStorageServer, \
 			StorageBinLogRecord *pRecord)
 {
 	int result;
@@ -1590,10 +1590,10 @@ int storage_report_storage_status(const char *storage_id, \
 		const char *ip_addr, const char status)
 {
 	FDFSStorageBrief briefServer;
-	TrackerServerInfo trackerServer;
-	TrackerServerInfo *pGlobalServer;
-	TrackerServerInfo *pTServer;
-	TrackerServerInfo *pTServerEnd;
+	ConnectionInfo trackerServer;
+	ConnectionInfo *pGlobalServer;
+	ConnectionInfo *pTServer;
+	ConnectionInfo *pTServerEnd;
 	int result;
 	int report_count;
 	int success_count;
@@ -1640,7 +1640,7 @@ int storage_report_storage_status(const char *storage_id, \
 	for (pGlobalServer=g_tracker_group.servers; pGlobalServer<pTServerEnd; \
 			pGlobalServer++)
 	{
-		memcpy(pTServer, pGlobalServer, sizeof(TrackerServerInfo));
+		memcpy(pTServer, pGlobalServer, sizeof(ConnectionInfo));
 		for (i=0; i < 3; i++)
 		{
 			pTServer->sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -1714,9 +1714,9 @@ int storage_report_storage_status(const char *storage_id, \
 
 static int storage_reader_sync_init_req(StorageBinLogReader *pReader)
 {
-	TrackerServerInfo *pTrackerServers;
-	TrackerServerInfo *pTServer;
-	TrackerServerInfo *pTServerEnd;
+	ConnectionInfo *pTrackerServers;
+	ConnectionInfo *pTServer;
+	ConnectionInfo *pTServerEnd;
 	char tracker_client_ip[IP_ADDRESS_SIZE];
 	int result;
 	int conn_ret;
@@ -1734,19 +1734,19 @@ static int storage_reader_sync_init_req(StorageBinLogReader *pReader)
 		}
 	}
 
-	pTrackerServers = (TrackerServerInfo *)malloc( \
-		sizeof(TrackerServerInfo) * g_tracker_group.server_count);
+	pTrackerServers = (ConnectionInfo *)malloc( \
+		sizeof(ConnectionInfo) * g_tracker_group.server_count);
 	if (pTrackerServers == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail", __LINE__, \
-			(int)sizeof(TrackerServerInfo) * \
+			(int)sizeof(ConnectionInfo) * \
 			g_tracker_group.server_count);
 		return errno != 0 ? errno : ENOMEM;
 	}
 
 	memcpy(pTrackerServers, g_tracker_group.servers, \
-		sizeof(TrackerServerInfo) * g_tracker_group.server_count);
+		sizeof(ConnectionInfo) * g_tracker_group.server_count);
 	pTServerEnd = pTrackerServers + g_tracker_group.server_count;
 	for (pTServer=pTrackerServers; pTServer<pTServerEnd; pTServer++)
 	{
@@ -2522,7 +2522,7 @@ static void storage_sync_get_start_end_times(time_t current_time, \
 	*end_time = mktime(&tm_time);
 }
 
-static void storage_sync_thread_exit(TrackerServerInfo *pStorage)
+static void storage_sync_thread_exit(ConnectionInfo *pStorage)
 {
 	int result;
 	int i;
@@ -2571,7 +2571,7 @@ static void* storage_sync_thread_entrance(void* arg)
 	FDFSStorageBrief *pStorage;
 	StorageBinLogReader reader;
 	StorageBinLogRecord record;
-	TrackerServerInfo storage_server;
+	ConnectionInfo storage_server;
 	char local_ip_addr[IP_ADDRESS_SIZE];
 	int read_result;
 	int sync_result;
@@ -2597,7 +2597,6 @@ static void* storage_sync_thread_entrance(void* arg)
 
 	pStorage = (FDFSStorageBrief *)arg;
 
-	strcpy(storage_server.group_name, g_group_name);
 	strcpy(storage_server.ip_addr, pStorage->ip_addr);
 	storage_server.port = g_server_port;
 	storage_server.sock = -1;

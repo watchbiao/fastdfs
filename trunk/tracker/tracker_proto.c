@@ -23,7 +23,7 @@
 #include "tracker_types.h"
 #include "tracker_proto.h"
 
-int fdfs_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
+int fdfs_recv_header(ConnectionInfo *pTrackerServer, int64_t *in_bytes)
 {
 	TrackerHeader resp;
 	int result;
@@ -67,7 +67,7 @@ int fdfs_recv_header(TrackerServerInfo *pTrackerServer, int64_t *in_bytes)
 	return resp.status;
 }
 
-int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
+int fdfs_recv_response(ConnectionInfo *pTrackerServer, \
 		char **buff, const int buff_size, \
 		int64_t *in_bytes)
 {
@@ -137,7 +137,7 @@ int fdfs_recv_response(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-int fdfs_quit(TrackerServerInfo *pTrackerServer)
+int fdfs_quit(ConnectionInfo *pTrackerServer)
 {
 	TrackerHeader header;
 	int result;
@@ -160,7 +160,7 @@ int fdfs_quit(TrackerServerInfo *pTrackerServer)
 	return 0;
 }
 
-int fdfs_deal_no_body_cmd(TrackerServerInfo *pTrackerServer, const int cmd)
+int fdfs_deal_no_body_cmd(ConnectionInfo *pTrackerServer, const int cmd)
 {
 	TrackerHeader header;
 	int result;
@@ -202,7 +202,7 @@ int fdfs_deal_no_body_cmd(TrackerServerInfo *pTrackerServer, const int cmd)
 
 int fdfs_deal_no_body_cmd_ex(const char *ip_addr, const int port, const int cmd)
 {
-	TrackerServerInfo server_info;
+	ConnectionInfo server_info;
 	int result;
 
 	strcpy(server_info.ip_addr, ip_addr);
@@ -416,58 +416,19 @@ char *fdfs_pack_metadata(const FDFSMetaData *meta_list, const int meta_count, \
 	return meta_buff;
 }
 
-void tracker_disconnect_server(TrackerServerInfo *pTrackerServer)
+void tracker_disconnect_server(ConnectionInfo *pTrackerServer)
 {
-	if (pTrackerServer->sock >= 0)
-	{
-		close(pTrackerServer->sock);
-		pTrackerServer->sock = -1;
-	}
+	conn_pool_disconnect_server(pTrackerServer);
 }
 
-int tracker_connect_server_ex(TrackerServerInfo *pTrackerServer, \
+int tracker_connect_server_ex(ConnectionInfo *pTrackerServer, \
 		const int connect_timeout)
 {
-	int result;
-
-	if (pTrackerServer->sock >= 0)
-	{
-		close(pTrackerServer->sock);
-	}
-	pTrackerServer->sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(pTrackerServer->sock < 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"socket create failed, errno: %d, " \
-			"error info: %s", __LINE__, errno, STRERROR(errno));
-		return errno != 0 ? errno : EPERM;
-	}
-
-	if ((result=tcpsetnonblockopt(pTrackerServer->sock)) != 0)
-	{
-		close(pTrackerServer->sock);
-		pTrackerServer->sock = -1;
-		return result;
-	}
-
-	if ((result=connectserverbyip_nb(pTrackerServer->sock, \
-		pTrackerServer->ip_addr, pTrackerServer->port, \
-		connect_timeout)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"connect to %s:%d fail, errno: %d, " \
-			"error info: %s", __LINE__, pTrackerServer->ip_addr, \
-			pTrackerServer->port, result, STRERROR(result));
-
-		close(pTrackerServer->sock);
-		pTrackerServer->sock = -1;
-		return result;
-	}
-
-	return 0;
+	return conn_pool_connect_server(pTrackerServer, \
+		connect_timeout);
 }
 
-static int fdfs_do_parameter_req(TrackerServerInfo *pTrackerServer, \
+static int fdfs_do_parameter_req(ConnectionInfo *pTrackerServer, \
 	char *buff, const int buff_size)
 {
 	char out_buff[sizeof(TrackerHeader)];
@@ -514,11 +475,11 @@ int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
 		IniContext *iniContext, bool *continue_flag, \
 		const bool client_bind_addr, const char *bind_addr)
 {
-	TrackerServerInfo *pGlobalServer;
-	TrackerServerInfo *pTServer;
-	TrackerServerInfo *pServerStart;
-	TrackerServerInfo *pServerEnd;
-	TrackerServerInfo trackerServer;
+	ConnectionInfo *pGlobalServer;
+	ConnectionInfo *pTServer;
+	ConnectionInfo *pServerStart;
+	ConnectionInfo *pServerEnd;
+	ConnectionInfo trackerServer;
 	char in_buff[1024];
 	int result;
 	int leader_index;
@@ -543,7 +504,7 @@ int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
 	for (pGlobalServer=pServerStart; pGlobalServer<pServerEnd; \
 			pGlobalServer++)
 	{
-		memcpy(pTServer, pGlobalServer, sizeof(TrackerServerInfo));
+		memcpy(pTServer, pGlobalServer, sizeof(ConnectionInfo));
 		for (i=0; i < 3; i++)
 		{
 			pTServer->sock = socket(AF_INET, SOCK_STREAM, 0);

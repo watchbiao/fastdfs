@@ -29,7 +29,7 @@
 #include "storage_func.h"
 #include "storage_ip_changed_dealer.h"
 
-static int storage_do_changelog_req(TrackerServerInfo *pTrackerServer)
+static int storage_do_changelog_req(ConnectionInfo *pTrackerServer)
 {
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 			FDFS_STORAGE_ID_MAX_SIZE];
@@ -60,7 +60,7 @@ static int storage_do_changelog_req(TrackerServerInfo *pTrackerServer)
 	return tracker_deal_changelog_response(pTrackerServer);
 }
 
-static int storage_report_ip_changed(TrackerServerInfo *pTrackerServer)
+static int storage_report_ip_changed(ConnectionInfo *pTrackerServer)
 {
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + \
 		2 * IP_ADDRESS_SIZE];
@@ -114,10 +114,10 @@ static int storage_report_ip_changed(TrackerServerInfo *pTrackerServer)
 
 int storage_get_my_tracker_client_ip()
 {
-	TrackerServerInfo *pGlobalServer;
-	TrackerServerInfo *pTServer;
-	TrackerServerInfo *pTServerEnd;
-	TrackerServerInfo trackerServer;
+	ConnectionInfo *pGlobalServer;
+	ConnectionInfo *pTServer;
+	ConnectionInfo *pTServerEnd;
+	ConnectionInfo trackerServer;
 	char tracker_client_ip[IP_ADDRESS_SIZE];
 	int success_count;
 	int result;
@@ -133,7 +133,7 @@ int storage_get_my_tracker_client_ip()
 	for (pGlobalServer=g_tracker_group.servers; pGlobalServer<pTServerEnd; \
 			pGlobalServer++)
 	{
-		memcpy(pTServer, pGlobalServer, sizeof(TrackerServerInfo));
+		memcpy(pTServer, pGlobalServer, sizeof(ConnectionInfo));
 		for (i=0; i < 3; i++)
 		{
 			pTServer->sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -218,10 +218,10 @@ int storage_get_my_tracker_client_ip()
 
 static int storage_report_storage_ip_addr()
 {
-	TrackerServerInfo *pGlobalServer;
-	TrackerServerInfo *pTServer;
-	TrackerServerInfo *pTServerEnd;
-	TrackerServerInfo trackerServer;
+	ConnectionInfo *pGlobalServer;
+	ConnectionInfo *pTServer;
+	ConnectionInfo *pTServerEnd;
+	ConnectionInfo trackerServer;
 	int success_count;
 	int result;
 	int i;
@@ -250,7 +250,7 @@ static int storage_report_storage_ip_addr()
 	for (pGlobalServer=g_tracker_group.servers; pGlobalServer<pTServerEnd; \
 			pGlobalServer++)
 	{
-		memcpy(pTServer, pGlobalServer, sizeof(TrackerServerInfo));
+		memcpy(pTServer, pGlobalServer, sizeof(ConnectionInfo));
 		for (i=0; i < 3; i++)
 		{
 			pTServer->sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -325,10 +325,10 @@ static int storage_report_storage_ip_addr()
 
 int storage_changelog_req()
 {
-	TrackerServerInfo *pGlobalServer;
-	TrackerServerInfo *pTServer;
-	TrackerServerInfo *pTServerEnd;
-	TrackerServerInfo trackerServer;
+	ConnectionInfo *pGlobalServer;
+	ConnectionInfo *pTServer;
+	ConnectionInfo *pTServerEnd;
+	ConnectionInfo trackerServer;
 	int success_count;
 	int result;
 	int i;
@@ -343,7 +343,7 @@ int storage_changelog_req()
 	for (pGlobalServer=g_tracker_group.servers; pGlobalServer<pTServerEnd; \
 			pGlobalServer++)
 	{
-		memcpy(pTServer, pGlobalServer, sizeof(TrackerServerInfo));
+		memcpy(pTServer, pGlobalServer, sizeof(ConnectionInfo));
 		for (i=0; i < 3; i++)
 		{
 			pTServer->sock = socket(AF_INET, SOCK_STREAM, 0);

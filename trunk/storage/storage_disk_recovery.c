@@ -53,7 +53,7 @@ static int saved_storage_status = FDFS_STORAGE_STATUS_NONE;
 static char *recovery_get_binlog_filename(const void *pArg, \
                         char *full_filename);
 
-static int storage_do_fetch_binlog(TrackerServerInfo *pSrcStorage, \
+static int storage_do_fetch_binlog(ConnectionInfo *pSrcStorage, \
 		const int store_path_index)
 {
 	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 1];
@@ -111,17 +111,17 @@ static int storage_do_fetch_binlog(TrackerServerInfo *pSrcStorage, \
 	return 0;
 }
 
-static int recovery_get_src_storage_server(TrackerServerInfo *pSrcStorage)
+static int recovery_get_src_storage_server(ConnectionInfo *pSrcStorage)
 {
 	int result;
 	int storage_count;
-	TrackerServerInfo trackerServer;
+	ConnectionInfo trackerServer;
 	FDFSGroupStat groupStat;
 	FDFSStorageInfo storageStats[FDFS_MAX_SERVERS_EACH_GROUP];
 	FDFSStorageInfo *pStorageStat;
 	FDFSStorageInfo *pStorageEnd;
 
-	memset(pSrcStorage, 0, sizeof(TrackerServerInfo));
+	memset(pSrcStorage, 0, sizeof(ConnectionInfo));
 	pSrcStorage->sock = -1;
 
 	logDebug("file: "__FILE__", line: %d, " \
@@ -495,9 +495,9 @@ static int recovery_reader_init(const char *pBasePath, \
 }
 
 static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pReader, \
-		TrackerServerInfo *pSrcStorage)
+		ConnectionInfo *pSrcStorage)
 {
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo *pTrackerServer;
 	FDFSTrunkFullInfo trunk_info;
 	StorageBinLogRecord record;
 	int record_length;
@@ -717,7 +717,7 @@ int storage_disk_recovery_restore(const char *pBasePath)
 {
 	char full_binlog_filename[MAX_PATH_SIZE];
 	char full_mark_filename[MAX_PATH_SIZE];
-	TrackerServerInfo srcStorage;
+	ConnectionInfo srcStorage;
 	int result;
 	StorageBinLogReader reader;
 
@@ -1023,7 +1023,7 @@ static int storage_disk_recovery_split_trunk_binlog(const int store_path_index)
 
 int storage_disk_recovery_start(const int store_path_index)
 {
-	TrackerServerInfo srcStorage;
+	ConnectionInfo srcStorage;
 	int result;
 	char *pBasePath;
 

@@ -17,6 +17,7 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include "fdfs_define.h"
+#include "connection_pool.h"
 
 #define FDFS_ONE_MB	(1024 * 1024)
 
@@ -357,14 +358,6 @@ typedef struct
 
 typedef struct
 {
-	int sock;
-	int port;
-	char ip_addr[IP_ADDRESS_SIZE];
-	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
-} TrackerServerInfo;
-
-typedef struct
-{
 	FDFSGroupInfo *pGroup;
 	FDFSStorageDetail *pStorage;
 	union {
@@ -394,7 +387,7 @@ typedef struct
         char init_flag;
 	signed char status;
 	int tracker_count;
-	TrackerServerInfo tracker_servers[FDFS_MAX_TRACKERS];
+	ConnectionInfo tracker_servers[FDFS_MAX_TRACKERS];
 } FDFSStorageJoinBody;
 
 typedef struct
@@ -402,7 +395,7 @@ typedef struct
 	int server_count;
 	int server_index;  //server index for roundrobin
 	int leader_index;  //leader server index
-	TrackerServerInfo *servers;
+	ConnectionInfo *servers;
 } TrackerServerGroup;
 
 typedef struct

@@ -441,7 +441,7 @@ static void sigQuitHandler(int sig)
 
 static void sigAlarmHandler(int sig)
 {
-	TrackerServerInfo server;
+	ConnectionInfo server;
 
 	if (bAcceptEndFlag)
 	{

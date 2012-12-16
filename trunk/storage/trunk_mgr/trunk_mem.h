@@ -35,7 +35,7 @@ extern int g_store_path_index;  //store to which path
 extern int g_current_trunk_file_id;  //current trunk file id
 extern TimeInfo g_trunk_create_file_time_base;
 extern int g_trunk_create_file_interval;
-extern TrackerServerInfo g_trunk_server;  //the trunk server
+extern ConnectionInfo g_trunk_server;  //the trunk server
 extern bool g_if_use_trunk_file;   //if use trunk file
 extern bool g_trunk_create_file_advance;
 extern bool g_trunk_init_check_occupying;

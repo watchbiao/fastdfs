@@ -106,7 +106,7 @@
 #define STORAGE_ITEM_LAST_HEART_BEAT_TIME      "last_heart_beat_time"
 
 TrackerServerGroup g_tracker_servers = {0, 0, -1, NULL};
-TrackerServerInfo *g_last_tracker_servers = NULL;  //for delay free
+ConnectionInfo *g_last_tracker_servers = NULL;  //for delay free
 int g_next_leader_index = -1;			   //next leader index
 int g_trunk_server_chg_count = 1;		   //for notify other trackers
 int g_tracker_leader_chg_count = 0;		   //for notify storage servers
@@ -3652,7 +3652,7 @@ static int _tracker_mem_add_storage(FDFSGroupInfo *pGroup, \
 	return result;
 }
 
-int tracker_mem_get_status(TrackerServerInfo *pTrackerServer, \
+int tracker_mem_get_status(ConnectionInfo *pTrackerServer, \
 		TrackerRunningStatus *pStatus)
 {
 	char in_buff[1 + 2 * FDFS_PROTO_PKG_LEN_SIZE];
@@ -3740,7 +3740,7 @@ void tracker_calc_running_times(TrackerRunningStatus *pStatus)
 					TRACKER_SYNC_STATUS_FILE_INTERVAL);
 }
 
-static int tracker_mem_get_sys_file_piece(TrackerServerInfo *pTrackerServer, \
+static int tracker_mem_get_sys_file_piece(ConnectionInfo *pTrackerServer, \
 	const int file_index, int fd, int64_t *offset, int64_t *file_size)
 {
 	char out_buff[sizeof(TrackerHeader) + 1 + FDFS_PROTO_PKG_LEN_SIZE];
@@ -3830,7 +3830,7 @@ static int tracker_mem_get_sys_file_piece(TrackerServerInfo *pTrackerServer, \
 	return 0;
 }
 
-static int tracker_mem_get_one_sys_file(TrackerServerInfo *pTrackerServer, \
+static int tracker_mem_get_one_sys_file(ConnectionInfo *pTrackerServer, \
 		const int file_index)
 {
 	char full_filename[MAX_PATH_SIZE];
@@ -3875,7 +3875,7 @@ static int tracker_mem_get_one_sys_file(TrackerServerInfo *pTrackerServer, \
 	return result;
 }
 
-static int tracker_mem_get_sys_files(TrackerServerInfo *pTrackerServer)
+static int tracker_mem_get_sys_files(ConnectionInfo *pTrackerServer)
 {
 	int result;
 	int index;
@@ -3927,15 +3927,15 @@ static int tracker_mem_cmp_tracker_running_status(const void *p1, const void *p2
 
 static int tracker_mem_first_add_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 {
-	TrackerServerInfo *pLocalTracker;
-	TrackerServerInfo *pLocalEnd;
-	TrackerServerInfo *servers;
+	ConnectionInfo *pLocalTracker;
+	ConnectionInfo *pLocalEnd;
+	ConnectionInfo *servers;
 	int tracker_count;
 	int bytes;
 
 	tracker_count = pJoinBody->tracker_count;
-	bytes = sizeof(TrackerServerInfo) * tracker_count;
-	servers = (TrackerServerInfo *)malloc(bytes);
+	bytes = sizeof(ConnectionInfo) * tracker_count;
+	servers = (ConnectionInfo *)malloc(bytes);
 	if (servers == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -3960,12 +3960,12 @@ static int tracker_mem_first_add_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 
 static int tracker_mem_check_add_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 {
-	TrackerServerInfo *pJoinTracker;
-	TrackerServerInfo *pJoinEnd;
-	TrackerServerInfo *pLocalTracker;
-	TrackerServerInfo *pLocalEnd;
-	TrackerServerInfo *pNewServer;
-	TrackerServerInfo *new_servers;
+	ConnectionInfo *pJoinTracker;
+	ConnectionInfo *pJoinEnd;
+	ConnectionInfo *pLocalTracker;
+	ConnectionInfo *pLocalEnd;
+	ConnectionInfo *pNewServer;
+	ConnectionInfo *new_servers;
 	int add_count;
 	int bytes;
 
@@ -4017,9 +4017,9 @@ static int tracker_mem_check_add_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 		"add %d tracker servers", \
 		__LINE__, add_count);
 
-	bytes = sizeof(TrackerServerInfo) * (g_tracker_servers.server_count \
+	bytes = sizeof(ConnectionInfo) * (g_tracker_servers.server_count \
 						 + add_count);
-	new_servers = (TrackerServerInfo *)malloc(bytes);
+	new_servers = (ConnectionInfo *)malloc(bytes);
 	if (new_servers == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -4029,7 +4029,7 @@ static int tracker_mem_check_add_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 		return errno != 0 ? errno : ENOMEM;
 	}
 
-	memcpy(new_servers, g_tracker_servers.servers, sizeof(TrackerServerInfo)* \
+	memcpy(new_servers, g_tracker_servers.servers, sizeof(ConnectionInfo)* \
 				g_tracker_servers.server_count);
 	pNewServer = new_servers + g_tracker_servers.server_count;
 	for (pJoinTracker=pJoinBody->tracker_servers; \
@@ -4049,7 +4049,7 @@ static int tracker_mem_check_add_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 		if (pLocalTracker == pLocalEnd)
 		{
 			memcpy(pNewServer, pJoinTracker, \
-				sizeof(TrackerServerInfo));
+				sizeof(ConnectionInfo));
 			pNewServer->sock = -1;
 			pNewServer++;
 		}
@@ -4065,8 +4065,8 @@ static int tracker_mem_check_add_tracker_servers(FDFSStorageJoinBody *pJoinBody)
 static int tracker_mem_get_tracker_server(FDFSStorageJoinBody *pJoinBody, \
 		TrackerRunningStatus *pTrackerStatus)
 {
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pTrackerEnd;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pTrackerEnd;
 	TrackerRunningStatus *pStatus;
 	TrackerRunningStatus trackerStatus[FDFS_MAX_TRACKERS];
 	int count;
@@ -4137,7 +4137,7 @@ static int tracker_mem_get_sys_files_from_others(FDFSStorageJoinBody *pJoinBody,
 {
 	int result;
 	TrackerRunningStatus trackerStatus;
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo *pTrackerServer;
 	FDFSGroups newGroups;
 	FDFSGroups tempGroups;
 
@@ -4791,7 +4791,7 @@ static void tracker_mem_find_store_server(FDFSGroupInfo *pGroup)
 }
 
 static int _storage_get_trunk_binlog_size(
-	TrackerServerInfo *pStorageServer, int64_t *file_size)
+	ConnectionInfo *pStorageServer, int64_t *file_size)
 {
 	char out_buff[sizeof(TrackerHeader)];
 	char in_buff[8];
@@ -4839,7 +4839,7 @@ static int _storage_get_trunk_binlog_size(
 static int tracker_mem_get_trunk_binlog_size(
 	const char *storage_ip, const int port, int64_t *file_size)
 {
-	TrackerServerInfo storage_server;
+	ConnectionInfo storage_server;
 	int result;
 
 	*file_size = 0;

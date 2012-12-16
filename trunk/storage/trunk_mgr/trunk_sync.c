@@ -921,7 +921,7 @@ int trunk_rename_mark_file(const char *old_ip_addr, const int old_port, \
 	return 0;
 }
 
-static void trunk_sync_thread_exit(TrackerServerInfo *pStorage)
+static void trunk_sync_thread_exit(ConnectionInfo *pStorage)
 {
 	int result;
 	int i;
@@ -966,7 +966,7 @@ static void trunk_sync_thread_exit(TrackerServerInfo *pStorage)
 }
 
 static int trunk_sync_data(TrunkBinLogReader *pReader, \
-		TrackerServerInfo *pStorage)
+		ConnectionInfo *pStorage)
 {
 	int length;
 	char *p;
@@ -1037,7 +1037,7 @@ static void* trunk_sync_thread_entrance(void* arg)
 {
 	FDFSStorageBrief *pStorage;
 	TrunkBinLogReader reader;
-	TrackerServerInfo storage_server;
+	ConnectionInfo storage_server;
 	char local_ip_addr[IP_ADDRESS_SIZE];
 	int read_result;
 	int sync_result;
@@ -1059,7 +1059,6 @@ static void* trunk_sync_thread_entrance(void* arg)
 	pStorage = (FDFSStorageBrief *)arg;
 
 	strcpy(storage_server.ip_addr, pStorage->ip_addr);
-	strcpy(storage_server.group_name, g_group_name);
 	storage_server.port = g_server_port;
 	storage_server.sock = -1;
 

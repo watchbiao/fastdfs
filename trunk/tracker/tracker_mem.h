@@ -26,7 +26,7 @@
 #define STORAGE_DATA_FIELD_SEPERATOR	   ','
 
 typedef struct {
-	TrackerServerInfo *pTrackerServer;
+	ConnectionInfo *pTrackerServer;
 	int running_time;     //running seconds, more means higher weight
 	int restart_interval; //restart interval, less mean higher weight
 	bool if_leader;       //if leader
@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 extern TrackerServerGroup g_tracker_servers;  //save all tracker servers from storage server
-extern TrackerServerInfo *g_last_tracker_servers;  //for delay free
+extern ConnectionInfo *g_last_tracker_servers;  //for delay free
 extern int g_next_leader_index;			   //next leader index
 extern int g_tracker_leader_chg_count;		   //for notify storage servers
 extern int g_trunk_server_chg_count;		   //for notify other trackers
@@ -123,7 +123,7 @@ int tracker_mem_get_storage_index(FDFSGroupInfo *pGroup, \
 
 void tracker_calc_running_times(TrackerRunningStatus *pStatus);
 
-int tracker_mem_get_status(TrackerServerInfo *pTrackerServer, \
+int tracker_mem_get_status(ConnectionInfo *pTrackerServer, \
 		TrackerRunningStatus *pStatus);
 
 int tracker_save_groups();

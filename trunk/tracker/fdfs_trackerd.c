@@ -442,7 +442,7 @@ static void sigHupHandler(int sig)
 
 static void sigAlarmHandler(int sig)
 {
-	TrackerServerInfo server;
+	ConnectionInfo server;
 
 	if (bAcceptEndFlag)
 	{

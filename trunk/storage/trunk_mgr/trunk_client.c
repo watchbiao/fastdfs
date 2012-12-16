@@ -28,7 +28,7 @@
 #include "storage_global.h"
 #include "trunk_client.h"
 
-static int trunk_client_trunk_do_alloc_space(TrackerServerInfo *pTrunkServer, \
+static int trunk_client_trunk_do_alloc_space(ConnectionInfo *pTrunkServer, \
 		const int file_size, FDFSTrunkFullInfo *pTrunkInfo)
 {
 	TrackerHeader *pHeader;
@@ -91,7 +91,7 @@ int trunk_client_trunk_alloc_space(const int file_size, \
 		FDFSTrunkFullInfo *pTrunkInfo)
 {
 	int result;
-	TrackerServerInfo trunk_server;
+	ConnectionInfo trunk_server;
 
 	if (g_if_trunker_self)
 	{
@@ -105,7 +105,7 @@ int trunk_client_trunk_alloc_space(const int file_size, \
 		return EAGAIN;
 	}
 
-	memcpy(&trunk_server, &g_trunk_server, sizeof(TrackerServerInfo));
+	memcpy(&trunk_server, &g_trunk_server, sizeof(ConnectionInfo));
 	if ((result=tracker_connect_server(&trunk_server)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -130,7 +130,7 @@ int trunk_client_trunk_alloc_space(const int file_size, \
 	trunk_client_trunk_confirm_or_free(pTrunkServer, pTrunkInfo, \
 		STORAGE_PROTO_CMD_TRUNK_FREE_SPACE, 0)
 
-static int trunk_client_trunk_confirm_or_free(TrackerServerInfo *pTrunkServer,\
+static int trunk_client_trunk_confirm_or_free(ConnectionInfo *pTrunkServer,\
 		const FDFSTrunkFullInfo *pTrunkInfo, const int cmd, \
 		const int status)
 {
@@ -192,7 +192,7 @@ int trunk_client_trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, \
 		const int status)
 {
 	int result;
-	TrackerServerInfo trunk_server;
+	ConnectionInfo trunk_server;
 
 	if (g_if_trunker_self)
 	{
@@ -204,7 +204,7 @@ int trunk_client_trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, \
 		return EAGAIN;
 	}
 
-	memcpy(&trunk_server, &g_trunk_server, sizeof(TrackerServerInfo));
+	memcpy(&trunk_server, &g_trunk_server, sizeof(ConnectionInfo));
 	if ((result=tracker_connect_server(&trunk_server)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -224,7 +224,7 @@ int trunk_client_trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, \
 int trunk_client_trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo)
 {
 	int result;
-	TrackerServerInfo trunk_server;
+	ConnectionInfo trunk_server;
 
 	if (g_if_trunker_self)
 	{
@@ -236,7 +236,7 @@ int trunk_client_trunk_free_space(const FDFSTrunkFullInfo *pTrunkInfo)
 		return EAGAIN;
 	}
 
-	memcpy(&trunk_server, &g_trunk_server, sizeof(TrackerServerInfo));
+	memcpy(&trunk_server, &g_trunk_server, sizeof(ConnectionInfo));
 	if ((result=tracker_connect_server(&trunk_server)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
