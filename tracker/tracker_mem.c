@@ -3658,11 +3658,12 @@ int tracker_mem_get_status(ConnectionInfo *pTrackerServer, \
 	char in_buff[1 + 2 * FDFS_PROTO_PKG_LEN_SIZE];
 	TrackerHeader header;
 	char *pInBuff;
+	ConnectionInfo *conn;
 	int64_t in_bytes;
 	int result;
 
 	pTrackerServer->sock = -1;
-	if ((result=tracker_connect_server(pTrackerServer)) != 0)
+	if ((conn=tracker_connect_server(pTrackerServer, &result)) == NULL)
 	{
 		return result;
 	}
@@ -3671,7 +3672,7 @@ int tracker_mem_get_status(ConnectionInfo *pTrackerServer, \
 	{
 	memset(&header, 0, sizeof(header));
 	header.cmd = TRACKER_PROTO_CMD_TRACKER_GET_STATUS;
-	if ((result=tcpsenddata_nb(pTrackerServer->sock, &header, \
+	if ((result=tcpsenddata_nb(conn->sock, &header, \
 			sizeof(header), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -3686,7 +3687,7 @@ int tracker_mem_get_status(ConnectionInfo *pTrackerServer, \
 	}
 
 	pInBuff = in_buff;
-	result = fdfs_recv_response(pTrackerServer, &pInBuff, \
+	result = fdfs_recv_response(conn, &pInBuff, \
 				sizeof(in_buff), &in_bytes);
 	if (result != 0)
 	{
@@ -3712,8 +3713,7 @@ int tracker_mem_get_status(ConnectionInfo *pTrackerServer, \
 
 	} while (0);
 
-	close(pTrackerServer->sock);
-	pTrackerServer->sock = -1;
+	tracker_disconnect_server_ex(conn, result != 0);
 
 	return result;
 }
@@ -3877,33 +3877,34 @@ static int tracker_mem_get_one_sys_file(ConnectionInfo *pTrackerServer, \
 
 static int tracker_mem_get_sys_files(ConnectionInfo *pTrackerServer)
 {
+	ConnectionInfo *conn;
 	int result;
 	int index;
 
 	pTrackerServer->sock = -1;
-	if ((result=tracker_connect_server(pTrackerServer)) != 0)
+	if ((conn=tracker_connect_server(pTrackerServer, &result)) == NULL)
 	{
 		return result;
 	}
 
-	if ((result=tracker_get_sys_files_start(pTrackerServer)) != 0)
+	if ((result=tracker_get_sys_files_start(conn)) != 0)
 	{
-		close(pTrackerServer->sock);
+		tracker_disconnect_server_ex(conn, true);
 		return result;
 	}
 
 	for (index=0; index<TRACKER_SYS_FILE_COUNT; index++)
 	{
-		result = tracker_mem_get_one_sys_file(pTrackerServer, index);
+		result = tracker_mem_get_one_sys_file(conn, index);
 		if (result != 0)
 		{
 			break;
 		}
 	}
 
-	result = tracker_get_sys_files_end(pTrackerServer);
+	result = tracker_get_sys_files_end(conn);
+	tracker_disconnect_server_ex(conn, result != 0);
 
-	close(pTrackerServer->sock);
 	return result;
 }
 
@@ -4840,19 +4841,20 @@ static int tracker_mem_get_trunk_binlog_size(
 	const char *storage_ip, const int port, int64_t *file_size)
 {
 	ConnectionInfo storage_server;
+	ConnectionInfo *conn;
 	int result;
 
 	*file_size = 0;
 	strcpy(storage_server.ip_addr, storage_ip);
 	storage_server.port = port;
 	storage_server.sock = -1;
-	if ((result=tracker_connect_server(&storage_server)) != 0)
+	if ((conn=tracker_connect_server(&storage_server, &result)) == NULL)
 	{
 		return result;
 	}
 
-	result = _storage_get_trunk_binlog_size(&storage_server, file_size);
-	tracker_disconnect_server(&storage_server);
+	result = _storage_get_trunk_binlog_size(conn, file_size);
+	tracker_disconnect_server_ex(conn, result != 0);
 
 
 	logDebug("file: "__FILE__", line: %d, " \

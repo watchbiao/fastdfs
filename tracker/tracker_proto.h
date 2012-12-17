@@ -204,25 +204,32 @@ typedef struct
 extern "C" {
 #endif
 
-#define tracker_connect_server(pTrackerServer) \
-	tracker_connect_server_ex(pTrackerServer, g_fdfs_connect_timeout)
+#define tracker_connect_server(pTrackerServer, err_no) \
+	tracker_connect_server_ex(pTrackerServer, g_fdfs_connect_timeout, err_no)
+
 /**
 * connect to the tracker server
 * params:
 *	pTrackerServer: tracker server
 *	connect_timeout: connect timeout in seconds
-* return: 0 success, !=0 fail, return the error code
+*	err_no: return the error no
+* return: ConnectionInfo pointer for success, NULL for fail
 **/
-int tracker_connect_server_ex(ConnectionInfo *pTrackerServer, \
-		const int connect_timeout);
+ConnectionInfo *tracker_connect_server_ex(ConnectionInfo *pTrackerServer, \
+		const int connect_timeout, int *err_no);
+
+#define tracker_disconnect_server(pTrackerServer) \
+	tracker_disconnect_server_ex(pTrackerServer, false)
 
 /**
 * close all connections to tracker servers
 * params:
 *	pTrackerServer: tracker server
+*	bForceClose: if force close the connection when use connection pool
 * return:
 **/
-void tracker_disconnect_server(ConnectionInfo *pTrackerServer);
+void tracker_disconnect_server_ex(ConnectionInfo *pTrackerServer, \
+	const bool bForceClose);
 
 int fdfs_validate_group_name(const char *group_name);
 int fdfs_validate_filename(const char *filename);

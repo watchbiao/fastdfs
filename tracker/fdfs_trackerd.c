@@ -463,13 +463,13 @@ static void sigAlarmHandler(int sig)
 	server.port = g_server_port;
 	server.sock = -1;
 
-	if (tracker_connect_server_ex(&server, 1) != 0)
+	if (conn_pool_connect_server(&server, g_fdfs_connect_timeout) != 0)
 	{
 		return;
 	}
 
 	fdfs_quit(&server);
-	tracker_disconnect_server(&server);
+	conn_pool_disconnect_server(&server);
 
 	logDebug("file: "__FILE__", line: %d, " \
 		"signal server to quit done", __LINE__);

@@ -13,9 +13,9 @@
 
 #include "common_define.h"
 #include "fdfs_define.h"
+#include "connection_pool.h"
 
 #define FDFS_FILE_EXT_NAME_MAX_LEN	6
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,6 +25,8 @@ extern int g_fdfs_connect_timeout;
 extern int g_fdfs_network_timeout;
 extern char g_fdfs_base_path[MAX_PATH_SIZE];
 extern Version g_fdfs_version;
+extern bool g_use_connection_pool;
+extern ConnectionPool g_connection_pool;
 
 int fdfs_check_data_filename(const char *filename, const int len);
 int fdfs_gen_slave_filename(const char *master_filename, \
