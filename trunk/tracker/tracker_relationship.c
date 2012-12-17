@@ -241,13 +241,14 @@ static int do_notify_leader_changed(ConnectionInfo *pTrackerServer, \
 {
 	char out_buff[sizeof(TrackerHeader) + FDFS_PROTO_IP_PORT_SIZE];
 	char in_buff[1];
+	ConnectionInfo *conn;
 	TrackerHeader *pHeader;
 	char *pInBuff;
 	int64_t in_bytes;
 	int result;
 
 	pTrackerServer->sock = -1;
-	if ((result=tracker_connect_server(pTrackerServer)) != 0)
+	if ((conn=tracker_connect_server(pTrackerServer, &result)) == NULL)
 	{
 		*bConnectFail = true;
 		return result;
@@ -262,7 +263,7 @@ static int do_notify_leader_changed(ConnectionInfo *pTrackerServer, \
 	sprintf(out_buff + sizeof(TrackerHeader), "%s:%d", \
 			pLeader->ip_addr, pLeader->port);
 	long2buff(FDFS_PROTO_IP_PORT_SIZE, pHeader->pkg_len);
-	if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+	if ((result=tcpsenddata_nb(conn->sock, out_buff, \
 			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -277,7 +278,7 @@ static int do_notify_leader_changed(ConnectionInfo *pTrackerServer, \
 	}
 
 	pInBuff = in_buff;
-	result = fdfs_recv_response(pTrackerServer, &pInBuff, \
+	result = fdfs_recv_response(conn, &pInBuff, \
 				0, &in_bytes);
 	if (result != 0)
 	{
@@ -297,9 +298,7 @@ static int do_notify_leader_changed(ConnectionInfo *pTrackerServer, \
 	}
 	} while (0);
 
-	close(pTrackerServer->sock);
-	pTrackerServer->sock = -1;
-
+	tracker_disconnect_server_ex(conn, result != 0);
 	return result;
 }
 
@@ -446,7 +445,8 @@ static int relationship_ping_leader()
 	pTrackerServer = g_tracker_servers.servers + leader_index;
 	if (pTrackerServer->sock < 0)
 	{
-		if ((result=tracker_connect_server(pTrackerServer)) != 0)
+		if ((result=conn_pool_connect_server(pTrackerServer, \
+				g_fdfs_connect_timeout)) != 0)
 		{
 			return result;
 		}

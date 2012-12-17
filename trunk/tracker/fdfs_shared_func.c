@@ -546,6 +546,7 @@ int fdfs_get_storage_ids_from_tracker_server(ConnectionInfo *pTrackerServer)
 {
 #define MAX_REQUEST_LOOP   32
 	TrackerHeader *pHeader;
+	ConnectionInfo *conn;
 	char out_buff[sizeof(TrackerHeader) + sizeof(int)];
 	char *p;
 	char *response;
@@ -562,7 +563,7 @@ int fdfs_get_storage_ids_from_tracker_server(ConnectionInfo *pTrackerServer)
 	int start_index;
 	int64_t in_bytes;
 
-	if ((result=tracker_connect_server(pTrackerServer)) != 0)
+	if ((conn=tracker_connect_server(pTrackerServer, &result)) == NULL)
 	{
 		return result;
 	}
@@ -580,7 +581,7 @@ int fdfs_get_storage_ids_from_tracker_server(ConnectionInfo *pTrackerServer)
 	while (1)
 	{
 		int2buff(start_index, p);
-		if ((result=tcpsenddata_nb(pTrackerServer->sock, out_buff, \
+		if ((result=tcpsenddata_nb(conn->sock, out_buff, \
 			sizeof(out_buff), g_fdfs_network_timeout)) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -593,7 +594,7 @@ int fdfs_get_storage_ids_from_tracker_server(ConnectionInfo *pTrackerServer)
 		else
 		{
 			response = NULL;
-			result = fdfs_recv_response(pTrackerServer, \
+			result = fdfs_recv_response(conn, \
 				&response, 0, &in_bytes);
 		}
 
@@ -665,9 +666,7 @@ int fdfs_get_storage_ids_from_tracker_server(ConnectionInfo *pTrackerServer)
 		}
 	}
 
-	fdfs_quit(pTrackerServer);
-	close(pTrackerServer->sock);
-	pTrackerServer->sock = -1;
+	tracker_disconnect_server_ex(conn, result != 0);
 
 	if (result == 0)
 	{

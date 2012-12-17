@@ -202,19 +202,20 @@ int fdfs_deal_no_body_cmd(ConnectionInfo *pTrackerServer, const int cmd)
 
 int fdfs_deal_no_body_cmd_ex(const char *ip_addr, const int port, const int cmd)
 {
+	ConnectionInfo *conn;
 	ConnectionInfo server_info;
 	int result;
 
 	strcpy(server_info.ip_addr, ip_addr);
 	server_info.port = port;
 	server_info.sock = -1;
-	if ((result=tracker_connect_server(&server_info)) != 0)
+	if ((conn=tracker_connect_server(&server_info, &result)) == NULL)
 	{
 		return result;
 	}
 
-	result = fdfs_deal_no_body_cmd(&server_info, cmd);
-	tracker_disconnect_server(&server_info);
+	result = fdfs_deal_no_body_cmd(conn, cmd);
+	tracker_disconnect_server_ex(conn, result != 0);
 	return result;
 }
 
@@ -416,16 +417,41 @@ char *fdfs_pack_metadata(const FDFSMetaData *meta_list, const int meta_count, \
 	return meta_buff;
 }
 
-void tracker_disconnect_server(ConnectionInfo *pTrackerServer)
+void tracker_disconnect_server_ex(ConnectionInfo *conn, \
+	const bool bForceClose)
 {
-	conn_pool_disconnect_server(pTrackerServer);
+	if (g_use_connection_pool)
+	{
+		conn_pool_close_connection_ex(&g_connection_pool, \
+			conn, bForceClose);
+	}
+	else
+	{
+		conn_pool_disconnect_server(conn);
+	}
 }
 
-int tracker_connect_server_ex(ConnectionInfo *pTrackerServer, \
-		const int connect_timeout)
+ConnectionInfo *tracker_connect_server_ex(ConnectionInfo *pTrackerServer, \
+		const int connect_timeout, int *err_no)
 {
-	return conn_pool_connect_server(pTrackerServer, \
-		connect_timeout);
+	if (g_use_connection_pool)
+	{
+		return conn_pool_get_connection(&g_connection_pool,
+			pTrackerServer, err_no);
+	}
+	else
+	{
+		*err_no = conn_pool_connect_server(pTrackerServer, \
+				connect_timeout);
+		if (*err_no != 0)
+		{
+			return NULL;
+		}
+		else
+		{
+			return pTrackerServer;
+		}
+	}
 }
 
 static int fdfs_do_parameter_req(ConnectionInfo *pTrackerServer, \

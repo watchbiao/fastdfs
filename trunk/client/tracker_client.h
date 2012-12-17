@@ -52,8 +52,8 @@ typedef struct
 ConnectionInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup);
 
 
-#define tracker_get_connection_r(pTrackerServer) \
-	tracker_get_connection_r_ex((&g_tracker_group), pTrackerServer)
+#define tracker_get_connection_r(pTrackerServer, err_no) \
+	tracker_get_connection_r_ex((&g_tracker_group), pTrackerServer, err_no)
 
 /**
 * get a connection to tracker server
@@ -62,8 +62,8 @@ ConnectionInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup);
 *       pTrackerServer: tracker server
 * return: 0 success, !=0 fail
 **/
-int tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
-		ConnectionInfo *pTrackerServer);
+ConnectionInfo *tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
+		ConnectionInfo *pTrackerServer, int *err_no);
 
 #define tracker_get_all_connections() \
 	tracker_get_all_connections_ex((&g_tracker_group))
