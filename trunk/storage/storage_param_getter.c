@@ -35,6 +35,7 @@ static int storage_convert_src_server_id()
 {
 	ConnectionInfo *pTrackerServer;
 	ConnectionInfo *pServerEnd;
+	ConnectionInfo *pTrackerConn;
 	ConnectionInfo tracker_server;
 	int result;
 
@@ -46,14 +47,16 @@ static int storage_convert_src_server_id()
 		memcpy(&tracker_server, pTrackerServer, \
 			sizeof(ConnectionInfo));
 		tracker_server.sock = -1;
-                if ((result=tracker_connect_server(&tracker_server)) != 0)
+                if ((pTrackerConn=tracker_connect_server(&tracker_server, \
+			&result)) == NULL)
 		{
 			continue;
 		}
 
-		result = tracker_get_storage_id(&tracker_server, \
+		result = tracker_get_storage_id(pTrackerConn, \
 			g_group_name, g_sync_src_id, g_sync_src_id);
-		tracker_disconnect_server(&tracker_server);
+		tracker_disconnect_server_ex(pTrackerConn, \
+			result != 0 && result != ENOENT);
 		if (result == 0)
 		{
 			return 0;

@@ -2100,6 +2100,7 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 	int result;
 	int src_store_path_index;
 	ConnectionInfo trackerServer;
+	ConnectionInfo *pTracker;
 	ConnectionInfo storageServer;
 	ConnectionInfo *pStorageServer;
 	StorageClientInfo *pClientInfo;
@@ -2110,7 +2111,7 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	pFileContext =  &(pClientInfo->file_context);
 
-	if ((result=tracker_get_connection_r(&trackerServer)) != 0)
+	if ((pTracker=tracker_get_connection_r(&trackerServer, &result)) == NULL)
 	{
 		return result;
 	}
@@ -2122,16 +2123,15 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 	}
 	else
 	{
-		pStorageServer = &storageServer;
-		result = tracker_query_storage_update(&trackerServer, \
-				pStorageServer, group_name, src_filename);
+		result = tracker_query_storage_update(pTracker, \
+				&storageServer, group_name, src_filename);
 		if (result != 0)
 		{
-			tracker_disconnect_server(&trackerServer);
+			tracker_disconnect_server_ex(pTracker, true);
 			return result;
 		}
 
-		if (is_local_host_ip(pStorageServer->ip_addr))
+		if (is_local_host_ip(storageServer.ip_addr))
 		{
 			bCreateDirectly = true;
 		}
@@ -2142,11 +2142,16 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 
 		if (!bCreateDirectly)
 		{
-			if ((result=tracker_connect_server(pStorageServer)) != 0)
+			if ((pStorageServer=tracker_connect_server( \
+				&storageServer, &result)) == NULL)
 			{
-				tracker_disconnect_server(&trackerServer);
+				tracker_disconnect_server(pTracker);
 				return result;
 			}
+		}
+		else
+		{
+			pStorageServer = NULL;
 		}
 	}
 
@@ -2162,7 +2167,7 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 			filename_len, sourceFileInfo.src_true_filename, \
 			&src_store_path_index)) != 0)
 		{
-			tracker_disconnect_server(&trackerServer);
+			tracker_disconnect_server(pTracker);
 			return result;
 		}
 
@@ -2180,7 +2185,7 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 	}
 	else
 	{
-		result = storage_client_create_link(&trackerServer, \
+		result = storage_client_create_link(pTracker, \
 				pStorageServer, master_filename, \
 				src_filename, src_filename_len, \
 				src_file_sig, src_file_sig_len, \
@@ -2189,12 +2194,12 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 		if (pStorageServer != NULL)
 		{
 			fdfs_quit(pStorageServer);
-			tracker_disconnect_server(pStorageServer);
+			tracker_disconnect_server_ex(pStorageServer, result != 0);
 		}
 	}
 
-	fdfs_quit(&trackerServer);
-	tracker_disconnect_server(&trackerServer);
+	fdfs_quit(pTracker);
+	tracker_disconnect_server(pTracker);
 
 	return result;
 }
