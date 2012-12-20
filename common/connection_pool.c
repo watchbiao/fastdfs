@@ -15,7 +15,7 @@
 #include "connection_pool.h"
 
 int conn_pool_init(ConnectionPool *cp, int connect_timeout, \
-		const int max_count_per_entry)
+	const int max_count_per_entry, const int max_idle_time)
 {
 	int result;
 
@@ -25,8 +25,9 @@ int conn_pool_init(ConnectionPool *cp, int connect_timeout, \
 	}
 	cp->connect_timeout = connect_timeout;
 	cp->max_count_per_entry = max_count_per_entry;
+	cp->max_idle_time = max_idle_time;
 
-	return hash_init(&(cp->hash_array), simple_hash, 10, 0.75);
+	return hash_init(&(cp->hash_array), simple_hash, 1024, 0.75);
 }
 
 void conn_pool_destroy(ConnectionPool *cp)
@@ -116,6 +117,7 @@ ConnectionInfo *conn_pool_get_connection(ConnectionPool *cp,
 	ConnectionManager *cm;
 	ConnectionNode *node;
 	ConnectionInfo *ci;
+	time_t current_time;
 
 	*err_no = conn_pool_get_key(conn, key, &key_len);
 	if (*err_no != 0)
@@ -152,71 +154,91 @@ ConnectionInfo *conn_pool_get_connection(ConnectionPool *cp,
 	}
 	pthread_mutex_unlock(&cp->lock);
 
+	current_time = time(NULL);
 	pthread_mutex_lock(&cm->lock);
-	if (cm->head == NULL)
+	while (1)
 	{
-		if ((cp->max_count_per_entry > 0) && 
-			(cm->total_count >= cp->max_count_per_entry))
+		if (cm->head == NULL)
 		{
-			*err_no = ENOSPC;
-			logError("file: "__FILE__", line: %d, " \
-				"connections: %d of server %s:%d " \
-				"exceed limit: %d", __LINE__, \
-				cm->total_count, conn->ip_addr, \
-				conn->port, cp->max_count_per_entry);
-			pthread_mutex_unlock(&cm->lock);
-			return NULL;
-		}
+			if ((cp->max_count_per_entry > 0) && 
+				(cm->total_count >= cp->max_count_per_entry))
+			{
+				*err_no = ENOSPC;
+				logError("file: "__FILE__", line: %d, " \
+					"connections: %d of server %s:%d " \
+					"exceed limit: %d", __LINE__, \
+					cm->total_count, conn->ip_addr, \
+					conn->port, cp->max_count_per_entry);
+				pthread_mutex_unlock(&cm->lock);
+				return NULL;
+			}
 
-		bytes = sizeof(ConnectionInfo) + sizeof(ConnectionNode);
-		p = (char *)malloc(bytes);
-		if (p == NULL)
+			bytes = sizeof(ConnectionInfo) + sizeof(ConnectionNode);
+			p = (char *)malloc(bytes);
+			if (p == NULL)
+			{
+				*err_no = errno != 0 ? errno : ENOMEM;
+				logError("file: "__FILE__", line: %d, " \
+					"malloc %d bytes fail, errno: %d, " \
+					"error info: %s", __LINE__, \
+					bytes, *err_no, STRERROR(*err_no));
+				pthread_mutex_unlock(&cm->lock);
+				return NULL;
+			}
+
+			node = (ConnectionNode *)(p + sizeof(ConnectionInfo));
+			node->conn = (ConnectionInfo *)p;
+			node->manager = cm;
+			node->next = NULL;
+
+			cm->total_count++;
+			pthread_mutex_unlock(&cm->lock);
+
+			memcpy(node->conn, conn, sizeof(ConnectionInfo));
+			node->conn->sock = -1;
+			*err_no = conn_pool_connect_server(node->conn, \
+					cp->connect_timeout);
+			if (*err_no != 0)
+			{
+				free(p);
+				return NULL;
+			}
+
+			logDebug("file: "__FILE__", line: %d, " \
+				"server %s:%d, total_count: %d, free_count: %d", 
+				__LINE__, conn->ip_addr, conn->port, 
+				cm->total_count, cm->free_count);
+			return node->conn;
+		}
+		else
 		{
-			*err_no = errno != 0 ? errno : ENOMEM;
-			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail, errno: %d, " \
-				"error info: %s", __LINE__, \
-				bytes, *err_no, STRERROR(*err_no));
+			node = cm->head;
+			ci = node->conn;
+			cm->head = node->next;
+			cm->free_count--;
+
+			if (current_time - node->atime > cp->max_idle_time)
+			{
+				cm->total_count--;
+
+				logDebug("file: "__FILE__", line: %d, " \
+					"server %s:%d, total_count: %d, free_count: %d", 
+					__LINE__, conn->ip_addr, conn->port, 
+					cm->total_count, cm->free_count);
+
+				conn_pool_disconnect_server(ci);
+				free(ci);
+				continue;
+			}
+
 			pthread_mutex_unlock(&cm->lock);
-			return NULL;
+			logDebug("file: "__FILE__", line: %d, " \
+				"server %s:%d, total_count: %d, free_count: %d", 
+				__LINE__, conn->ip_addr, conn->port, 
+				cm->total_count, cm->free_count);
+			return ci;
 		}
-
-		node = (ConnectionNode *)(p + sizeof(ConnectionInfo));
-		node->conn = (ConnectionInfo *)p;
-		node->manager = cm;
-		node->next = NULL;
-
-		cm->total_count++;
-		pthread_mutex_unlock(&cm->lock);
 	}
-	else
-	{
-		cm->free_count--;
-		ci = cm->head->conn;
-		cm->head = cm->head->next;
-		pthread_mutex_unlock(&cm->lock);
-
-		logDebug("file: "__FILE__", line: %d, " \
-			"server %s:%d, total_count: %d, free_count: %d", 
-			__LINE__, conn->ip_addr, conn->port, 
-			cm->total_count, cm->free_count);
-		return ci;
-	}
-
-	memcpy(node->conn, conn, sizeof(ConnectionInfo));
-	node->conn->sock = -1;
-	*err_no = conn_pool_connect_server(node->conn, cp->connect_timeout);
-	if (*err_no != 0)
-	{
-		free(p);
-		return NULL;
-	}
-
-	logDebug("file: "__FILE__", line: %d, " \
-		"server %s:%d, total_count: %d, free_count: %d", 
-		__LINE__, conn->ip_addr, conn->port, 
-		cm->total_count, cm->free_count);
-	return node->conn;
 }
 
 int conn_pool_close_connection_ex(ConnectionPool *cp, ConnectionInfo *conn, 
@@ -269,6 +291,7 @@ int conn_pool_close_connection_ex(ConnectionPool *cp, ConnectionInfo *conn,
 	}
 	else
 	{
+		node->atime = time(NULL);
 		cm->free_count++;
 		node->next = cm->head;
 		cm->head = node;

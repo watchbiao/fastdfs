@@ -29,6 +29,7 @@
 #include "shared_func.h"
 #include "pthread_func.h"
 #include "ini_file_reader.h"
+#include "connection_pool.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
 #include "fdfs_shared_func.h"
@@ -1606,6 +1607,12 @@ int storage_func_init(const char *filename, \
 
 		g_file_sync_skip_invalid_record = iniGetBoolValue(NULL, \
 			"file_sync_skip_invalid_record", &iniContext, false);
+
+		if ((result=fdfs_connection_pool_init(filename, &iniContext)) != 0)
+		{
+			break;
+		}
+
 #ifdef WITH_HTTPD
 		{
 		char *pHttpTrunkSize;
@@ -1665,7 +1672,9 @@ int storage_func_init(const char *filename, \
 			"error_log_rotate_time=%02d:%02d, " \
 			"rotate_access_log_size="INT64_PRINTF_FORMAT", " \
 			"rotate_error_log_size="INT64_PRINTF_FORMAT", " \
-			"file_sync_skip_invalid_record=%d", \
+			"file_sync_skip_invalid_record=%d, " \
+			"use_connection_pool=%d, " \
+			"g_connection_pool_max_idle_time=%ds", \
 			g_fdfs_version.major, g_fdfs_version.minor, \
 			g_fdfs_base_path, g_fdfs_path_count, g_subdir_count_per_path,\
 			g_group_name, g_run_by_group, g_run_by_user, \
@@ -1698,7 +1707,8 @@ int storage_func_init(const char *filename, \
 			g_error_log_rotate_time.minute, \
 			g_access_log_context.rotate_size, \
 			g_log_context.rotate_size, \
-			g_file_sync_skip_invalid_record);
+			g_file_sync_skip_invalid_record, \
+			g_use_connection_pool, g_connection_pool_max_idle_time);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)

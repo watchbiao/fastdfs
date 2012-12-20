@@ -27,6 +27,7 @@
 #include "sockopt.h"
 #include "shared_func.h"
 #include "ini_file_reader.h"
+#include "connection_pool.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
 #include "tracker_global.h"
@@ -594,6 +595,11 @@ int tracker_load_from_conf_file(const char *filename, \
 		g_store_slave_file_use_link = iniGetBoolValue(NULL, \
 			"store_slave_file_use_link", &iniContext, false);
 
+		if ((result=fdfs_connection_pool_init(filename, &iniContext)) != 0)
+		{
+			break;
+		}
+
 #ifdef WITH_HTTPD
 		if ((result=fdfs_http_params_load(&iniContext, \
 				filename, &g_http_params)) != 0)
@@ -665,12 +671,14 @@ int tracker_load_from_conf_file(const char *filename, \
 			"trunk_init_check_occupying=%d, " \
 			"trunk_init_reload_from_binlog=%d, " \
 			"use_storage_id=%d, " \
-      "id_type_in_filename=%s, " \
-      "storage_id_count=%d, " \
+			"id_type_in_filename=%s, " \
+			"storage_id_count=%d, " \
 			"rotate_error_log=%d, " \
 			"error_log_rotate_time=%02d:%02d, " \
 			"rotate_error_log_size="INT64_PRINTF_FORMAT", " \
-			"store_slave_file_use_link=%d", \
+			"store_slave_file_use_link=%d, " \
+			"use_connection_pool=%d, " \
+			"g_connection_pool_max_idle_time=%ds", \
 			g_fdfs_version.major, g_fdfs_version.minor,  \
 			g_fdfs_base_path, g_run_by_group, g_run_by_user, \
 			g_fdfs_connect_timeout, \
@@ -697,11 +705,11 @@ int tracker_load_from_conf_file(const char *filename, \
 			(FDFS_ONE_MB * 1024)), g_trunk_init_check_occupying, \
 			g_trunk_init_reload_from_binlog, \
 			g_use_storage_id, g_id_type_in_filename == \
-        FDFS_ID_TYPE_SERVER_ID ? "id" : "ip", g_storage_id_count, \
+			FDFS_ID_TYPE_SERVER_ID ? "id" : "ip", g_storage_id_count, \
 			g_rotate_error_log, g_error_log_rotate_time.hour, \
 			g_error_log_rotate_time.minute, \
-			g_log_context.rotate_size, \
-			g_store_slave_file_use_link);
+			g_log_context.rotate_size, g_store_slave_file_use_link, \
+			g_use_connection_pool, g_connection_pool_max_idle_time);
 
 #ifdef WITH_HTTPD
 		if (!g_http_params.disabled)

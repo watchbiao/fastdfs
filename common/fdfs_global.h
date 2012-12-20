@@ -27,6 +27,7 @@ extern char g_fdfs_base_path[MAX_PATH_SIZE];
 extern Version g_fdfs_version;
 extern bool g_use_connection_pool;
 extern ConnectionPool g_connection_pool;
+extern int g_connection_pool_max_idle_time;
 
 int fdfs_check_data_filename(const char *filename, const int len);
 int fdfs_gen_slave_filename(const char *master_filename, \

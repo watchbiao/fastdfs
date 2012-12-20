@@ -36,6 +36,7 @@ typedef struct tagConnectionNode {
 	ConnectionInfo *conn;
 	struct tagConnectionManager *manager;
 	struct tagConnectionNode *next;
+	time_t atime;  //last access time
 } ConnectionNode;
 
 typedef struct tagConnectionManager {
@@ -50,10 +51,15 @@ typedef struct tagConnectionPool {
 	pthread_mutex_t lock;
 	int connect_timeout;
 	int max_count_per_entry;  //0 means no limit
+
+	/*
+	connections whose the idle time exceeds this time will be closed
+	*/
+	int max_idle_time;
 } ConnectionPool;
 
 int conn_pool_init(ConnectionPool *cp, int connect_timeout, \
-	const int max_count_per_entry);
+	const int max_count_per_entry, const int max_idle_time);
 void conn_pool_destroy(ConnectionPool *cp);
 
 ConnectionInfo *conn_pool_get_connection(ConnectionPool *cp, 
