@@ -69,6 +69,11 @@ int fdfs_get_storage_ids_from_tracker_group(TrackerServerGroup *pTrackerGroup);
 int fdfs_load_storage_ids_from_file(const char *config_filename, \
 		IniContext *pItemContext);
 
+int fdfs_connection_pool_init(const char *config_filename, \
+		IniContext *pItemContext);
+
+void fdfs_connection_pool_destroy();
+
 #ifdef __cplusplus
 }
 #endif

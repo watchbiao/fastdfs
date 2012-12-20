@@ -25,6 +25,7 @@
 #include "sockopt.h"
 #include "shared_func.h"
 #include "ini_file_reader.h"
+#include "connection_pool.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
 #include "client_global.h"
@@ -287,16 +288,24 @@ static int fdfs_client_do_init_ex(TrackerServerGroup *pTrackerGroup, \
 		g_tracker_server_http_port = 80;
 	}
 
+	if ((result=fdfs_connection_pool_init(conf_filename, iniContext)) != 0)
+	{
+		return result;
+	}
+
 #ifdef DEBUG_FLAG
 	logDebug("base_path=%s, " \
 		"connect_timeout=%d, "\
 		"network_timeout=%d, "\
 		"tracker_server_count=%d, " \
 		"anti_steal_token=%d, " \
-		"anti_steal_secret_key length=%d\n", \
+		"anti_steal_secret_key length=%d, " \
+		"use_connection_pool=%d, " \
+		"g_connection_pool_max_idle_time=%ds\n", \
 		g_fdfs_base_path, g_fdfs_connect_timeout, \
 		g_fdfs_network_timeout, pTrackerGroup->server_count, \
-		g_anti_steal_token, g_anti_steal_secret_key.length);
+		g_anti_steal_token, g_anti_steal_secret_key.length, \
+		g_use_connection_pool, g_connection_pool_max_idle_time);
 #endif
 
 	return 0;

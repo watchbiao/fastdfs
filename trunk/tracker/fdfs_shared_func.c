@@ -836,3 +836,34 @@ int fdfs_load_storage_ids_from_file(const char *config_filename, \
 	return result;
 }
 
+int fdfs_connection_pool_init(const char *config_filename, \
+		IniContext *pItemContext)
+{
+	g_use_connection_pool = iniGetBoolValue(NULL, "use_connection_pool", \
+				pItemContext, false);
+	if (!g_use_connection_pool)
+	{
+		return 0;
+	}
+
+	g_connection_pool_max_idle_time = iniGetIntValue(NULL, \
+			"connection_pool_max_idle_time", \
+			pItemContext, 3600);
+	if (g_connection_pool_max_idle_time <= 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"connection_pool_max_idle_time: %d of conf " \
+			"filename: \"%s\" is invalid!", __LINE__, \
+			g_connection_pool_max_idle_time, config_filename);
+		return EINVAL;
+	}
+
+	return conn_pool_init(&g_connection_pool, g_fdfs_connect_timeout, \
+        		0, g_connection_pool_max_idle_time);
+}
+
+void fdfs_connection_pool_destroy()
+{
+	conn_pool_destroy(&g_connection_pool);
+}
+
