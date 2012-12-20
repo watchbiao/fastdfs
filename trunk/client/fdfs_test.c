@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
 	char *conf_filename;
 	char *local_filename;
 	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	int result;
 	ConnectionInfo storageServer;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
@@ -112,6 +113,7 @@ int main(int argc, char *argv[])
 		return errno != 0 ? errno : ECONNREFUSED;
 	}
 
+	pStorageServer = NULL;
 	*group_name = '\0';
 	local_filename = NULL;
 	if (strcmp(operation, "upload") == 0)
@@ -192,7 +194,8 @@ int main(int argc, char *argv[])
 			group_name, storageServer.ip_addr, \
 			storageServer.port);
 
-		if ((result=tracker_connect_server(&storageServer)) != 0)
+		if ((pStorageServer=tracker_connect_server(&storageServer, \
+			&result)) != 0)
 		{
 			fdfs_client_destroy();
 			return result;
@@ -219,7 +222,7 @@ int main(int argc, char *argv[])
 		if (upload_type == FDFS_UPLOAD_BY_FILE)
 		{
 			result = storage_upload_by_filename(pTrackerServer, \
-				&storageServer, store_path_index, \
+				pStorageServer, store_path_index, \
 				local_filename, file_ext_name, \
 				meta_list, meta_count, \
 				group_name, remote_filename);
@@ -233,7 +236,7 @@ int main(int argc, char *argv[])
 					&file_content, &file_size)) == 0)
 			{
 			result = storage_upload_by_filebuff(pTrackerServer, \
-				&storageServer, store_path_index, \
+				pStorageServer, store_path_index, \
 				file_content, file_size, file_ext_name, \
 				meta_list, meta_count, \
 				group_name, remote_filename);
@@ -251,7 +254,7 @@ int main(int argc, char *argv[])
 			{
 			file_size = stat_buf.st_size;
 			result = storage_upload_by_callback(pTrackerServer, \
-				&storageServer, store_path_index, \
+				pStorageServer, store_path_index, \
 				uploadFileCallback, local_filename, \
 				file_size, file_ext_name, \
 				meta_list, meta_count, \
@@ -266,8 +269,8 @@ int main(int argc, char *argv[])
 			printf("upload file fail, " \
 				"error no: %d, error info: %s\n", \
 				result, STRERROR(result));
-			fdfs_quit(&storageServer);
-			tracker_disconnect_server(&storageServer);
+			fdfs_quit(pStorageServer);
+			tracker_disconnect_server_ex(pStorageServer, true);
 			fdfs_client_destroy();
 			return result;
 		}
@@ -359,8 +362,8 @@ int main(int argc, char *argv[])
 			printf("upload slave file fail, " \
 				"error no: %d, error info: %s\n", \
 				result, STRERROR(result));
-			fdfs_quit(&storageServer);
-			tracker_disconnect_server(&storageServer);
+			fdfs_quit(pStorageServer);
+			tracker_disconnect_server_ex(pStorageServer, true);
 			fdfs_client_destroy();
 			return result;
 		}
@@ -489,7 +492,8 @@ int main(int argc, char *argv[])
 		printf("storage=%s:%d\n", storageServer.ip_addr, \
 			storageServer.port);
 
-		if ((result=tracker_connect_server(&storageServer)) != 0)
+		if ((pStorageServer=tracker_connect_server(&storageServer, \
+			&result)) != 0)
 		{
 			fdfs_client_destroy();
 			return result;
@@ -515,7 +519,7 @@ int main(int argc, char *argv[])
 				else
 				{
 				result = storage_download_file_ex( \
-					pTrackerServer, &storageServer, \
+					pTrackerServer, pStorageServer, \
 					group_name, remote_filename, 0, 0, \
 					writeToFileCallback, fp, &file_size);
 				fclose(fp);
@@ -524,7 +528,7 @@ int main(int argc, char *argv[])
 				else
 				{
 				result = storage_download_file_to_file( \
-					pTrackerServer, &storageServer, \
+					pTrackerServer, pStorageServer, \
 					group_name, remote_filename, \
 					local_filename, &file_size);
 				}
@@ -533,7 +537,7 @@ int main(int argc, char *argv[])
 			{
 				file_buff = NULL;
 				if ((result=storage_download_file_to_buff( \
-					pTrackerServer, &storageServer, \
+					pTrackerServer, pStorageServer, \
 					group_name, remote_filename, \
 					&file_buff, &file_size)) == 0)
 				{
@@ -571,7 +575,7 @@ int main(int argc, char *argv[])
 		else if (strcmp(operation, "getmeta") == 0)
 		{
 			if ((result=storage_get_metadata(pTrackerServer, \
-				&storageServer, group_name, remote_filename, \
+				pStorageServer, group_name, remote_filename, \
 				&pMetaList, &meta_count)) == 0)
 			{
 				printf("get meta data success, " \
@@ -672,18 +676,18 @@ int main(int argc, char *argv[])
 	}
 
 	/* for test only */
-	if ((result=fdfs_active_test(&storageServer)) != 0)
+	if ((result=fdfs_active_test(pStorageServer)) != 0)
 	{
 		printf("active_test to storage server %s:%d fail, errno: %d\n", \
-			storageServer.ip_addr, storageServer.port, result);
+			pStorageServer->ip_addr, pStorageServer->port, result);
 	}
 
-	fdfs_quit(&storageServer);
-	tracker_disconnect_server(&storageServer);
+	fdfs_quit(pStorageServer);
+	tracker_disconnect_server_ex(pStorageServer, true);
 
 	fdfs_quit(pTrackerServer);
+	tracker_disconnect_server_ex(pTrackerServer, true);
 
-	tracker_close_all_connections();
 	fdfs_client_destroy();
 
 	return result;

@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
 	char *conf_filename;
 	char *local_filename;
 	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	int result;
 	ConnectionInfo storageServer;
 	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
@@ -145,7 +146,7 @@ int main(int argc, char *argv[])
 		group_name, storageServer.ip_addr, \
 		storageServer.port);
 
-	if ((result=tracker_connect_server(&storageServer)) != 0)
+	if ((pStorageServer=tracker_connect_server(&storageServer, &result)) != 0)
 	{
 		fdfs_client_destroy();
 		return result;
@@ -174,7 +175,7 @@ int main(int argc, char *argv[])
 		{
 			file_size = stat_buf.st_size;
 			result = storage_upload_appender_by_filename1( \
-				pTrackerServer, &storageServer, \
+				pTrackerServer, pStorageServer, \
 				store_path_index, local_filename, \
 				file_ext_name, meta_list, meta_count, \
 				group_name, file_id);
@@ -193,7 +194,7 @@ int main(int argc, char *argv[])
 					&file_content, &file_size)) == 0)
 		{
 			result = storage_upload_appender_by_filebuff1( \
-					pTrackerServer, &storageServer, \
+					pTrackerServer, pStorageServer, \
 					store_path_index, file_content, \
 					file_size, file_ext_name, \
 					meta_list, meta_count, \
@@ -210,7 +211,7 @@ int main(int argc, char *argv[])
 		{
 			file_size = stat_buf.st_size;
 			result = storage_upload_appender_by_callback1( \
-					pTrackerServer, &storageServer, \
+					pTrackerServer, pStorageServer, \
 					store_path_index, uploadFileCallback, \
 					local_filename, file_size, \
 					file_ext_name, meta_list, meta_count, \
@@ -229,8 +230,8 @@ int main(int argc, char *argv[])
 		printf("upload file fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
-		fdfs_quit(&storageServer);
-		tracker_disconnect_server(&storageServer);
+		fdfs_quit(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, true);
 		fdfs_client_destroy();
 		return result;
 	}
@@ -267,14 +268,14 @@ int main(int argc, char *argv[])
 
 
 	strcpy(appender_file_id, file_id);
-	if (storage_truncate_file1(pTrackerServer, &storageServer, \
+	if (storage_truncate_file1(pTrackerServer, pStorageServer, \
 			appender_file_id, 0) != 0)
 	{
 		printf("truncate file fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
-		fdfs_quit(&storageServer);
-		tracker_disconnect_server(&storageServer);
+		fdfs_quit(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, true);
 		fdfs_client_destroy();
 		return result;
 	}
@@ -297,7 +298,7 @@ int main(int argc, char *argv[])
 	if (upload_type == FDFS_UPLOAD_BY_FILE)
 	{
 		result = storage_append_by_filename1(pTrackerServer, \
-				&storageServer, local_filename, 
+				pStorageServer, local_filename, 
 				appender_file_id);
 
 		printf("storage_append_by_filename\n");
@@ -309,7 +310,7 @@ int main(int argc, char *argv[])
 				&file_content, &file_size)) == 0)
 		{
 			result = storage_append_by_filebuff1(pTrackerServer, \
-				&storageServer, file_content, \
+				pStorageServer, file_content, \
 				file_size, appender_file_id);
 			free(file_content);
 		}
@@ -323,7 +324,7 @@ int main(int argc, char *argv[])
 		{
 			file_size = stat_buf.st_size;
 			result = storage_append_by_callback1(pTrackerServer, \
-					&storageServer, uploadFileCallback, \
+					pStorageServer, uploadFileCallback, \
 					local_filename, file_size, \
 					appender_file_id);
 		}
@@ -340,8 +341,8 @@ int main(int argc, char *argv[])
 		printf("append file fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
-		fdfs_quit(&storageServer);
-		tracker_disconnect_server(&storageServer);
+		fdfs_quit(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, true);
 		fdfs_client_destroy();
 		return result;
 	}
@@ -363,7 +364,7 @@ int main(int argc, char *argv[])
 	if (upload_type == FDFS_UPLOAD_BY_FILE)
 	{
 		result = storage_modify_by_filename1(pTrackerServer, \
-				&storageServer, local_filename, 
+				pStorageServer, local_filename, 
 				file_offset, appender_file_id);
 
 		printf("storage_modify_by_filename\n");
@@ -375,7 +376,7 @@ int main(int argc, char *argv[])
 				&file_content, &file_size)) == 0)
 		{
 			result = storage_modify_by_filebuff1( \
-				pTrackerServer, &storageServer, \
+				pTrackerServer, pStorageServer, \
 				file_content, file_offset, file_size, \
 				appender_file_id);
 			free(file_content);
@@ -390,7 +391,7 @@ int main(int argc, char *argv[])
 		{
 			file_size = stat_buf.st_size;
 			result = storage_modify_by_callback1( \
-					pTrackerServer, &storageServer, \
+					pTrackerServer, pStorageServer, \
 					uploadFileCallback, \
 					local_filename, file_offset, \
 					file_size, appender_file_id);
@@ -408,8 +409,8 @@ int main(int argc, char *argv[])
 		printf("modify file fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
-		fdfs_quit(&storageServer);
-		tracker_disconnect_server(&storageServer);
+		fdfs_quit(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, true);
 		fdfs_client_destroy();
 		return result;
 	}
@@ -427,12 +428,12 @@ int main(int argc, char *argv[])
 			2 * file_size);
 	}
 
-	fdfs_quit(&storageServer);
-	tracker_disconnect_server(&storageServer);
+	fdfs_quit(pStorageServer);
+	tracker_disconnect_server_ex(pStorageServer, true);
 
 	fdfs_quit(pTrackerServer);
+	tracker_disconnect_server_ex(pTrackerServer, true);
 
-	tracker_close_all_connections();
 	fdfs_client_destroy();
 
 	return result;

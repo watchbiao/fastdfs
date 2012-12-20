@@ -187,24 +187,6 @@ ConnectionInfo *tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 	return conn;
 }
 
-#define CHECK_CONNECTION(pTrackerServer, conn, result, new_connection) \
-	do { \
-		if (pTrackerServer->sock < 0) \
-		{ \
-			if ((conn=tracker_connect_server( \
-				pTrackerServer, &result)) != NULL) \
-			{ \
-				return result; \
-			} \
-			new_connection = true; \
-		} \
-		else \
-		{ \
-			conn = pTrackerServer;  \
-			new_connection = false; \
-		} \
-	} while (0)
-
 int tracker_list_servers(ConnectionInfo *pTrackerServer, \
 		const char *szGroupName, const char *szStorageId, \
 		FDFSStorageInfo *storage_infos, const int max_storages, \
