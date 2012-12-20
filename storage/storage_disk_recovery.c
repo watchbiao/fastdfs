@@ -116,6 +116,7 @@ static int recovery_get_src_storage_server(ConnectionInfo *pSrcStorage)
 	int result;
 	int storage_count;
 	ConnectionInfo trackerServer;
+	ConnectionInfo *pTrackerConn;
 	FDFSGroupStat groupStat;
 	FDFSStorageInfo storageStats[FDFS_MAX_SERVERS_EACH_GROUP];
 	FDFSStorageInfo *pStorageStat;
@@ -171,17 +172,18 @@ static int recovery_get_src_storage_server(ConnectionInfo *pSrcStorage)
 
 	while (g_continue_flag)
 	{
-		if ((result=tracker_get_connection_r(&trackerServer)) != 0)
+		if ((pTrackerConn=tracker_get_connection_r(&trackerServer, \
+				&result)) == NULL)
 		{
 			sleep(5);
 			continue;
 		}
 
-		result = tracker_list_one_group(&trackerServer, \
+		result = tracker_list_one_group(pTrackerConn, \
 				g_group_name, &groupStat);
 		if (result != 0)
 		{
-			close(trackerServer.sock);
+			tracker_disconnect_server_ex(pTrackerConn, true);
 			sleep(1);
 			continue;
 		}
@@ -192,7 +194,7 @@ static int recovery_get_src_storage_server(ConnectionInfo *pSrcStorage)
 				"storage server count: %d in the group <= 0!",\
 				__LINE__, groupStat.count);
 
-			close(trackerServer.sock);
+			tracker_disconnect_server(pTrackerConn);
 			sleep(1);
 			continue;
 		}
@@ -203,7 +205,7 @@ static int recovery_get_src_storage_server(ConnectionInfo *pSrcStorage)
 				"storage server count in the group = 1, " \
 				"does not need recovery", __LINE__);
 
-			close(trackerServer.sock);
+			tracker_disconnect_server(pTrackerConn);
 			return ENOENT;
 		}
 
@@ -215,21 +217,21 @@ static int recovery_get_src_storage_server(ConnectionInfo *pSrcStorage)
 				"does not need recovery", __LINE__, \
 				g_fdfs_path_count, groupStat.store_path_count);
 
-			close(trackerServer.sock);
+			tracker_disconnect_server(pTrackerConn);
 			return ENOENT;
 		}
 
 		if (groupStat.active_count <= 0)
 		{
-			close(trackerServer.sock);
+			tracker_disconnect_server(pTrackerConn);
 			sleep(5);
 			continue;
 		}
 
-		result = tracker_list_servers(&trackerServer, \
+		result = tracker_list_servers(pTrackerConn, \
                 		g_group_name, NULL, storageStats, \
 				FDFS_MAX_SERVERS_EACH_GROUP, &storage_count);
-		close(trackerServer.sock);
+		tracker_disconnect_server_ex(pTrackerConn, result != 0);
 		if (result != 0)
 		{
 			sleep(5);
@@ -498,6 +500,7 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 		ConnectionInfo *pSrcStorage)
 {
 	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageConn;
 	FDFSTrunkFullInfo trunk_info;
 	StorageBinLogRecord record;
 	int record_length;
@@ -525,7 +528,7 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 	bContinueFlag = true;
 	while (bContinueFlag)
 	{
-	if ((result=tracker_connect_server(pSrcStorage)) != 0)
+	if ((pStorageConn=tracker_connect_server(pSrcStorage, &result)) == NULL)
 	{
 		sleep(5);
 		continue;
@@ -583,7 +586,7 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 			}
 
 			result = storage_download_file_to_file(pTrackerServer, \
-					pSrcStorage, g_group_name, \
+					pStorageConn, g_group_name, \
 					record.filename, local_filename, \
 					&file_size);
 			if (result == 0)
@@ -685,7 +688,7 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 		}
 	}
 
-	tracker_disconnect_server(pSrcStorage);
+	tracker_disconnect_server_ex(pStorageConn, result != 0);
 	if (count > 0)
 	{
 		recovery_write_to_mark_file(pBasePath, pReader);
@@ -1024,6 +1027,7 @@ static int storage_disk_recovery_split_trunk_binlog(const int store_path_index)
 int storage_disk_recovery_start(const int store_path_index)
 {
 	ConnectionInfo srcStorage;
+	ConnectionInfo *pStorageConn;
 	int result;
 	char *pBasePath;
 
@@ -1064,13 +1068,13 @@ int storage_disk_recovery_start(const int store_path_index)
 		return EINTR;
 	}
 
-	if ((result=tracker_connect_server(&srcStorage)) != 0)
+	if ((pStorageConn=tracker_connect_server(&srcStorage, &result)) == NULL)
 	{
 		return result;
 	}
 
-	result = storage_do_fetch_binlog(&srcStorage, store_path_index);
-	tracker_disconnect_server(&srcStorage);
+	result = storage_do_fetch_binlog(pStorageConn, store_path_index);
+	tracker_disconnect_server_ex(pStorageConn, result != 0);
 	if (result != 0)
 	{
 		return result;

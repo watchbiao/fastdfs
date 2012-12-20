@@ -107,7 +107,7 @@ static int storage_get_connection(ConnectionInfo *pTrackerServer, \
 		}
 
 		if ((*ppStorageServer=tracker_connect_server(pNewStorage, \
-			&result)) != 0)
+			&result)) == NULL)
 		{
 			return result;
 		}
@@ -123,7 +123,7 @@ static int storage_get_connection(ConnectionInfo *pTrackerServer, \
 		else
 		{
 			if ((*ppStorageServer=tracker_connect_server( \
-				*ppStorageServer, &result)) != 0)
+				*ppStorageServer, &result)) == NULL)
 			{
 				return result;
 			}
@@ -180,7 +180,7 @@ static int storage_get_upload_connection(ConnectionInfo *pTrackerServer, \
 		}
 
 		if ((*ppStorageServer=tracker_connect_server(pNewStorage, \
-			&result)) != 0)
+			&result)) == NULL)
 		{
 			return result;
 		}
@@ -196,7 +196,7 @@ static int storage_get_upload_connection(ConnectionInfo *pTrackerServer, \
 		else
 		{
 			if ((*ppStorageServer=tracker_connect_server( \
-				*ppStorageServer, &result)) != 0)
+				*ppStorageServer, &result)) == NULL)
 			{
 				return result;
 			}

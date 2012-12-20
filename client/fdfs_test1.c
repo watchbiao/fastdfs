@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
 			storageServer.port);
 
 		if ((pStorageServer=tracker_connect_server(&storageServer, \
-			&result)) != 0)
+			&result)) == NULL)
 		{
 			fdfs_client_destroy();
 			return result;
@@ -463,7 +463,7 @@ int main(int argc, char *argv[])
 			storageServer.port);
 
 		if ((pStorageServer=tracker_connect_server(&storageServer, \
-			&result)) != 0)
+			&result)) == NULL)
 		{
 			fdfs_client_destroy();
 			return result;
