@@ -40,6 +40,25 @@ typedef struct
 } FDFSStorageInfo;
 
 
+#define CHECK_CONNECTION(pTrackerServer, conn, result, new_connection) \
+	do { \
+		if (pTrackerServer->sock < 0) \
+		{ \
+			if ((conn=tracker_connect_server( \
+				pTrackerServer, &result)) != NULL) \
+			{ \
+				return result; \
+			} \
+			new_connection = true; \
+		} \
+		else \
+		{ \
+			conn = pTrackerServer;  \
+			new_connection = false; \
+		} \
+	} while (0)
+
+
 #define tracker_get_connection() \
 	tracker_get_connection_ex((&g_tracker_group))
 

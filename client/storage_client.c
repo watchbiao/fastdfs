@@ -71,44 +71,47 @@ static int storage_get_connection(ConnectionInfo *pTrackerServer, \
 		ConnectionInfo *pNewStorage, bool *new_connection)
 {
 	int result;
+	bool new_tracker_connection;
+	ConnectionInfo *pNewTracker;
 	if (*ppStorageServer == NULL)
 	{
-		if (pTrackerServer->sock < 0)
-		{
-			if ((result=tracker_connect_server(pTrackerServer))!=0)
-			{
-				return result;
-			}
-		}
-
+		CHECK_CONNECTION(pTrackerServer, pNewTracker, result, \
+			new_tracker_connection);
 		if (cmd == TRACKER_PROTO_CMD_SERVICE_QUERY_FETCH_ONE)
 		{
-			result = tracker_query_storage_fetch(pTrackerServer, \
+			result = tracker_query_storage_fetch(pNewTracker, \
 		                pNewStorage, group_name, filename);
 		}
 		else
 		{
-			result = tracker_query_storage_update(pTrackerServer, \
+			result = tracker_query_storage_update(pNewTracker, \
 		                pNewStorage, group_name, filename);
+		}
+
+		if (new_tracker_connection)
+		{
+			tracker_disconnect_server_ex(pNewTracker, result != 0);
 		}
 
 		if (result != 0)
 		{
+			/*
 			if (result >= ENETDOWN) //network error
 			{
 				close(pTrackerServer->sock);
 				pTrackerServer->sock = -1;
 			}
+			*/
 
 			return result;
 		}
 
-		if ((result=tracker_connect_server(pNewStorage)) != 0)
+		if ((*ppStorageServer=tracker_connect_server(pNewStorage, \
+			&result)) != 0)
 		{
 			return result;
 		}
 
-		*ppStorageServer = pNewStorage;
 		*new_connection = true;
 	}
 	else
@@ -119,7 +122,8 @@ static int storage_get_connection(ConnectionInfo *pTrackerServer, \
 		}
 		else
 		{
-			if ((result=tracker_connect_server(*ppStorageServer)) != 0)
+			if ((*ppStorageServer=tracker_connect_server( \
+				*ppStorageServer, &result)) != 0)
 			{
 				return result;
 			}
@@ -137,46 +141,50 @@ static int storage_get_upload_connection(ConnectionInfo *pTrackerServer, \
 		bool *new_connection)
 {
 	int result;
+	bool new_tracker_connection;
+	ConnectionInfo *pNewTracker;
+
 	if (*ppStorageServer == NULL)
 	{
-		if (pTrackerServer->sock < 0)
-		{
-			if ((result=tracker_connect_server(pTrackerServer))!=0)
-			{
-				return result;
-			}
-		}
-
+		CHECK_CONNECTION(pTrackerServer, pNewTracker, result, \
+			new_tracker_connection);
 		if (*group_name == '\0')
 		{
 			result = tracker_query_storage_store_without_group( \
-				pTrackerServer, pNewStorage, group_name, \
+				pNewTracker, pNewStorage, group_name, \
 				store_path_index);
 		}
 		else
 		{
 			result = tracker_query_storage_store_with_group( \
-				pTrackerServer, group_name, pNewStorage, \
+				pNewTracker, group_name, pNewStorage, \
 				store_path_index);
+		}
+
+		if (new_connection)
+		{
+			tracker_disconnect_server_ex(pNewTracker, result != 0);
 		}
 
 		if (result != 0)
 		{
+			/*
 			if (result >= ENETDOWN) //network error
 			{
 				close(pTrackerServer->sock);
 				pTrackerServer->sock = -1;
 			}
+			*/
 
 			return result;
 		}
 
-		if ((result=tracker_connect_server(pNewStorage)) != 0)
+		if ((*ppStorageServer=tracker_connect_server(pNewStorage, \
+			&result)) != 0)
 		{
 			return result;
 		}
 
-		*ppStorageServer = pNewStorage;
 		*new_connection = true;
 	}
 	else
@@ -187,8 +195,8 @@ static int storage_get_upload_connection(ConnectionInfo *pTrackerServer, \
 		}
 		else
 		{
-			result = tracker_connect_server(*ppStorageServer);
-			if (result != 0)
+			if ((*ppStorageServer=tracker_connect_server( \
+				*ppStorageServer, &result)) != 0)
 			{
 				return result;
 			}
@@ -2262,17 +2270,18 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 	{ //slave file or appender file
 		if (get_from_server)
 		{
+			ConnectionInfo *conn;
 			ConnectionInfo trackerServer;
 
-			result = tracker_get_connection_r(&trackerServer);
+			conn = tracker_get_connection_r(&trackerServer, &result);
 			if (result != 0)
 			{
 				return result;
 			}
 
-			result = storage_query_file_info(&trackerServer, \
+			result = storage_query_file_info(conn, \
 				NULL,  group_name, remote_filename, pFileInfo);
-			tracker_disconnect_server(&trackerServer);
+			tracker_disconnect_server(conn);
 
 			return result;
 		}
