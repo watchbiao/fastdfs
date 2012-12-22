@@ -937,7 +937,7 @@ int tracker_query_storage_store_list_with_group( \
 	pHeader = (TrackerHeader *)out_buff;
 	memset(out_buff, 0, sizeof(out_buff));
 
-	if (group_name == NULL)
+	if (group_name == NULL || *group_name == '\0')
 	{
 	pHeader->cmd = TRACKER_PROTO_CMD_SERVICE_QUERY_STORE_WITHOUT_GROUP_ALL;
 	out_len = 0;

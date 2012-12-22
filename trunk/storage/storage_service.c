@@ -2193,12 +2193,10 @@ static int storage_client_create_link_wrapper(struct fast_task_info *pTask, \
 				file_ext_name, remote_filename, filename_len);
 		if (pStorageServer != NULL)
 		{
-			fdfs_quit(pStorageServer);
 			tracker_disconnect_server_ex(pStorageServer, result != 0);
 		}
 	}
 
-	fdfs_quit(pTracker);
 	tracker_disconnect_server(pTracker);
 
 	return result;
@@ -3311,6 +3309,11 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
+
+	logInfo("file: "__FILE__", line: %d, " \
+		"client ip:%s, total_length: %d", __LINE__, 
+		pTask->client_ip, (int)nInPackLen);
+
 	if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -3522,6 +3525,11 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	p += IP_ADDRESS_SIZE;
 
 	pClientInfo->total_length = p - pTask->data;
+
+	logInfo("file: "__FILE__", line: %d, " \
+		"client ip:%s, total_length: %d", __LINE__, 
+		pTask->client_ip, (int)pClientInfo->total_length);
+
 	return 0;
 }
 

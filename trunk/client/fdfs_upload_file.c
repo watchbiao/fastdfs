@@ -93,30 +93,20 @@ int main(int argc, char *argv[])
 			&storageServer, store_path_index, \
 			local_filename, NULL, \
 			NULL, 0, group_name, file_id);
-	if (result != 0)
+	if (result == 0)
+	{
+		printf("%s\n", file_id);
+	}
+	else
 	{
 		fprintf(stderr, "upload file fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
-
-		if (storageServer.sock >= 0)
-		{
-			fdfs_quit(&storageServer);
-		}
-		tracker_disconnect_server(&storageServer);
-
-		fdfs_quit(pTrackerServer);
-		tracker_close_all_connections();
-		fdfs_client_destroy();
-		return result;
 	}
 
-	printf("%s\n", file_id);
-
-	fdfs_quit(pTrackerServer);
-	tracker_close_all_connections();
+	tracker_disconnect_server_ex(pTrackerServer, true);
 	fdfs_client_destroy();
 
-	return 0;
+	return result;
 }
 

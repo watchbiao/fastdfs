@@ -29,9 +29,11 @@ static int downloadFileCallback(void *arg, const int64_t file_size, const char *
 int upload_file(const char *file_buff, const int file_size, char *file_id, char *storage_ip)
 {
 	int result;
-	ConnectionInfo *pTrackerServer;
-	ConnectionInfo storageServer;
 	int store_path_index;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
+	ConnectionInfo storageServer;
 
 	pTrackerServer = tracker_get_connection();
 	if (pTrackerServer == NULL)
@@ -39,17 +41,17 @@ int upload_file(const char *file_buff, const int file_size, char *file_id, char 
 		return errno != 0 ? errno : ECONNREFUSED;
 	}
 
+	*group_name = '\0';
 	if ((result=tracker_query_storage_store(pTrackerServer, &storageServer,
-			 &store_path_index)) != 0)
+			 group_name, &store_path_index)) != 0)
 	{
-		fdfs_quit(pTrackerServer);
-		tracker_disconnect_server(pTrackerServer);
+		tracker_disconnect_server_ex(pTrackerServer, true);
 		return result;
 	}
 
-	if ((result=tracker_connect_server(&storageServer)) != 0)
+	if ((pStorageServer=tracker_connect_server(&storageServer, &result)) \
+			 == NULL)
 	{
-		fdfs_quit(pTrackerServer);
 		tracker_disconnect_server(pTrackerServer);
 		return result;
 	}
@@ -58,11 +60,8 @@ int upload_file(const char *file_buff, const int file_size, char *file_id, char 
 	result = storage_upload_by_filebuff1(pTrackerServer, &storageServer, 
 		store_path_index, file_buff, file_size, NULL, NULL, 0, "", file_id);
 
-	fdfs_quit(pTrackerServer);
 	tracker_disconnect_server(pTrackerServer);
-
-	fdfs_quit(&storageServer);
-	tracker_disconnect_server(&storageServer);
+	tracker_disconnect_server(pStorageServer);
 
 	return result;
 }
@@ -71,6 +70,7 @@ int download_file(const char *file_id, int *file_size, char *storage_ip)
 {
 	int result;
 	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	ConnectionInfo storageServer;
 	int64_t file_bytes;
 
@@ -82,14 +82,13 @@ int download_file(const char *file_id, int *file_size, char *storage_ip)
 
 	if ((result=tracker_query_storage_fetch1(pTrackerServer, &storageServer, file_id)) != 0)
 	{
-		fdfs_quit(pTrackerServer);
-		tracker_disconnect_server(pTrackerServer);
+		tracker_disconnect_server_ex(pTrackerServer, true);
 		return result;
 	}
 
-	if ((result=tracker_connect_server(&storageServer)) != 0)
+	if ((pStorageServer=tracker_connect_server(&storageServer, &result)) \
+			 == NULL)
 	{
-		fdfs_quit(pTrackerServer);
 		tracker_disconnect_server(pTrackerServer);
 		return result;
 	}
@@ -98,11 +97,8 @@ int download_file(const char *file_id, int *file_size, char *storage_ip)
 	result = storage_download_file_ex1(pTrackerServer, &storageServer, file_id, 0, 0, downloadFileCallback, NULL, &file_bytes);
 	*file_size = file_bytes;
 
-	fdfs_quit(pTrackerServer);
 	tracker_disconnect_server(pTrackerServer);
-
-	fdfs_quit(&storageServer);
-	tracker_disconnect_server(&storageServer);
+	tracker_disconnect_server(pStorageServer);
 
 	return result;
 }
@@ -111,6 +107,7 @@ int delete_file(const char *file_id, char *storage_ip)
 {
 	int result;
 	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer;
 	ConnectionInfo storageServer;
 
 	pTrackerServer = tracker_get_connection();
@@ -119,16 +116,16 @@ int delete_file(const char *file_id, char *storage_ip)
 		return errno != 0 ? errno : ECONNREFUSED;
 	}
 
-	if ((result=tracker_query_storage_update1(pTrackerServer, &storageServer, file_id)) != 0)
+	if ((result=tracker_query_storage_update1(pTrackerServer, \
+		&storageServer, file_id)) != 0)
 	{
-		fdfs_quit(pTrackerServer);
-		tracker_disconnect_server(pTrackerServer);
+		tracker_disconnect_server_ex(pTrackerServer, true);
 		return result;
 	}
 
-	if ((result=tracker_connect_server(&storageServer)) != 0)
+	if ((pStorageServer=tracker_connect_server(&storageServer, &result)) \
+			 == NULL)
 	{
-		fdfs_quit(pTrackerServer);
 		tracker_disconnect_server(pTrackerServer);
 		return result;
 	}
@@ -136,11 +133,8 @@ int delete_file(const char *file_id, char *storage_ip)
 	strcpy(storage_ip, storageServer.ip_addr);
 	result = storage_delete_file1(pTrackerServer, &storageServer, file_id);
 
-	fdfs_quit(pTrackerServer);
 	tracker_disconnect_server(pTrackerServer);
-
-	fdfs_quit(&storageServer);
-	tracker_disconnect_server(&storageServer);
+	tracker_disconnect_server(pStorageServer);
 
 	return result;
 }

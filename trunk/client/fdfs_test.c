@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 		meta_count++;
 
 		file_ext_name = fdfs_get_file_ext_name(local_filename);
-		strcpy(group_name, "");
+		*group_name = '\0';
 
 		if (upload_type == FDFS_UPLOAD_BY_FILE)
 		{
@@ -269,7 +269,6 @@ int main(int argc, char *argv[])
 			printf("upload file fail, " \
 				"error no: %d, error info: %s\n", \
 				result, STRERROR(result));
-			fdfs_quit(pStorageServer);
 			tracker_disconnect_server_ex(pStorageServer, true);
 			fdfs_client_destroy();
 			return result;
@@ -362,7 +361,6 @@ int main(int argc, char *argv[])
 			printf("upload slave file fail, " \
 				"error no: %d, error info: %s\n", \
 				result, STRERROR(result));
-			fdfs_quit(pStorageServer);
 			tracker_disconnect_server_ex(pStorageServer, true);
 			fdfs_client_destroy();
 			return result;
@@ -393,6 +391,7 @@ int main(int argc, char *argv[])
 			group_name, remote_filename);
 
 		fdfs_get_file_info(group_name, remote_filename, &file_info);
+
 		printf("source ip address: %s\n", file_info.source_ip_addr);
 		printf("file timestamp=%s\n", formatDatetime(
 			file_info.create_timestamp, "%Y-%m-%d %H:%M:%S", \
@@ -468,7 +467,7 @@ int main(int argc, char *argv[])
 				printf("\n");
 			}
 
-			fdfs_quit(pTrackerServer);
+			tracker_disconnect_server(pTrackerServer);
 			fdfs_client_destroy();
 			return result;
 		}
@@ -682,10 +681,7 @@ int main(int argc, char *argv[])
 			pStorageServer->ip_addr, pStorageServer->port, result);
 	}
 
-	fdfs_quit(pStorageServer);
 	tracker_disconnect_server_ex(pStorageServer, true);
-
-	fdfs_quit(pTrackerServer);
 	tracker_disconnect_server_ex(pTrackerServer, true);
 
 	fdfs_client_destroy();
