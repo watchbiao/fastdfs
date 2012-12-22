@@ -190,6 +190,7 @@ ConnectionInfo *conn_pool_get_connection(ConnectionPool *cp,
 			node->conn = (ConnectionInfo *)p;
 			node->manager = cm;
 			node->next = NULL;
+			node->atime = 0;
 
 			cm->total_count++;
 			pthread_mutex_unlock(&cm->lock);
@@ -205,9 +206,11 @@ ConnectionInfo *conn_pool_get_connection(ConnectionPool *cp,
 			}
 
 			logDebug("file: "__FILE__", line: %d, " \
-				"server %s:%d, total_count: %d, free_count: %d", 
-				__LINE__, conn->ip_addr, conn->port, 
-				cm->total_count, cm->free_count);
+				"server %s:%d, new connection: %d, " \
+				"total_count: %d, free_count: %d",   \
+				__LINE__, conn->ip_addr, conn->port, \
+				node->conn->sock, cm->total_count, \
+				cm->free_count);
 			return node->conn;
 		}
 		else
@@ -222,9 +225,14 @@ ConnectionInfo *conn_pool_get_connection(ConnectionPool *cp,
 				cm->total_count--;
 
 				logDebug("file: "__FILE__", line: %d, " \
-					"server %s:%d, total_count: %d, free_count: %d", 
-					__LINE__, conn->ip_addr, conn->port, 
-					cm->total_count, cm->free_count);
+					"server %s:%d, connection: %d idle " \
+					"time: %d exceeds max idle time: %d, "\
+					"total_count: %d, free_count: %d", \
+					__LINE__, conn->ip_addr, conn->port, \
+					ci->sock, \
+					(int)(current_time - node->atime), \
+					cp->max_idle_time, cm->total_count, \
+					cm->free_count);
 
 				conn_pool_disconnect_server(ci);
 				free(ci);
@@ -233,9 +241,10 @@ ConnectionInfo *conn_pool_get_connection(ConnectionPool *cp,
 
 			pthread_mutex_unlock(&cm->lock);
 			logDebug("file: "__FILE__", line: %d, " \
-				"server %s:%d, total_count: %d, free_count: %d", 
+				"server %s:%d, reuse connection: %d, " \
+				"total_count: %d, free_count: %d", 
 				__LINE__, conn->ip_addr, conn->port, 
-				cm->total_count, cm->free_count);
+				ci->sock, cm->total_count, cm->free_count);
 			return ci;
 		}
 	}
@@ -282,9 +291,10 @@ int conn_pool_close_connection_ex(ConnectionPool *cp, ConnectionInfo *conn,
 		cm->total_count--;
 
 		logDebug("file: "__FILE__", line: %d, " \
-			"server %s:%d, total_count: %d, free_count: %d", 
+			"server %s:%d, release connection: %d, " \
+			"total_count: %d, free_count: %d", 
 			__LINE__, conn->ip_addr, conn->port, 
-			cm->total_count, cm->free_count);
+			conn->sock, cm->total_count, cm->free_count);
 
 		conn_pool_disconnect_server(conn);
 		free(conn);
@@ -292,15 +302,15 @@ int conn_pool_close_connection_ex(ConnectionPool *cp, ConnectionInfo *conn,
 	else
 	{
 		node->atime = time(NULL);
-		cm->free_count++;
 		node->next = cm->head;
 		cm->head = node;
+		cm->free_count++;
 
 		logDebug("file: "__FILE__", line: %d, " \
-			"server %s:%d, total_count: %d, free_count: %d", 
+			"server %s:%d, free connection: %d, " \
+			"total_count: %d, free_count: %d", 
 			__LINE__, conn->ip_addr, conn->port, 
-			cm->total_count, cm->free_count);
-			
+			conn->sock, cm->total_count, cm->free_count);
 	}
 	pthread_mutex_unlock(&cm->lock);
 

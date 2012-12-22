@@ -233,7 +233,6 @@ int main(int argc, char *argv[])
 		printf("upload file fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server_ex(pStorageServer, true);
 		fdfs_client_destroy();
 		return result;
@@ -279,7 +278,6 @@ int main(int argc, char *argv[])
 		printf("truncate file fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server_ex(pStorageServer, true);
 		fdfs_client_destroy();
 		return result;
@@ -346,7 +344,6 @@ int main(int argc, char *argv[])
 		printf("append file fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server_ex(pStorageServer, true);
 		fdfs_client_destroy();
 		return result;
@@ -414,7 +411,6 @@ int main(int argc, char *argv[])
 		printf("modify file fail, " \
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server_ex(pStorageServer, true);
 		fdfs_client_destroy();
 		return result;
@@ -433,10 +429,7 @@ int main(int argc, char *argv[])
 			2 * file_size + file_size /2);
 	}
 
-	fdfs_quit(pStorageServer);
 	tracker_disconnect_server_ex(pStorageServer, true);
-
-	fdfs_quit(pTrackerServer);
 	tracker_disconnect_server_ex(pTrackerServer, true);
 
 	fdfs_client_destroy();

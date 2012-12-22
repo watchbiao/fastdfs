@@ -170,10 +170,6 @@ int main(int argc, char *argv[])
 		{
 			result = list_all_groups(group_name);
 		}
-
-		if (fdfs_quit(pTrackerServer) != 0)
-		{
-		}
 	}
 	else if (strcmp(op_type, "delete") == 0)
 	{
@@ -240,7 +236,7 @@ int main(int argc, char *argv[])
 		usage(argv);
 	}
 
-	tracker_close_all_connections();
+	tracker_disconnect_server_ex(pTrackerServer, true);
 	fdfs_client_destroy();
 	return 0;
 }

@@ -177,7 +177,7 @@ int tracker_query_storage_store_without_group(ConnectionInfo *pTrackerServer,
 		pTrackerServer, storageServers, nMaxServerCount, \
 		storage_count, group_name, store_path_index) \
 	tracker_query_storage_store_list_with_group( \
-		pTrackerServer, group_name, storageServers, nMaxServerCount, \
+		pTrackerServer, NULL, storageServers, nMaxServerCount, \
 		storage_count, store_path_index)
 
 /**

@@ -27,7 +27,8 @@ static ConnectionInfo *getConnectedStorageServer(
 		{
 			if (pServer->sock < 0)
 			{
-				*err_no = tracker_connect_server(pServer);
+				*err_no = conn_pool_connect_server(pServer, \
+					g_fdfs_connect_timeout);
 				if (*err_no != 0)
 				{
 					return NULL;
@@ -45,7 +46,8 @@ static ConnectionInfo *getConnectedStorageServer(
 	pServer = pEnd;
 	memcpy(pServer, pStorageServer, sizeof(ConnectionInfo));
 	pServer->sock = -1;
-	if ((*err_no=tracker_connect_server(pServer)) != 0)
+	if ((*err_no=conn_pool_connect_server(pServer, \
+		g_fdfs_connect_timeout)) != 0)
 	{
 		return NULL;
 	}
@@ -78,13 +80,12 @@ void dfs_destroy()
 	ConnectionInfo *pEnd;
 	ConnectionInfo *pServer;
 
-	fdfs_quit(pTrackerServer);
 	tracker_disconnect_server(pTrackerServer);
 
 	pEnd = storage_servers + storage_server_count;
 	for (pServer=storage_servers; pServer<pEnd; pServer++)
 	{
-		tracker_disconnect_server(pServer);
+		conn_pool_disconnect_server(pServer);
 	}
 
 	fdfs_client_destroy();
@@ -100,12 +101,14 @@ int upload_file(const char *file_buff, const int file_size, char *file_id,
 		char *storage_ip)
 {
 	int result;
+	int store_path_index;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	ConnectionInfo storageServer;
 	ConnectionInfo *pStorageServer;
-	int store_path_index;
 
+	*group_name = '\0';
 	if ((result=tracker_query_storage_store(pTrackerServer, &storageServer,
-			 &store_path_index)) != 0)
+			 group_name, &store_path_index)) != 0)
 	{
 		return result;
 	}

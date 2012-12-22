@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -73,22 +72,14 @@ int main(int argc, char *argv[])
 			"error no: %d, error info: %s\n", \
 			result, STRERROR(result));
 
-		if (storageServer.sock >= 0)
-		{
-			fdfs_quit(&storageServer);
-		}
-		tracker_disconnect_server(&storageServer);
-
-		fdfs_quit(pTrackerServer);
-		tracker_close_all_connections();
+		tracker_disconnect_server_ex(pTrackerServer, true);
 		fdfs_client_destroy();
 		return result;
 	}
 
 	printf("%s\n", file_id);
 
-	fdfs_quit(pTrackerServer);
-	tracker_close_all_connections();
+	tracker_disconnect_server_ex(pTrackerServer, true);
 	fdfs_client_destroy();
 
 	return 0;

@@ -206,11 +206,39 @@ int fdfs_load_tracker_group(TrackerServerGroup *pTrackerGroup, \
 	return result;
 }
 
+static int fdfs_get_params_from_tracker(bool *use_storage_id)
+{
+        IniContext iniContext;
+	int result;
+	bool continue_flag;
+
+	continue_flag = false;
+	if ((result=fdfs_get_ini_context_from_tracker(&g_tracker_group, \
+		&iniContext, &continue_flag, false, NULL)) != 0)
+        {
+                return result;
+        }
+
+	*use_storage_id = iniGetBoolValue(NULL, "use_storage_id", \
+				&iniContext, false);
+        iniFreeContext(&iniContext);
+
+	if (*use_storage_id)
+	{
+		result = fdfs_get_storage_ids_from_tracker_group( \
+				&g_tracker_group);
+	}
+
+        return result;
+}
+
 static int fdfs_client_do_init_ex(TrackerServerGroup *pTrackerGroup, \
 		const char *conf_filename, IniContext *iniContext)
 {
 	char *pBasePath;
 	int result;
+	bool use_storage_id;
+	bool load_fdfs_parameters_from_tracker;
 
 	pBasePath = iniGetStrValue(NULL, "base_path", iniContext);
 	if (pBasePath == NULL)
@@ -293,6 +321,24 @@ static int fdfs_client_do_init_ex(TrackerServerGroup *pTrackerGroup, \
 		return result;
 	}
 
+	load_fdfs_parameters_from_tracker = iniGetBoolValue(NULL, \
+				"load_fdfs_parameters_from_tracker", \
+				iniContext, false);
+	if (load_fdfs_parameters_from_tracker)
+	{
+		fdfs_get_params_from_tracker(&use_storage_id);
+	}
+	else
+	{
+		use_storage_id = iniGetBoolValue(NULL, "use_storage_id", \
+				iniContext, false);
+		if (use_storage_id)
+		{
+			result = fdfs_load_storage_ids_from_file( \
+					conf_filename, iniContext);
+		}
+	}
+
 #ifdef DEBUG_FLAG
 	logDebug("base_path=%s, " \
 		"connect_timeout=%d, "\
@@ -301,11 +347,13 @@ static int fdfs_client_do_init_ex(TrackerServerGroup *pTrackerGroup, \
 		"anti_steal_token=%d, " \
 		"anti_steal_secret_key length=%d, " \
 		"use_connection_pool=%d, " \
-		"g_connection_pool_max_idle_time=%ds\n", \
+		"g_connection_pool_max_idle_time=%ds, " \
+		"use_storage_id=%d, storage server id count: %d\n", \
 		g_fdfs_base_path, g_fdfs_connect_timeout, \
 		g_fdfs_network_timeout, pTrackerGroup->server_count, \
 		g_anti_steal_token, g_anti_steal_secret_key.length, \
-		g_use_connection_pool, g_connection_pool_max_idle_time);
+		g_use_connection_pool, g_connection_pool_max_idle_time, \
+		use_storage_id, g_storage_id_count);
 #endif
 
 	return 0;

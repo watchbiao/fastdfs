@@ -95,14 +95,6 @@ static int storage_get_connection(ConnectionInfo *pTrackerServer, \
 
 		if (result != 0)
 		{
-			/*
-			if (result >= ENETDOWN) //network error
-			{
-				close(pTrackerServer->sock);
-				pTrackerServer->sock = -1;
-			}
-			*/
-
 			return result;
 		}
 
@@ -168,14 +160,6 @@ static int storage_get_upload_connection(ConnectionInfo *pTrackerServer, \
 
 		if (result != 0)
 		{
-			/*
-			if (result >= ENETDOWN) //network error
-			{
-				close(pTrackerServer->sock);
-				pTrackerServer->sock = -1;
-			}
-			*/
-
 			return result;
 		}
 
@@ -302,16 +286,7 @@ int storage_get_metadata(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
-	}
-	else
-	{
-		if (result >= ENETDOWN) //network error
-		{
-			close(pStorageServer->sock);
-			pStorageServer->sock = -1;
-		}
 	}
 
 	return result;
@@ -430,16 +405,7 @@ int storage_query_file_info_ex(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
-	}
-	else
-	{
-		if (result >= ENETDOWN) //network error
-		{
-			close(pStorageServer->sock);
-			pStorageServer->sock = -1;
-		}
 	}
 
 	return result;
@@ -531,16 +497,7 @@ int storage_delete_file(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
-	}
-	else
-	{
-		if (result >= ENETDOWN) //network error
-		{
-			close(pStorageServer->sock);
-			pStorageServer->sock = -1;
-		}
 	}
 
 	return result;
@@ -709,16 +666,7 @@ int storage_do_download_file_ex(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
-	}
-	else
-	{
-		if (result >= ENETDOWN) //network error
-		{
-			close(pStorageServer->sock);
-			pStorageServer->sock = -1;
-		}
 	}
 
 	return result;
@@ -1052,12 +1000,12 @@ int storage_do_upload_file(ConnectionInfo *pTrackerServer, \
 	if (result == 0 && meta_count > 0)
 	{
 		result = storage_set_metadata(pTrackerServer, \
-			NULL, group_name, remote_filename, \
+			pStorageServer, group_name, remote_filename, \
 			meta_list, meta_count, \
 			STORAGE_SET_METADATA_FLAG_OVERWRITE);
 		if (result != 0)  //rollback
 		{
-			storage_delete_file(pTrackerServer, NULL, \
+			storage_delete_file(pTrackerServer, pStorageServer, \
 				group_name, remote_filename);
 			*group_name = '\0';
 			*remote_filename = '\0';
@@ -1066,16 +1014,7 @@ int storage_do_upload_file(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
-	}
-	else
-	{
-		if (result >= ENETDOWN) //network error
-		{
-			close(pStorageServer->sock);
-			pStorageServer->sock = -1;
-		}
 	}
 
 	return result;
@@ -1299,16 +1238,7 @@ int storage_set_metadata(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
-	}
-	else
-	{
-		if (result >= ENETDOWN) //network error
-		{
-			close(pStorageServer->sock);
-			pStorageServer->sock = -1;
-		}
 	}
 
 	return result;
@@ -1520,16 +1450,7 @@ int storage_client_create_link(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
-	}
-	else
-	{
-		if (result >= ENETDOWN) //network error
-		{
-			close(pStorageServer->sock);
-			pStorageServer->sock = -1;
-		}
 	}
 
 	return result;
@@ -1847,16 +1768,7 @@ int storage_do_append_file(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
-	}
-	else
-	{
-		if (result >= ENETDOWN) //network error
-		{
-			close(pStorageServer->sock);
-			pStorageServer->sock = -1;
-		}
 	}
 
 	return result;
@@ -1984,16 +1896,7 @@ int storage_do_modify_file(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
-	}
-	else
-	{
-		if (result >= ENETDOWN) //network error
-		{
-			close(pStorageServer->sock);
-			pStorageServer->sock = -1;
-		}
 	}
 
 	return result;
@@ -2402,16 +2305,7 @@ int storage_truncate_file(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		fdfs_quit(pStorageServer);
 		tracker_disconnect_server(pStorageServer);
-	}
-	else
-	{
-		if (result >= ENETDOWN) //network error
-		{
-			close(pStorageServer->sock);
-			pStorageServer->sock = -1;
-		}
 	}
 
 	return result;
