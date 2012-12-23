@@ -317,3 +317,29 @@ int conn_pool_close_connection_ex(ConnectionPool *cp, ConnectionInfo *conn,
 	return 0;
 }
 
+static int _conn_count_walk(const int index, const HashData *data, void *args)
+{
+	int *count;
+	ConnectionManager *cm;
+	ConnectionNode *node;
+
+	count = (int *)args;
+	cm = (ConnectionManager *)data->value;
+	node = cm->head;
+	while (node != NULL)
+	{
+		(*count)++;
+		node = node->next;
+	}
+
+	return 0;
+}
+
+int conn_pool_get_connection_count(ConnectionPool *cp)
+{
+	int count;
+	count = 0;
+	hash_walk(&cp->hash_array, _conn_count_walk, &count);
+	return count;
+}
+

@@ -3309,11 +3309,6 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	pClientInfo = (StorageClientInfo *)pTask->arg;
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 	pClientInfo->total_length = sizeof(TrackerHeader);
-
-	logInfo("file: "__FILE__", line: %d, " \
-		"client ip:%s, total_length: %d", __LINE__, 
-		pTask->client_ip, (int)nInPackLen);
-
 	if (nInPackLen <= FDFS_GROUP_NAME_MAX_LEN)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -3525,11 +3520,6 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	p += IP_ADDRESS_SIZE;
 
 	pClientInfo->total_length = p - pTask->data;
-
-	logInfo("file: "__FILE__", line: %d, " \
-		"client ip:%s, total_length: %d", __LINE__, 
-		pTask->client_ip, (int)pClientInfo->total_length);
-
 	return 0;
 }
 
