@@ -76,6 +76,8 @@ void conn_pool_disconnect_server(ConnectionInfo *pConnection);
 int conn_pool_connect_server(ConnectionInfo *pConnection, \
 		const int connect_timeout);
 
+int conn_pool_get_connection_count(ConnectionPool *cp);
+
 #ifdef __cplusplus
 }
 #endif
