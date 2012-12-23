@@ -1300,6 +1300,24 @@ void load_log_level(IniContext *pIniContext)
 	set_log_level(iniGetStrValue(NULL, "log_level", pIniContext));
 }
 
+int load_log_level_ex(const char *conf_filename)
+{
+	int result;
+	IniContext iniContext;
+
+	if ((result=iniLoadFromFile(conf_filename, &iniContext)) != 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"load conf file \"%s\" fail, ret code: %d", \
+			__LINE__, conf_filename, result);
+		return result;
+	}
+
+	load_log_level(&iniContext);
+	iniFreeContext(&iniContext);
+	return 0;
+}
+
 void set_log_level(char *pLogLevel)
 {
 	if (pLogLevel != NULL)

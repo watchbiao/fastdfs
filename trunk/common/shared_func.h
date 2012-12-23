@@ -318,6 +318,13 @@ bool is_filename_secure(const char *filename, const int len);
 */
 void load_log_level(IniContext *pIniContext);
 
+/** load log_level from config file
+ *  parameters:
+ *  	conf_filename: the config filename
+ *  return: none
+*/
+int load_log_level_ex(const char *conf_filename);
+
 /** set global log level
  *  parameters:
  *  	pLogLevel: log level string value
