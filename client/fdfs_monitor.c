@@ -98,6 +98,7 @@ int main(int argc, char *argv[])
 	{
 		return result;
 	}
+	load_log_level_ex(conf_filename);
 
 	if (tracker_server == NULL)
 	{
