@@ -76,65 +76,85 @@ static void iniSortItems(IniContext *pContext)
 int iniLoadFromFile(const char *szFilename, IniContext *pContext)
 {
 	int result;
+	int len;
 	char *pLast;
 	char full_filename[PATH_MAX];
-	char old_cwd[PATH_MAX];
-
-	memset(old_cwd, 0, sizeof(old_cwd));
-	if (strncasecmp(szFilename, "http://", 7) != 0)
-	{
-		pLast = strrchr(szFilename, '/');
-		if (pLast != NULL)
-		{
-			char path[256];
-			int len;
-
-			if (getcwd(old_cwd, sizeof(old_cwd)) == NULL)
-			{
-				logWarning("file: "__FILE__", line: %d, " \
-					"getcwd fail, errno: %d, " \
-					"error info: %s", \
-					__LINE__, errno, STRERROR(errno));
-				*old_cwd = '\0';
-			}
-
-			len = pLast - szFilename;
-
-			if (len > 0)
-			{
-				if (len >= sizeof(path))
-				{
-					len = sizeof(path) - 1;
-				}
-				memcpy(path, szFilename, len);
-				*(path + len) = '\0';
-				if (chdir(path) != 0)
-				{
-					logError("file: "__FILE__", line: %d, "\
-						"chdir to the path of conf " \
-						"file: %s fail, errno: %d, " \
-						"error info: %s", \
-						__LINE__, szFilename, \
-						errno, STRERROR(errno));
-					return errno != 0 ? errno : ENOENT;
-				}
-			}
-		}
-	}
-
-	if (*szFilename != '/' && *old_cwd != '\0')
-	{
-		snprintf(full_filename, sizeof(full_filename), "%s/%s", \
-			old_cwd, szFilename);
-	}
-	else
-	{
-		snprintf(full_filename, sizeof(full_filename),"%s",szFilename);
-	}
 
 	if ((result=iniInitContext(pContext)) != 0)
 	{
 		return result;
+	}
+
+	if (strncasecmp(szFilename, "http://", 7) == 0)
+	{
+		*pContext->config_path = '\0';
+		snprintf(full_filename, sizeof(full_filename),"%s",szFilename);
+	}
+	else
+	{
+		if (*szFilename == '/')
+		{
+			pLast = strrchr(szFilename, '/');
+			len = pLast - szFilename;
+			if (len >= sizeof(pContext->config_path))
+			{
+				logError("file: "__FILE__", line: %d, "\
+					"the path of the config file: %s is " \
+					"too long!", __LINE__, szFilename);
+				return ENOSPC;
+			}
+
+			memcpy(pContext->config_path, szFilename, len);
+			*(pContext->config_path + len) = '\0';
+			snprintf(full_filename, sizeof(full_filename), \
+				"%s", szFilename);
+		}
+		else
+		{
+			memset(pContext->config_path, 0, \
+				sizeof(pContext->config_path));
+			if (getcwd(pContext->config_path, sizeof( \
+				pContext->config_path)) == NULL)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"getcwd fail, errno: %d, " \
+					"error info: %s", \
+					__LINE__, errno, STRERROR(errno));
+				return errno != 0 ? errno : EPERM;
+			}
+
+			len = strlen(pContext->config_path);
+			if (len > 0 && pContext->config_path[len - 1] == '/')
+			{
+				len--;
+				*(pContext->config_path + len) = '\0';
+			}
+
+			snprintf(full_filename, sizeof(full_filename), \
+				"%s/%s", pContext->config_path, szFilename);
+
+			pLast = strrchr(szFilename, '/');
+			if (pLast != NULL)
+			{
+				int tail_len;
+
+				tail_len = pLast - szFilename;
+				if (len + tail_len >= sizeof( \
+						pContext->config_path))
+				{
+					logError("file: "__FILE__", line: %d, "\
+						"the path of the config " \
+						"file: %s is too long!", \
+						__LINE__, szFilename);
+					return ENOSPC;
+				}
+
+				memcpy(pContext->config_path + len, \
+					szFilename, tail_len);
+				len += tail_len;
+				*(pContext->config_path + len) = '\0';
+			}
+		}
 	}
 
 	result = iniDoLoadFromFile(full_filename, pContext);
@@ -145,15 +165,6 @@ int iniLoadFromFile(const char *szFilename, IniContext *pContext)
 	else
 	{
 		iniFreeContext(pContext);
-	}
-
-	if (*old_cwd != '\0' && chdir(old_cwd) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"chdir to old path: %s fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, old_cwd, errno, STRERROR(errno));
-		return errno != 0 ? errno : ENOENT;
 	}
 
 	return result;
@@ -235,6 +246,7 @@ static int iniDoLoadItemsFromBuffer(char *content, IniContext *pContext)
 	char *pLastEnd;
 	char *pEqualChar;
 	char *pIncludeFilename;
+	char full_filename[PATH_MAX];
 	int nLineLen;
 	int nNameLen;
 	int nValueLen;
@@ -276,9 +288,27 @@ static int iniDoLoadItemsFromBuffer(char *content, IniContext *pContext)
 			}
 
 			trim(pIncludeFilename);
-			if (strncasecmp(pIncludeFilename, "http://", 7) != 0 \
-				&& !fileExists(pIncludeFilename))
+			if (strncasecmp(pIncludeFilename, "http://", 7) == 0)
 			{
+				snprintf(full_filename, sizeof(full_filename),\
+					"%s", pIncludeFilename);
+			}
+			else
+			{
+				if (*pIncludeFilename == '/')
+				{
+				snprintf(full_filename, sizeof(full_filename), \
+					"%s", pIncludeFilename);
+				}
+				else
+				{
+				snprintf(full_filename, sizeof(full_filename), \
+					"%s/%s", pContext->config_path, \
+					 pIncludeFilename);
+				}
+
+				if (!fileExists(full_filename))
+				{
 				logError("file: "__FILE__", line: %d, " \
 					"include file \"%s\" not exists, " \
 					"line: \"%s\"", __LINE__, \
@@ -286,10 +316,10 @@ static int iniDoLoadItemsFromBuffer(char *content, IniContext *pContext)
 				free(pIncludeFilename);
 				result = ENOENT;
 				break;
+				}
 			}
 
-			result = iniDoLoadFromFile(pIncludeFilename, \
-					pContext);
+			result = iniDoLoadFromFile(full_filename, pContext);
 			if (result != 0)
 			{
 				free(pIncludeFilename);

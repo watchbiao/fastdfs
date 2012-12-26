@@ -34,11 +34,133 @@ void trunk_shared_init()
 	base64_init_ex(&g_fdfs_base64_context, 0, '-', '_', '.');
 }
 
-int storage_load_paths_from_conf_file(IniContext *pItemContext)
+char **storage_load_paths_from_conf_file_ex(IniContext *pItemContext, \
+	const char *szSectionName, const bool bUseBasePath, \
+	int *path_count, int *err_no)
 {
 	char item_name[64];
+	char **store_paths;
 	char *pPath;
 	int i;
+
+	*path_count = iniGetIntValue(szSectionName, "store_path_count", 
+					pItemContext, 1);
+	if (*path_count <= 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"store_path_count: %d is invalid!", \
+			__LINE__, *path_count);
+		*err_no = EINVAL;
+		return NULL;
+	}
+
+	store_paths = (char **)malloc(sizeof(char *) * (*path_count));
+	if (store_paths == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, (int)sizeof(char *) * (*path_count), \
+			errno, STRERROR(errno));
+		*err_no = errno != 0 ? errno : ENOMEM;
+		return NULL;
+	}
+	memset(store_paths, 0, sizeof(char *) * (*path_count));
+
+	pPath = iniGetStrValue(szSectionName, "store_path0", pItemContext);
+	if (pPath == NULL)
+	{
+		if (!bUseBasePath)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"conf file must have item " \
+				"\"store_path0\"!", __LINE__);
+			*err_no = ENOENT;
+			free(store_paths);
+			return NULL;
+		}
+
+		pPath = g_fdfs_base_path;
+	}
+	store_paths[0] = strdup(pPath);
+	if (store_paths[0] == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"malloc %d bytes fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, (int)strlen(pPath), \
+			errno, STRERROR(errno));
+		*err_no = errno != 0 ? errno : ENOMEM;
+		free(store_paths);
+		return NULL;
+	}
+
+	*err_no = 0;
+	for (i=1; i<*path_count; i++)
+	{
+		sprintf(item_name, "store_path%d", i);
+		pPath = iniGetStrValue(szSectionName, item_name, \
+				pItemContext);
+		if (pPath == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"conf file must have item \"%s\"!", \
+				__LINE__, item_name);
+			*err_no = ENOENT;
+			break;
+		}
+
+		chopPath(pPath);
+		if (!fileExists(pPath))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"\"%s\" can't be accessed, " \
+				"errno: %d, error info: %s", \
+				__LINE__, errno, STRERROR(errno), pPath);
+			*err_no = errno != 0 ? errno : ENOENT;
+			break;
+		}
+		if (!isDir(pPath))
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"\"%s\" is not a directory!", \
+				__LINE__, pPath);
+			*err_no = ENOTDIR;
+			break;
+		}
+
+		store_paths[i] = strdup(pPath);
+		if (store_paths[i] == NULL)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"malloc %d bytes fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				(int)strlen(pPath), errno, STRERROR(errno));
+			*err_no = errno != 0 ? errno : ENOMEM;
+			break;
+		}
+	}
+
+	if (*err_no != 0)
+	{
+		for (i=0; i<*path_count; i++)
+		{
+			if (store_paths[i] != NULL)
+			{
+				free(store_paths[i]);
+			}
+		}
+		free(store_paths);
+		return NULL;
+	}
+
+	return store_paths;
+}
+
+int storage_load_paths_from_conf_file(IniContext *pItemContext)
+{
+	char *pPath;
+	int result;
 
 	pPath = iniGetStrValue(NULL, "base_path", pItemContext);
 	if (pPath == NULL)
@@ -65,81 +187,10 @@ int storage_load_paths_from_conf_file(IniContext *pItemContext)
 		return ENOTDIR;
 	}
 
-	g_fdfs_path_count = iniGetIntValue(NULL, "store_path_count", 
-					pItemContext, 1);
-	if (g_fdfs_path_count <= 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"store_path_count: %d is invalid!", \
-			__LINE__, g_fdfs_path_count);
-		return EINVAL;
-	}
+	g_fdfs_store_paths = storage_load_paths_from_conf_file_ex( \
+		pItemContext, NULL, true, &g_fdfs_path_count, &result);
 
-	g_fdfs_store_paths = (char **)malloc(sizeof(char *)*g_fdfs_path_count);
-	if (g_fdfs_store_paths == NULL)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)sizeof(char *) *g_fdfs_path_count, \
-			errno, STRERROR(errno));
-		return errno != 0 ? errno : ENOMEM;
-	}
-	memset(g_fdfs_store_paths, 0, sizeof(char *) * g_fdfs_path_count);
-
-	pPath = iniGetStrValue(NULL, "store_path0", pItemContext);
-	if (pPath == NULL)
-	{
-		pPath = g_fdfs_base_path;
-	}
-	g_fdfs_store_paths[0] = strdup(pPath);
-	if (g_fdfs_store_paths[0] == NULL)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)strlen(pPath), errno, STRERROR(errno));
-		return errno != 0 ? errno : ENOMEM;
-	}
-
-	for (i=1; i<g_fdfs_path_count; i++)
-	{
-		sprintf(item_name, "store_path%d", i);
-		pPath = iniGetStrValue(NULL, item_name, pItemContext);
-		if (pPath == NULL)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"conf file must have item \"%s\"!", \
-				__LINE__, item_name);
-			return ENOENT;
-		}
-
-		chopPath(pPath);
-		if (!fileExists(pPath))
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"\"%s\" can't be accessed, error info: %s", \
-				__LINE__, STRERROR(errno), pPath);
-			return errno != 0 ? errno : ENOENT;
-		}
-		if (!isDir(pPath))
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"\"%s\" is not a directory!", \
-				__LINE__, pPath);
-			return ENOTDIR;
-		}
-
-		g_fdfs_store_paths[i] = strdup(pPath);
-		if (g_fdfs_store_paths[i] == NULL)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"malloc %d bytes fail, " \
-				"errno: %d, error info: %s", __LINE__, \
-				(int)strlen(pPath), errno, STRERROR(errno));
-			return errno != 0 ? errno : ENOMEM;
-		}
-	}
-
-	return 0;
+	return result;
 }
 
 #define SPLIT_FILENAME_BODY(logic_filename, filename_len, true_filename, \
