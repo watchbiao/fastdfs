@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 
 		storageServer.sock = -1;
 		snprintf(storageServer.ip_addr, sizeof(storageServer.ip_addr), \
-			 "%.*s", pPort - pIpAndPort, pIpAndPort);
+			 "%.*s", (int)(pPort - pIpAndPort), pIpAndPort);
 		storageServer.port = atoi(pPort + 1);
 		store_path_index = atoi(argv[4]);
 	}

@@ -37,7 +37,7 @@ typedef struct
 	IniSection global;
 	HashArray sections;  //key is session name, and value is IniSection
 	IniSection *current_section; //for load from ini file
-	char config_path[PATH_MAX];  //save the config filepath
+	char config_path[MAX_PATH_SIZE];  //save the config filepath
 } IniContext;
 
 #ifdef __cplusplus
