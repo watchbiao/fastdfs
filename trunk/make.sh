@@ -61,7 +61,6 @@ ENABLE_SHARED_LIB=1
 TARGET_PREFIX=/usr/local
 TARGET_CONF_PATH=/etc/fdfs
 
-#WITH_HTTPD=1
 #WITH_LINUX_SERVICE=1
 
 DEBUG_FLAG=1
@@ -90,16 +89,6 @@ elif [ "$uname" = "HP-UX" ]; then
   CFLAGS="$CFLAGS -DOS_HPUX"
 fi
 
-if [ "$WITH_HTTPD" = "1" ]; then
-  CFLAGS="$CFLAGS -DWITH_HTTPD"
-  LIBS="$LIBS -levent"
-  TRACKER_HTTPD_OBJS='tracker_httpd.o tracker_http_check.o ../common/mime_file_parser.o ../common/fdfs_http_shared.o'
-  STORAGE_HTTPD_OBJS='storage_httpd.o ../common/mime_file_parser.o ../common/fdfs_http_shared.o'
-else
-  TRACKER_HTTPD_OBJS=''
-  STORAGE_HTTPD_OBJS=''
-fi
-
 if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ] || [ -f /lib64/libpthread.so ] || [ -f /usr/lib64/libpthread.so ] || [ -f /usr/lib/libpthread.a ] || [ -f /usr/local/lib/libpthread.a ] || [ -f /lib64/libpthread.a ] || [ -f /usr/lib64/libpthread.a ]; then
   LIBS="$LIBS -lpthread"
 elif [ "$uname" = "HP-UX" ]; then
@@ -126,6 +115,8 @@ elif [ "$uname" = "FreeBSD" ]; then
   fi
 fi
 
+TRACKER_HTTPD_OBJS=''
+STORAGE_HTTPD_OBJS=''
 if [ "$DEBUG_FLAG" = "1" ]; then
   TRACKER_HTTPD_OBJS="$TRACKER_HTTPD_OBJS tracker_dump.o"
   STORAGE_HTTPD_OBJS="$STORAGE_HTTPD_OBJS storage_dump.o"
