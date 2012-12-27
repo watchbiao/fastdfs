@@ -78,7 +78,7 @@ int iniLoadFromFile(const char *szFilename, IniContext *pContext)
 	int result;
 	int len;
 	char *pLast;
-	char full_filename[PATH_MAX];
+	char full_filename[MAX_PATH_SIZE];
 
 	if ((result=iniInitContext(pContext)) != 0)
 	{
@@ -246,7 +246,7 @@ static int iniDoLoadItemsFromBuffer(char *content, IniContext *pContext)
 	char *pLastEnd;
 	char *pEqualChar;
 	char *pIncludeFilename;
-	char full_filename[PATH_MAX];
+	char full_filename[MAX_PATH_SIZE];
 	int nLineLen;
 	int nNameLen;
 	int nValueLen;
