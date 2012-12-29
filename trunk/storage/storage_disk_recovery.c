@@ -647,9 +647,6 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 				record.true_filename);
 			if (symlink(src_filename, local_filename) == 0)
 			{
-				set_file_utimes(local_filename, \
-					record.timestamp);
-
 				success_count++;
 			}
 			else
