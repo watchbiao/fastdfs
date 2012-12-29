@@ -744,9 +744,9 @@ static int storage_check_and_make_data_dirs()
 		}
 	}
 
-	for (i=0; i<g_fdfs_path_count; i++)
+	for (i=0; i<g_fdfs_store_paths.count; i++)
 	{
-		if ((result=storage_make_data_dirs(g_fdfs_store_paths[i], \
+		if ((result=storage_make_data_dirs(g_fdfs_store_paths.paths[i], \
 				&pathCreated)) != 0)
 		{
 			return result;
@@ -760,7 +760,7 @@ static int storage_check_and_make_data_dirs()
 			}
 		}
 
-		result = storage_disk_recovery_restore(g_fdfs_store_paths[i]);
+		result = storage_disk_recovery_restore(g_fdfs_store_paths.paths[i]);
 		if (result == EAGAIN) //need to re-fetch binlog
 		{
 			if ((result=storage_disk_recovery_start(i)) != 0)
@@ -768,7 +768,7 @@ static int storage_check_and_make_data_dirs()
 				return result;
 			}
 
-			result=storage_disk_recovery_restore(g_fdfs_store_paths[i]);
+			result=storage_disk_recovery_restore(g_fdfs_store_paths.paths[i]);
 		}
 
 		if (result != 0)
@@ -935,7 +935,7 @@ static int storage_load_paths(IniContext *pItemContext)
 		return result;
 	}
 
-	bytes = sizeof(FDFSStorePathInfo) * g_fdfs_path_count;
+	bytes = sizeof(FDFSStorePathInfo) * g_fdfs_store_paths.count;
 	g_path_space_list = (FDFSStorePathInfo *)malloc(bytes);
 	if (g_path_space_list == NULL)
 	{
@@ -1676,7 +1676,7 @@ int storage_func_init(const char *filename, \
 			"use_connection_pool=%d, " \
 			"g_connection_pool_max_idle_time=%ds", \
 			g_fdfs_version.major, g_fdfs_version.minor, \
-			g_fdfs_base_path, g_fdfs_path_count, g_subdir_count_per_path,\
+			g_fdfs_base_path, g_fdfs_store_paths.count, g_subdir_count_per_path,\
 			g_group_name, g_run_by_group, g_run_by_user, \
 			g_fdfs_connect_timeout, \
 			g_fdfs_network_timeout, g_server_port, bind_addr, \
@@ -1793,18 +1793,18 @@ int storage_func_destroy()
 	int result;
 	int close_ret;
 
-	if (g_fdfs_store_paths != NULL)
+	if (g_fdfs_store_paths.paths != NULL)
 	{
-		for (i=0; i<g_fdfs_path_count; i++)
+		for (i=0; i<g_fdfs_store_paths.count; i++)
 		{
-			if (g_fdfs_store_paths[i] != NULL)
+			if (g_fdfs_store_paths.paths[i] != NULL)
 			{
-				free(g_fdfs_store_paths[i]);
-				g_fdfs_store_paths[i] = NULL;
+				free(g_fdfs_store_paths.paths[i]);
+				g_fdfs_store_paths.paths[i] = NULL;
 			}
 		}
 
-		g_fdfs_store_paths = NULL;
+		g_fdfs_store_paths.paths = NULL;
 	}
 
 	if (g_tracker_group.servers != NULL)

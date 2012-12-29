@@ -479,7 +479,7 @@ static int storage_sync_copy_file_rename_filename( \
 	}
 
 	snprintf(full_filename, sizeof(full_filename), \
-			"%s/data/%s", g_fdfs_store_paths[store_path_index], \
+			"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], \
 			true_filename);
 	if (rename(pFileContext->filename, full_filename) != 0)
 	{
@@ -764,7 +764,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 		}
 
 		sprintf(meta_filename, "%s/data/%s"FDFS_STORAGE_META_FILE_EXT, \
-			g_fdfs_store_paths[store_path_index], true_filename);
+			g_fdfs_store_paths.paths[store_path_index], true_filename);
 	}
 	else
 	{
@@ -1000,7 +1000,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 		else
 		{
 			sprintf(pFileContext->filename, "%s/data/%s", \
-				g_fdfs_store_paths[store_path_index], \
+				g_fdfs_store_paths.paths[store_path_index], \
 				true_filename);
 		}
 
@@ -2123,7 +2123,7 @@ static int storage_get_filename(StorageClientInfo *pClientInfo, \
 		}
 
 		sprintf(full_filename, "%s/data/%s", \
-			g_fdfs_store_paths[store_path_index], filename);
+			g_fdfs_store_paths.paths[store_path_index], filename);
 		if (!fileExists(full_filename))
 		{
 			break;
@@ -2386,7 +2386,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		}
 
 		snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-			"%s/data/%s", g_fdfs_store_paths[master_store_path_index], \
+			"%s/data/%s", g_fdfs_store_paths.paths[master_store_path_index], \
 			filename);
 		sprintf(pFileContext->fname2log, \
 			"%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
@@ -2766,12 +2766,12 @@ static int storage_service_do_create_link(struct fast_task_info *pTask, \
 	else
 	{
 		sprintf(full_filename, "%s/data/%s", \
-			g_fdfs_store_paths[store_path_index], \
+			g_fdfs_store_paths.paths[store_path_index], \
 			filename);
 	}
 
 	sprintf(src_full_filename, "%s/data/%s", \
-		g_fdfs_store_paths[store_path_index], \
+		g_fdfs_store_paths.paths[store_path_index], \
 		pSrcFileInfo->src_true_filename);
 	if (symlink(src_full_filename, full_filename) != 0)
 	{
@@ -3239,7 +3239,7 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 
 	pFileContext->timestamp2log = time(NULL);
 	sprintf(pFileContext->filename, "%s/data/%s%s", \
-		g_fdfs_store_paths[store_path_index], true_filename, \
+		g_fdfs_store_paths.paths[store_path_index], true_filename, \
 		FDFS_STORAGE_META_FILE_EXT);
 	sprintf(pFileContext->fname2log,"%s%s", \
 		filename, FDFS_STORAGE_META_FILE_EXT);
@@ -3507,7 +3507,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 			char full_filename[MAX_PATH_SIZE + 128];
 
 			sprintf(full_filename, "%s/data/%s", \
-				g_fdfs_store_paths[store_path_index], \
+				g_fdfs_store_paths.paths[store_path_index], \
 				true_filename);
 			if ((len=readlink(full_filename, src_filename, \
 					sizeof(src_filename))) < 0)
@@ -3961,7 +3961,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 
 	store_path_index = pFileContext->extra_info.upload.trunk_info. \
 				path.store_path_index;
-	pBasePath = g_fdfs_store_paths[store_path_index];
+	pBasePath = g_fdfs_store_paths.paths[store_path_index];
 	base_path_len = strlen(pBasePath);
 	pOutBuff = pTask->data;
 
@@ -3983,7 +3983,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 			break;
 		}
 
-		if (g_fdfs_store_paths[record.store_path_index] != pBasePath)
+		if (g_fdfs_store_paths.paths[record.store_path_index] != pBasePath)
 		{
 			continue;
 		}
@@ -4010,7 +4010,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 		else
 		{
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-			g_fdfs_store_paths[record.store_path_index], \
+			g_fdfs_store_paths.paths[record.store_path_index], \
 			record.true_filename);
 		if (lstat(full_filename, &stat_buf) != 0)
 		{
@@ -4272,7 +4272,7 @@ static int storage_server_fetch_one_path_binlog(struct fast_task_info *pTask)
 	}
 
 	store_path_index = *(in_buff + FDFS_GROUP_NAME_MAX_LEN);
-	if (store_path_index < 0 || store_path_index >= g_fdfs_path_count)
+	if (store_path_index < 0 || store_path_index >= g_fdfs_store_paths.count)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, store_path_index: %d " \
@@ -4329,7 +4329,7 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 
 	p = pTask->data + sizeof(TrackerHeader);
 	store_path_index = *p++;
-	if (store_path_index < 0 || store_path_index >= g_fdfs_path_count)
+	if (store_path_index < 0 || store_path_index >= g_fdfs_store_paths.count)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, store_path_index: %d " \
@@ -4588,7 +4588,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 	}
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-		"%s/data/%s", g_fdfs_store_paths[store_path_index], true_filename);
+		"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], true_filename);
 	if (lstat(pFileContext->filename, &stat_buf) == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
@@ -4659,7 +4659,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 	pFileContext->calc_file_hash = false;
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-		"%s/data/%s", g_fdfs_store_paths[store_path_index], \
+		"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], \
 		true_filename);
 
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_APPEND_FILE;
@@ -4784,7 +4784,7 @@ static int storage_modify_file(struct fast_task_info *pTask)
 	}
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-		"%s/data/%s", g_fdfs_store_paths[store_path_index], true_filename);
+		"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], true_filename);
 	if (lstat(pFileContext->filename, &stat_buf) == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
@@ -4867,7 +4867,7 @@ static int storage_modify_file(struct fast_task_info *pTask)
 	pFileContext->calc_file_hash = false;
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-		"%s/data/%s", g_fdfs_store_paths[store_path_index], true_filename);
+		"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], true_filename);
 
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_MODIFY_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
@@ -4971,7 +4971,7 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 	}
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-		"%s/data/%s", g_fdfs_store_paths[store_path_index], true_filename);
+		"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], true_filename);
 	if (lstat(pFileContext->filename, &stat_buf) == 0)
 	{
 		if (!S_ISREG(stat_buf.st_mode))
@@ -5055,7 +5055,7 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 	pFileContext->calc_file_hash = false;
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-		"%s/data/%s", g_fdfs_store_paths[store_path_index], true_filename);
+		"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], true_filename);
 
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_TRUNCATE_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
@@ -5261,7 +5261,7 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	}
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-		"%s/data/%s", g_fdfs_store_paths[store_path_index], filename);
+		"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], filename);
 	if (fileExists(pFileContext->filename))
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -5570,7 +5570,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 
 			sprintf(pFileContext->filename, "%s/data/.cp" \
 				INT64_PRINTF_FORMAT".tmp", \
-				g_fdfs_store_paths[store_path_index], \
+				g_fdfs_store_paths.paths[store_path_index], \
 				temp_file_sequence++);
 
 			pthread_mutex_unlock(&g_storage_thread_lock);
@@ -5783,7 +5783,7 @@ static int storage_sync_append_file(struct fast_task_info *pTask)
 	}
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-			"%s/data/%s", g_fdfs_store_paths[store_path_index], \
+			"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], \
 			true_filename);
 
 	if (lstat(pFileContext->filename, &stat_buf) != 0)
@@ -6019,7 +6019,7 @@ static int storage_sync_modify_file(struct fast_task_info *pTask)
 	}
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-			"%s/data/%s", g_fdfs_store_paths[store_path_index], \
+			"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], \
 			true_filename);
 
 	if (lstat(pFileContext->filename, &stat_buf) != 0)
@@ -6228,7 +6228,7 @@ static int storage_sync_truncate_file(struct fast_task_info *pTask)
 	}
 
 	snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-			"%s/data/%s", g_fdfs_store_paths[store_path_index], \
+			"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], \
 			true_filename);
 
 	if (lstat(pFileContext->filename, &stat_buf) != 0)
@@ -6475,11 +6475,11 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 		else
 		{
 		snprintf(pFileContext->filename, sizeof(pFileContext->filename), \
-			"%s/data/%s", g_fdfs_store_paths[dest_store_path_index], \
+			"%s/data/%s", g_fdfs_store_paths.paths[dest_store_path_index], \
 			dest_true_filename);
 
 		snprintf(src_full_filename, sizeof(src_full_filename), \
-			"%s/data/%s", g_fdfs_store_paths[src_store_path_index], \
+			"%s/data/%s", g_fdfs_store_paths.paths[src_store_path_index], \
 			src_true_filename);
 		if (symlink(src_full_filename, pFileContext->filename) != 0)
 		{
@@ -6731,7 +6731,7 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 	}
 
 	sprintf(pFileContext->filename, "%s/data/%s%s", \
-			g_fdfs_store_paths[store_path_index], \
+			g_fdfs_store_paths.paths[store_path_index], \
 			true_filename, FDFS_STORAGE_META_FILE_EXT);
 	if (lstat(pFileContext->filename, &stat_buf) == 0)
 	{
@@ -6942,7 +6942,7 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 	else
 	{
 		sprintf(pFileContext->filename, "%s/data/%s", \
-			g_fdfs_store_paths[store_path_index], true_filename);
+			g_fdfs_store_paths.paths[store_path_index], true_filename);
 	}
 
 	return storage_read_from_file(pTask, file_offset, download_bytes, \
@@ -7193,7 +7193,7 @@ static int storage_sync_delete_file(struct fast_task_info *pTask)
 	{
 		pClientInfo->deal_func = dio_delete_normal_file;
 		sprintf(pFileContext->filename, "%s/data/%s", \
-			g_fdfs_store_paths[store_path_index], true_filename);
+			g_fdfs_store_paths.paths[store_path_index], true_filename);
 	}
 
 	strcpy(pFileContext->fname2log, filename);
@@ -7331,7 +7331,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 	{
 		pClientInfo->deal_func = dio_delete_normal_file;
 		sprintf(pFileContext->filename, "%s/data/%s", \
-			g_fdfs_store_paths[store_path_index], true_filename);
+			g_fdfs_store_paths.paths[store_path_index], true_filename);
 	}
 
 	if ((pFileContext->extra_info.upload.file_type & _FILE_TYPE_LINK) && \
@@ -7347,7 +7347,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 		int i;
 
 		sprintf(full_filename, "%s/data/%s", \
-			g_fdfs_store_paths[store_path_index], true_filename);
+			g_fdfs_store_paths.paths[store_path_index], true_filename);
 		do
 		{
 			if ((src_filename_len=readlink(full_filename, \
@@ -7378,10 +7378,10 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 				return result;
 			}
 
-			base_path_len = strlen(g_fdfs_store_paths \
+			base_path_len = strlen(g_fdfs_store_paths.paths \
 						[store_path_index]);
 			if (src_filename_len > base_path_len && memcmp( \
-				src_filename, g_fdfs_store_paths \
+				src_filename, g_fdfs_store_paths.paths \
 				[store_path_index], base_path_len) == 0)
 			{
 				src_store_path_index = store_path_index;
@@ -7389,11 +7389,11 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 			else
 			{
 			src_store_path_index = -1;
-			for (i=0; i<g_fdfs_path_count; i++)
+			for (i=0; i<g_fdfs_store_paths.count; i++)
 			{
-				base_path_len = strlen(g_fdfs_store_paths[i]);
+				base_path_len = strlen(g_fdfs_store_paths.paths[i]);
 				if (src_filename_len > base_path_len && \
-					memcmp(src_filename, g_fdfs_store_paths\
+					memcmp(src_filename, g_fdfs_store_paths.paths\
 					[i], base_path_len) == 0)
 				{
 					src_store_path_index = i;
@@ -7552,7 +7552,7 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 		}
 
 		snprintf(full_filename, sizeof(full_filename), \
-			"%s/data/%s", g_fdfs_store_paths[store_path_index], \
+			"%s/data/%s", g_fdfs_store_paths.paths[store_path_index], \
 			filename);
 		if (fileExists(full_filename))
 		{
