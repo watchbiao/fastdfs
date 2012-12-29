@@ -6481,12 +6481,7 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 		snprintf(src_full_filename, sizeof(src_full_filename), \
 			"%s/data/%s", g_fdfs_store_paths[src_store_path_index], \
 			src_true_filename);
-		if (symlink(src_full_filename, pFileContext->filename) == 0)
-		{
-			set_file_utimes(pFileContext->filename, \
-				pFileContext->timestamp2log);
-		}
-		else
+		if (symlink(src_full_filename, pFileContext->filename) != 0)
 		{
 			result = errno != 0 ? errno : EPERM;
 			if (result == EEXIST)
