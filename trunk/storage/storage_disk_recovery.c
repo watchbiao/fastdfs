@@ -16,6 +16,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/statvfs.h>
@@ -551,11 +552,15 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 		if (record.op_type == STORAGE_OP_TYPE_SOURCE_CREATE_FILE
 		 || record.op_type == STORAGE_OP_TYPE_REPLICA_CREATE_FILE)
 		{
+			bool bTrunkFile;
+
 			if (fdfs_is_trunk_file(record.filename, \
 					record.filename_len))
 			{
 			char *pTrunkPathEnd;
 			char *pLocalFilename;
+
+			bTrunkFile = true;
 			if (fdfs_decode_trunk_info(record.store_path_index, \
 				record.true_filename, record.true_filename_len,\
 				&trunk_info) != 0)
@@ -580,6 +585,7 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 			}
 			else
 			{
+			bTrunkFile = false;
 			sprintf(local_filename, "%s/data/%s", \
 				g_fdfs_store_paths[record.store_path_index], \
 				record.true_filename);
@@ -591,6 +597,12 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 					&file_size);
 			if (result == 0)
 			{
+				if (!bTrunkFile)
+				{
+					set_file_utimes(local_filename, \
+						record.timestamp);
+				}
+
 				success_count++;
 			}
 			else if (result != ENOENT)
@@ -635,6 +647,9 @@ static int storage_do_recovery(const char *pBasePath, StorageBinLogReader *pRead
 				record.true_filename);
 			if (symlink(src_filename, local_filename) == 0)
 			{
+				set_file_utimes(local_filename, \
+					record.timestamp);
+
 				success_count++;
 			}
 			else
