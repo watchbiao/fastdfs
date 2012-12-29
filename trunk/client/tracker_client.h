@@ -87,6 +87,16 @@ ConnectionInfo *tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 #define tracker_get_all_connections() \
 	tracker_get_all_connections_ex((&g_tracker_group))
 
+
+/**
+* get a connection to tracker server without connection pool
+* params:
+*	pTrackerGroup: the tracker group
+* return: != NULL for success, NULL for fail
+**/
+ConnectionInfo *tracker_get_connection_no_pool( \
+			TrackerServerGroup *pTrackerGroup);
+
 /**
 * connect to all tracker servers
 * params:

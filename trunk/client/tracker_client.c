@@ -122,6 +122,69 @@ ConnectionInfo *tracker_get_connection_ex(TrackerServerGroup *pTrackerGroup)
 	return conn;
 }
 
+ConnectionInfo *tracker_get_connection_no_pool(TrackerServerGroup *pTrackerGroup)
+{
+	ConnectionInfo *pCurrentServer;
+	ConnectionInfo *pServer;
+	ConnectionInfo *pEnd;
+	ConnectionInfo *conn;
+	int server_index;
+	int result;
+
+	server_index = pTrackerGroup->server_index;
+	if (server_index >= pTrackerGroup->server_count)
+	{
+		server_index = 0;
+	}
+
+	conn = NULL;
+	do
+	{
+	pCurrentServer = pTrackerGroup->servers + server_index;
+	if ((result=tracker_connect_server_no_pool(pCurrentServer)) == 0)
+	{
+		conn = pCurrentServer;
+		break;
+	}
+
+	pEnd = pTrackerGroup->servers + pTrackerGroup->server_count;
+	for (pServer=pCurrentServer+1; pServer<pEnd; pServer++)
+	{
+		if ((result=tracker_connect_server_no_pool(pServer)) == 0)
+		{
+			conn = pServer;
+			pTrackerGroup->server_index = pServer - \
+							pTrackerGroup->servers;
+			break;
+		}
+	}
+
+	if (conn != NULL)
+	{
+		break;
+	}
+
+	for (pServer=pTrackerGroup->servers; pServer<pCurrentServer; pServer++)
+	{
+		if ((result=tracker_connect_server_no_pool(pServer)) == 0)
+		{
+			conn = pServer;
+			pTrackerGroup->server_index = pServer - \
+							pTrackerGroup->servers;
+			break;
+		}
+	}
+	} while (0);
+
+	pTrackerGroup->server_index++;
+	if (pTrackerGroup->server_index >= pTrackerGroup->server_count)
+	{
+		pTrackerGroup->server_index = 0;
+	}
+
+	return conn;
+}
+
 ConnectionInfo *tracker_get_connection_r_ex(TrackerServerGroup *pTrackerGroup, \
 		ConnectionInfo *pTrackerServer, int *err_no)
 {

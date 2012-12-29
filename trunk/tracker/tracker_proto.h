@@ -218,6 +218,15 @@ extern "C" {
 ConnectionInfo *tracker_connect_server_ex(ConnectionInfo *pTrackerServer, \
 		const int connect_timeout, int *err_no);
 
+
+/**
+* connect to the tracker server directly without connection pool
+* params:
+*	pTrackerServer: tracker server
+* return: 0 for success, none zero for fail
+**/
+int tracker_connect_server_no_pool(ConnectionInfo *pTrackerServer);
+
 #define tracker_disconnect_server(pTrackerServer) \
 	tracker_disconnect_server_ex(pTrackerServer, false)
 

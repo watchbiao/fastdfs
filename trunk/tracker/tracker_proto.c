@@ -454,6 +454,17 @@ ConnectionInfo *tracker_connect_server_ex(ConnectionInfo *pTrackerServer, \
 	}
 }
 
+int tracker_connect_server_no_pool(ConnectionInfo *pTrackerServer)
+{
+	if (pTrackerServer->sock >= 0)
+	{
+		return 0;
+	}
+
+	return conn_pool_connect_server(pTrackerServer, \
+				g_fdfs_connect_timeout);
+}
+
 static int fdfs_do_parameter_req(ConnectionInfo *pTrackerServer, \
 	char *buff, const int buff_size)
 {
