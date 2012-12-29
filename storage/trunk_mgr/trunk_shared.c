@@ -25,8 +25,7 @@
 #include "trunk_shared.h"
 #include "tracker_proto.h"
 
-char **g_fdfs_store_paths = NULL;
-int g_fdfs_path_count = 0;
+FDFSStorePaths g_fdfs_store_paths = {0, NULL};
 struct base64_context g_fdfs_base64_context;
 
 void trunk_shared_init()
@@ -115,8 +114,8 @@ char **storage_load_paths_from_conf_file_ex(IniContext *pItemContext, \
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"\"%s\" can't be accessed, " \
-				"errno: %d, error info: %s", \
-				__LINE__, errno, STRERROR(errno), pPath);
+				"errno: %d, error info: %s", __LINE__, \
+				pPath, errno, STRERROR(errno));
 			*err_no = errno != 0 ? errno : ENOENT;
 			break;
 		}
@@ -187,8 +186,8 @@ int storage_load_paths_from_conf_file(IniContext *pItemContext)
 		return ENOTDIR;
 	}
 
-	g_fdfs_store_paths = storage_load_paths_from_conf_file_ex( \
-		pItemContext, NULL, true, &g_fdfs_path_count, &result);
+	g_fdfs_store_paths.paths = storage_load_paths_from_conf_file_ex( \
+		pItemContext, NULL, true, &g_fdfs_store_paths.count, &result);
 
 	return result;
 }
@@ -238,7 +237,7 @@ int storage_load_paths_from_conf_file(IniContext *pItemContext)
 	} \
  \
 	if (check_path_index && (store_path_index < 0 || \
-		store_path_index >= g_fdfs_path_count)) \
+		store_path_index >= g_fdfs_store_paths.count)) \
 	{ \
 		logError("file: "__FILE__", line: %d, " \
 			"filename: %s is invalid, " \
@@ -261,7 +260,7 @@ int storage_split_filename(const char *logic_filename, \
 	SPLIT_FILENAME_BODY(logic_filename, filename_len, true_filename, \
 		store_path_index, true);
 
-	*ppStorePath = g_fdfs_store_paths[store_path_index];
+	*ppStorePath = g_fdfs_store_paths.paths[store_path_index];
 
 	return 0;
 }
@@ -320,13 +319,14 @@ char *trunk_header_dump(const FDFSTrunkHeader *pTrunkHeader, char *buff, \
 	return buff;
 }
 
-char *trunk_get_full_filename(const FDFSTrunkFullInfo *pTrunkInfo, \
+char *trunk_get_full_filename_ex(const FDFSStorePaths *pStorePaths, \
+		const FDFSTrunkFullInfo *pTrunkInfo, \
 		char *full_filename, const int buff_size)
 {
 	char short_filename[64];
 	char *pStorePath;
 
-	pStorePath = g_fdfs_store_paths[pTrunkInfo->path.store_path_index];
+	pStorePath = pStorePaths->paths[pTrunkInfo->path.store_path_index];
 	TRUNK_GET_FILENAME(pTrunkInfo->file.id, short_filename);
 
 	snprintf(full_filename, buff_size, \
@@ -396,9 +396,9 @@ void trunk_file_info_decode(const char *str, FDFSTrunkFileInfo *pTrunkFile)
 	pTrunkFile->size = buff2int(buff + sizeof(int) * 2);
 }
 
-int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, \
-		const int file_size, int *pfd, \
-		char *buff, const int buff_size)
+int trunk_file_get_content_ex(const FDFSStorePaths *pStorePaths, \
+		const FDFSTrunkFullInfo *pTrunkInfo, const int file_size, \
+		int *pfd, char *buff, const int buff_size)
 {
 	char full_filename[MAX_PATH_SIZE];
 	int fd;
@@ -416,8 +416,8 @@ int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, \
 	}
 	else
 	{
-		trunk_get_full_filename(pTrunkInfo, full_filename, \
-				sizeof(full_filename));
+		trunk_get_full_filename_ex(pStorePaths, pTrunkInfo, \
+			full_filename, sizeof(full_filename));
 		fd = open(full_filename, O_RDONLY);
 		if (fd < 0)
 		{
@@ -451,7 +451,8 @@ int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, \
 	return result;
 }
 
-int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
+int trunk_file_stat_func_ex(const FDFSStorePaths *pStorePaths, \
+	const int store_path_index, const char *true_filename, \
 	const int filename_len, const int stat_func, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader, int *pfd)
@@ -462,7 +463,7 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	char src_filename[128];
 	char src_true_filename[128];
 
-	result = trunk_file_do_lstat_func(store_path_index, \
+	result = trunk_file_do_lstat_func_ex(pStorePaths, store_path_index, \
 		true_filename, filename_len, stat_func, \
 		pStat, pTrunkInfo, pTrunkHeader, pfd);
 	if (result != 0)
@@ -478,8 +479,9 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 
 	do
 	{
-		result = trunk_file_get_content(pTrunkInfo, pStat->st_size, \
-				pfd, src_filename, sizeof(src_filename) - 1);
+		result = trunk_file_get_content_ex(pStorePaths, pTrunkInfo, \
+				pStat->st_size, pfd, src_filename, \
+				sizeof(src_filename) - 1);
 		if (result != 0)
 		{
 			break;
@@ -487,10 +489,22 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 
 		src_filename_len = pStat->st_size;
 		*(src_filename + src_filename_len) = '\0';
-		if ((result=storage_split_filename_ex(src_filename, \
+		if ((result=storage_split_filename_no_check(src_filename, \
 			&src_filename_len, src_true_filename, \
 			&src_store_path_index)) != 0)
 		{
+			break;
+		}
+		if (src_store_path_index < 0 || \
+			src_store_path_index >= pStorePaths->count)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"filename: %s is invalid, " \
+				"invalid store path index: %d, " \
+				"which < 0 or >= %d", __LINE__, \
+				src_filename, src_store_path_index, \
+				pStorePaths->count);
+			result = EINVAL;
 			break;
 		}
 
@@ -500,9 +514,10 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 			*pfd = -1;
 		}
 
-		result = trunk_file_do_lstat_func(src_store_path_index, \
-				src_true_filename, src_filename_len, stat_func, \
-				pStat, pTrunkInfo, pTrunkHeader, pfd);
+		result = trunk_file_do_lstat_func_ex(pStorePaths, \
+				src_store_path_index, src_true_filename, \
+				src_filename_len, stat_func, pStat, \
+				pTrunkInfo, pTrunkHeader, pfd);
 	} while (0);
 
 	if (result != 0 && pfd != NULL && *pfd >= 0)
@@ -514,8 +529,8 @@ int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
 	return result;
 }
 
-int trunk_file_do_lstat_func(const int store_path_index, \
-	const char *true_filename, \
+int trunk_file_do_lstat_func_ex(const FDFSStorePaths *pStorePaths, \
+	const int store_path_index, const char *true_filename, \
 	const int filename_len, const int stat_func, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader, int *pfd)
@@ -533,7 +548,7 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 	if (filename_len != FDFS_TRUNK_FILENAME_LENGTH) //not trunk file
 	{
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-			g_fdfs_store_paths[store_path_index], true_filename);
+			pStorePaths->paths[store_path_index], true_filename);
 
 		if (stat_func == FDFS_STAT_FUNC_STAT)
 		{
@@ -562,7 +577,7 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 	if (!IS_TRUNK_FILE(file_size))  //slave file
 	{
 		snprintf(full_filename, sizeof(full_filename), "%s/data/%s", \
-			g_fdfs_store_paths[store_path_index], true_filename);
+			pStorePaths->paths[store_path_index], true_filename);
 
 		if (stat_func == FDFS_STAT_FUNC_STAT)
 		{
@@ -597,7 +612,7 @@ int trunk_file_do_lstat_func(const int store_path_index, \
 	pTrunkInfo->path.sub_path_high = strtol(true_filename, NULL, 16);
 	pTrunkInfo->path.sub_path_low = strtol(true_filename + 3, NULL, 16);
 
-	trunk_get_full_filename(pTrunkInfo, full_filename, \
+	trunk_get_full_filename_ex(pStorePaths, pTrunkInfo, full_filename, \
 				sizeof(full_filename));
 	fd = open(full_filename, O_RDONLY);
 	if (fd < 0)

@@ -98,7 +98,7 @@ int storage_get_params_from_tracker()
 		TRACKER_STORAGE_RESERVED_SPACE_FLAG_MB)
 	{
 		g_avg_storage_reserved_mb = g_storage_reserved_space.rs.mb \
-						/ g_fdfs_path_count;
+						/ g_fdfs_store_paths.count;
 	}
 	else
 	{

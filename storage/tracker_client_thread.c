@@ -1734,7 +1734,7 @@ int tracker_report_join(ConnectionInfo *pTrackerServer, \
 		g_fdfs_version.major, g_fdfs_version.minor);
 	long2buff(g_server_port, pReqBody->storage_port);
 	long2buff(g_http_port, pReqBody->storage_http_port);
-	long2buff(g_fdfs_path_count, pReqBody->store_path_count);
+	long2buff(g_fdfs_store_paths.count, pReqBody->store_path_count);
 	long2buff(g_subdir_count_per_path, pReqBody->subdir_count_per_path);
 	long2buff(g_upload_priority, pReqBody->upload_priority);
 	long2buff(g_storage_join_time, pReqBody->join_time);
@@ -1909,7 +1909,7 @@ static int tracker_report_df_stat(ConnectionInfo *pTrackerServer, \
 	int i;
 	int result;
 
-	body_len = (int)sizeof(TrackerStatReportReqBody) * g_fdfs_path_count;
+	body_len = (int)sizeof(TrackerStatReportReqBody) * g_fdfs_store_paths.count;
 	total_len = (int)sizeof(TrackerHeader) + body_len;
 	if (total_len <= sizeof(out_buff))
 	{
@@ -1936,9 +1936,9 @@ static int tracker_report_df_stat(ConnectionInfo *pTrackerServer, \
 	pHeader->cmd = TRACKER_PROTO_CMD_STORAGE_REPORT_DISK_USAGE;
 	pHeader->status = 0;
 
-	for (i=0; i<g_fdfs_path_count; i++)
+	for (i=0; i<g_fdfs_store_paths.count; i++)
 	{
-		if (statvfs(g_fdfs_store_paths[i], &sbuf) != 0)
+		if (statvfs(g_fdfs_store_paths.paths[i], &sbuf) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"call statfs fail, errno: %d, error info: %s.",\
@@ -1968,7 +1968,7 @@ static int tracker_report_df_stat(ConnectionInfo *pTrackerServer, \
 		/* find the max free space path */
 		max_free_mb = 0;
 		store_path_index = -1;
-		for (i=0; i<g_fdfs_path_count; i++)
+		for (i=0; i<g_fdfs_store_paths.count; i++)
 		{
 			if (g_path_space_list[i].free_mb > \
 				g_avg_storage_reserved_mb \

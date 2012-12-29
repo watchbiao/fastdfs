@@ -428,5 +428,10 @@ typedef struct {
 	} rs;
 } FDFSStorageReservedSpace;
 
+typedef struct {
+	int count;   //store path count
+	char **paths; //file store paths
+} FDFSStorePaths;
+
 #endif
 

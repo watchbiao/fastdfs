@@ -1513,7 +1513,7 @@ static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo)
 	}
 	else
 	{
-		if (store_path_index >= g_fdfs_path_count)
+		if (store_path_index >= g_fdfs_store_paths.count)
 		{
 			store_path_index = 0;
 		}
@@ -1522,7 +1522,7 @@ static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo)
 			[store_path_index].total_mb, g_path_space_list \
 			[store_path_index].free_mb, g_avg_storage_reserved_mb))
 		{
-			for (i=0; i<g_fdfs_path_count; i++)
+			for (i=0; i<g_fdfs_store_paths.count; i++)
 			{
 				if (storage_check_reserved_space_path( \
 					g_path_space_list[i].total_mb, \
@@ -1535,14 +1535,14 @@ static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo)
 				}
 			}
 
-			if (i == g_fdfs_path_count)
+			if (i == g_fdfs_store_paths.count)
 			{
 				return ENOSPC;
 			}
 		}
 
 		g_store_path_index++;
-		if (g_store_path_index >= g_fdfs_path_count)
+		if (g_store_path_index >= g_fdfs_store_paths.count)
 		{
 			g_store_path_index = 0;
 		}
@@ -1859,7 +1859,7 @@ int trunk_create_trunk_file_advance(void *args)
 
 	total_mb_sum = 0;
 	free_mb_sum = 0;
-	for (i=0; i<g_fdfs_path_count; i++)
+	for (i=0; i<g_fdfs_store_paths.count; i++)
 	{
 		total_mb_sum += g_path_space_list[i].total_mb;
 		free_mb_sum += g_path_space_list[i].free_mb;

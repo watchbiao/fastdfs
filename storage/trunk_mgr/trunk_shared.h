@@ -52,8 +52,7 @@
 extern "C" {
 #endif
 
-extern char **g_fdfs_store_paths; //file store paths
-extern int g_fdfs_path_count;   //store path count
+extern FDFSStorePaths g_fdfs_store_paths;  //file store paths
 extern struct base64_context g_fdfs_base64_context;   //base64 context
 
 typedef int (*stat_func)(const char *filename, struct stat *buf);
@@ -107,15 +106,36 @@ char *trunk_info_dump(const FDFSTrunkFullInfo *pTrunkInfo, char *buff, \
 char *trunk_header_dump(const FDFSTrunkHeader *pTrunkHeader, char *buff, \
 				const int buff_size);
 
-char *trunk_get_full_filename(const FDFSTrunkFullInfo *pTrunkInfo, \
+#define trunk_get_full_filename(pTrunkInfo, full_filename, buff_size) \
+	trunk_get_full_filename_ex(&g_fdfs_store_paths, pTrunkInfo, \
+		full_filename, buff_size)
+
+char *trunk_get_full_filename_ex(const FDFSStorePaths *pStorePaths, \
+		const FDFSTrunkFullInfo *pTrunkInfo, \
 		char *full_filename, const int buff_size);
 
 void trunk_pack_header(const FDFSTrunkHeader *pTrunkHeader, char *buff);
 void trunk_unpack_header(const char *buff, FDFSTrunkHeader *pTrunkHeader);
 
-int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, \
-		const int file_size, int *pfd, \
-		char *buff, const int buff_size);
+#define trunk_file_get_content(pTrunkInfo, file_size, pfd, buff, buff_size) \
+	trunk_file_get_content_ex(&g_fdfs_store_paths, pTrunkInfo, \
+		file_size, pfd, buff, buff_size)
+
+int trunk_file_get_content_ex(const FDFSStorePaths *pStorePaths, \
+		const FDFSTrunkFullInfo *pTrunkInfo, const int file_size, \
+		int *pfd, char *buff, const int buff_size);
+
+#define trunk_file_do_lstat_func(store_path_index, true_filename, \
+		filename_len, stat_func, pStat, pTrunkInfo, pTrunkHeader, pfd) \
+	trunk_file_do_lstat_func_ex(&g_fdfs_store_paths, store_path_index, \
+		true_filename, filename_len, stat_func, pStat, pTrunkInfo, \
+		pTrunkHeader, pfd)
+
+#define trunk_file_stat_func(store_path_index, true_filename, filename_len, \
+		stat_func, pStat, pTrunkInfo, pTrunkHeader, pfd) \
+	trunk_file_stat_func_ex(&g_fdfs_store_paths, store_path_index, \
+		true_filename, filename_len, stat_func, pStat, pTrunkInfo, \
+		pTrunkHeader, pfd)
 
 #define trunk_file_stat(store_path_index, true_filename, filename_len, \
 		pStat, pTrunkInfo, pTrunkHeader) \
@@ -137,13 +157,20 @@ int trunk_file_get_content(const FDFSTrunkFullInfo *pTrunkInfo, \
 	trunk_file_stat_func(store_path_index, true_filename, filename_len, \
 		FDFS_STAT_FUNC_STAT, pStat, pTrunkInfo, pTrunkHeader, pfd)
 
-int trunk_file_stat_func(const int store_path_index, const char *true_filename,\
+#define trunk_file_stat_ex1(pStorePaths, store_path_index, true_filename, \
+		filename_len, pStat, pTrunkInfo, pTrunkHeader, pfd) \
+	trunk_file_stat_func_ex(pStorePaths, store_path_index, true_filename, \
+		filename_len, FDFS_STAT_FUNC_STAT, pStat, pTrunkInfo, \
+		pTrunkHeader, pfd)
+
+int trunk_file_stat_func_ex(const FDFSStorePaths *pStorePaths, \
+	const int store_path_index, const char *true_filename, \
 	const int filename_len, const int stat_func, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader, int *pfd);
 
-int trunk_file_do_lstat_func(const int store_path_index, \
-	const char *true_filename, \
+int trunk_file_do_lstat_func_ex(const FDFSStorePaths *pStorePaths, \
+	const int store_path_index, const char *true_filename, \
 	const int filename_len, const int stat_func, \
 	struct stat *pStat, FDFSTrunkFullInfo *pTrunkInfo, \
 	FDFSTrunkHeader *pTrunkHeader, int *pfd);
