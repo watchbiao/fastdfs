@@ -153,7 +153,7 @@ static int storage_get_upload_connection(ConnectionInfo *pTrackerServer, \
 				store_path_index);
 		}
 
-		if (new_connection)
+		if (new_tracker_connection)
 		{
 			tracker_disconnect_server_ex(pNewTracker, result != 0);
 		}
@@ -857,10 +857,8 @@ int storage_do_upload_file(ConnectionInfo *pTrackerServer, \
 
 	*group_name = '\0';
 
-	/*
-	//printf("upload to storage %s:%d\n", \
+	logInfo("upload to storage %s:%d\n", \
 		pStorageServer->ip_addr, pStorageServer->port);
-	*/
 
 	do
 	{
@@ -994,6 +992,9 @@ int storage_do_upload_file(ConnectionInfo *pTrackerServer, \
 
 	memcpy(remote_filename, in_buff + FDFS_GROUP_NAME_MAX_LEN, \
 		in_bytes - FDFS_GROUP_NAME_MAX_LEN + 1);
+
+	logInfo("filename length: %d", (int)(in_bytes - FDFS_GROUP_NAME_MAX_LEN));
+	logInfo("bytes:%d, group_name: %s, remote_filename: %s\n", (int)in_bytes, group_name, remote_filename);
 
 	} while (0);
 

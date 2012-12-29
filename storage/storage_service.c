@@ -1168,6 +1168,11 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 			FDFS_GROUP_NAME_MAX_LEN);
 		p += FDFS_GROUP_NAME_MAX_LEN;
 		memcpy(p, pFileContext->fname2log, filename_len);
+
+		logInfo("file id1: %s/%s, file size: %d", 
+			pFileContext->extra_info.upload.group_name, 
+			pFileContext->fname2log, (int)(pFileContext->end - 
+			pFileContext->start));
 	}
 	else
 	{
@@ -1181,6 +1186,11 @@ static void storage_upload_file_done_callback(struct fast_task_info *pTask, \
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
 		pClientInfo->total_length = sizeof(TrackerHeader);
+
+		logInfo("file id2: %s/%s, file size: %d", 
+			pFileContext->extra_info.upload.group_name, 
+			pFileContext->fname2log, (int)(pFileContext->end - 
+			pFileContext->start));
 	}
 
 	STORAGE_ACCESS_LOG(pTask, ACCESS_LOG_ACTION_UPLOAD_FILE, result);
@@ -4312,6 +4322,8 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 
 	nInPackLen = pClientInfo->total_length - sizeof(TrackerHeader);
 
+	logInfo("line: %d, nInPackLen: %d", __LINE__, (int)nInPackLen);
+
 	if (nInPackLen < 1 + FDFS_PROTO_PKG_LEN_SIZE + 
 			FDFS_FILE_EXT_NAME_MAX_LEN)
 	{
@@ -4467,6 +4479,8 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 		pFileContext->open_flags = O_WRONLY | O_CREAT | O_TRUNC \
 						| g_extra_open_file_flags;
 	}
+
+	logInfo("line: %d, nInPackLen: %d", __LINE__, (int)nInPackLen);
 
  	return storage_write_to_file(pTask, file_offset, file_bytes, \
 			p - pTask->data, dio_write_file, \

@@ -298,7 +298,7 @@ static void php_fdfs_tracker_get_connection_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		RETURN_BOOL(false);
 	}
 
-	pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+	pTrackerServer = tracker_get_connection_no_pool(pContext->pTrackerGroup);
 	if (pTrackerServer == NULL)
 	{
 		pContext->err_no = ENOENT;
@@ -396,7 +396,8 @@ static void php_fdfs_connect_server_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	server_info.port = port;
 	server_info.sock = -1;
 
-	if ((pContext->err_no=tracker_connect_server(&server_info)) == 0)
+	if ((pContext->err_no=conn_pool_connect_server(&server_info, \
+			g_fdfs_network_timeout)) == 0)
 	{
 		array_init(return_value);
 		add_assoc_stringl_ex(return_value, "ip_addr", \
@@ -715,7 +716,8 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -759,6 +761,10 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		pContext->err_no = result;
 		RETURN_BOOL(false);
 	}
@@ -809,7 +815,12 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				storage_infos, FDFS_MAX_SERVERS_EACH_GROUP, \
 				&storage_count);
 		if (result != 0)
-		{       
+		{
+			if (tracker_obj == NULL && result >= ENETDOWN) //network error
+			{
+				conn_pool_disconnect_server(pTrackerServer);
+			}
+
 			pContext->err_no = result;
 			RETURN_BOOL(false);
 		}
@@ -1122,7 +1133,8 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -1167,6 +1179,10 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		RETURN_BOOL(false);
 	}
 
@@ -1227,7 +1243,8 @@ static void php_fdfs_tracker_query_storage_store_list_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -1274,6 +1291,10 @@ static void php_fdfs_tracker_query_storage_store_list_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		RETURN_BOOL(false);
 	}
 
@@ -1386,7 +1407,8 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -1420,6 +1442,10 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		RETURN_BOOL(false);
 	}
 
@@ -1574,7 +1600,8 @@ static void php_fdfs_storage_delete_file_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -1631,6 +1658,10 @@ static void php_fdfs_storage_delete_file_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		RETURN_BOOL(false);
 	}
 
@@ -1731,7 +1762,8 @@ static void php_fdfs_storage_truncate_file_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -1788,6 +1820,10 @@ static void php_fdfs_storage_truncate_file_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		RETURN_BOOL(false);
 	}
 
@@ -1895,7 +1931,8 @@ static void php_fdfs_storage_download_file_to_callback_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -1941,6 +1978,10 @@ static void php_fdfs_storage_download_file_to_callback_impl( \
 				&php_callback);
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		pContext->err_no = result;
 		RETURN_BOOL(false);
 	}
@@ -1960,6 +2001,10 @@ static void php_fdfs_storage_download_file_to_callback_impl( \
 
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		pContext->err_no = result;
 		RETURN_BOOL(false);
 	}
@@ -2065,7 +2110,8 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -2122,6 +2168,10 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		pContext->err_no = result;
 		RETURN_BOOL(false);
 	}
@@ -2245,7 +2295,8 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -2303,6 +2354,10 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		RETURN_BOOL(false);
 	}
 	else
@@ -2406,7 +2461,8 @@ static void php_fdfs_storage_get_metadata_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -2463,6 +2519,10 @@ static void php_fdfs_storage_get_metadata_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		RETURN_BOOL(false);
 	}
 
@@ -2572,7 +2632,8 @@ static void php_fdfs_storage_file_exist_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -2726,7 +2787,8 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -2759,6 +2821,10 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		RETURN_BOOL(false);
 	}
 
@@ -2992,7 +3058,8 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -3095,10 +3162,13 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 
 	buff = local_filename;
 	buff_len = filename_len;
+
+	logInfo("local_filename: %s, filename_len: %d", local_filename, filename_len);
 	result = storage_do_upload_file(pTrackerServer, pStorageServer, \
                 store_path_index, cmd, FDFS_UPLOAD_BY_BUFF, buff, NULL, \
                 buff_len, NULL, NULL, file_ext_name, meta_list, meta_count, \
                 group_name, remote_filename);
+	logInfo("local_filename: %s, filename_len: %d, result: %d", local_filename, filename_len, result);
 	}
 	else  //by callback
 	{
@@ -3139,6 +3209,10 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	}
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		RETURN_BOOL(false);
 	}
 
@@ -3330,7 +3404,8 @@ static void php_fdfs_storage_upload_slave_file_impl( \
 	*remote_filename = '\0';
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -3442,6 +3517,10 @@ static void php_fdfs_storage_upload_slave_file_impl( \
 	}
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		RETURN_BOOL(false);
 	}
 
@@ -3598,7 +3677,8 @@ static void php_fdfs_storage_append_file_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -3828,7 +3908,8 @@ static void php_fdfs_storage_modify_file_impl( \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -4025,7 +4106,8 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 
 	if (tracker_obj == NULL)
 	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pTrackerGroup);
+		pTrackerServer = tracker_get_connection_no_pool( \
+					pContext->pTrackerGroup);
 		if (pTrackerServer == NULL)
 		{
 			pContext->err_no = ENOENT;
@@ -4123,6 +4205,10 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	}
 	if (result != 0)
 	{
+		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		{
+			conn_pool_disconnect_server(pTrackerServer);
+		}
 		RETURN_BOOL(false);
 	}
 	else
@@ -7063,6 +7149,7 @@ PHP_FASTDFS_API zend_class_entry *php_fdfs_get_exception_base(int root TSRMLS_DC
 #endif
 }
 
+
 static int load_config_files()
 {
 	#define ITEM_NAME_CONF_COUNT "fastdfs_client.tracker_group_count"
@@ -7073,6 +7160,8 @@ static int load_config_files()
 	#define ITEM_NAME_LOG_LEVEL      "fastdfs_client.log_level"
 	#define ITEM_NAME_LOG_FILENAME   "fastdfs_client.log_filename"
 	#define ITEM_NAME_ANTI_STEAL_SECRET_KEY "fastdfs_client.http.anti_steal_secret_key"
+	#define ITEM_NAME_USE_CONN_POOL  "fastdfs_client.use_connection_pool"
+	#define ITEM_NAME_CONN_POOL_MAX_IDLE_TIME "fastdfs_client.connection_pool_max_idle_time"
 
 	zval conf_c;
 	zval base_path;
@@ -7082,6 +7171,8 @@ static int load_config_files()
 	zval anti_steal_secret_key;
 	zval log_filename;
 	zval conf_filename;
+	zval use_conn_pool;
+	zval conn_pool_max_idle_time;
 	char *pAntiStealSecretKey;
 	char szItemName[sizeof(ITEM_NAME_CONF_FILE) + 10];
 	int nItemLen;
@@ -7258,12 +7349,60 @@ static int load_config_files()
 		}
 	}
 
+
+	if (zend_get_configuration_directive(ITEM_NAME_USE_CONN_POOL, 
+		sizeof(ITEM_NAME_USE_CONN_POOL), &use_conn_pool) == SUCCESS)
+	{
+		char *use_conn_pool_str;
+
+		use_conn_pool_str = use_conn_pool.value.str.val;
+		if (strcasecmp(use_conn_pool_str, "yes") == 0 || 
+			strcasecmp(use_conn_pool_str, "on") == 0 ||
+			strcasecmp(use_conn_pool_str, "true") == 0 ||
+			strcmp(use_conn_pool_str, "1") == 0)
+		{
+			if (zend_get_configuration_directive( \
+				ITEM_NAME_CONN_POOL_MAX_IDLE_TIME, \
+				sizeof(ITEM_NAME_CONN_POOL_MAX_IDLE_TIME), \
+				&conn_pool_max_idle_time) == SUCCESS)
+			{
+			g_connection_pool_max_idle_time = \
+				atoi(conn_pool_max_idle_time.value.str.val);
+			if (g_connection_pool_max_idle_time <= 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+					"%s: %d in config filename" \
+					"is invalid!", __LINE__, \
+					ITEM_NAME_CONN_POOL_MAX_IDLE_TIME, \
+					g_connection_pool_max_idle_time);
+				return EINVAL;
+			}
+			}
+			else
+			{
+				g_connection_pool_max_idle_time = 3600;
+			}
+
+			g_use_connection_pool = true;
+			result = conn_pool_init(&g_connection_pool, \
+					g_fdfs_connect_timeout, \
+					0, g_connection_pool_max_idle_time);
+			if (result != 0)
+			{
+				return result;
+			}
+		}
+	}
+
+
 	logDebug("base_path=%s, connect_timeout=%d, network_timeout=%d, " \
 		"anti_steal_secret_key length=%d, " \
-		"tracker_group_count=%d, first tracker group server_count=%d", \
+		"tracker_group_count=%d, first tracker group server_count=%d, "\
+		"use_connection_pool=%d, connection_pool_max_idle_time: %d", \
 		g_fdfs_base_path, g_fdfs_connect_timeout, \
 		g_fdfs_network_timeout, (int)strlen(pAntiStealSecretKey), \
-		config_count, g_tracker_group.server_count);
+		config_count, g_tracker_group.server_count, \
+		g_use_connection_pool, g_connection_pool_max_idle_time);
 
 	return 0;
 }
@@ -7338,6 +7477,11 @@ PHP_MSHUTDOWN_FUNCTION(fastdfs_client)
 						pConfigInfo->pTrackerGroup);
 			}
 		}
+	}
+
+	if (g_use_connection_pool)
+	{
+		fdfs_connection_pool_destroy();
 	}
 
 	fdfs_client_destroy();

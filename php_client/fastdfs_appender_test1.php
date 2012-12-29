@@ -1,6 +1,7 @@
 <?php
  echo fastdfs_client_version() . "\n";
 
+
  $appender_file_id = fastdfs_storage_upload_appender_by_filename1("/usr/include/stdio.h");
  if (!$appender_file_id)
  {
