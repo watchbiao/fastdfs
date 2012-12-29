@@ -435,6 +435,8 @@ static void storage_sync_truncate_file_done_callback( \
 
 	if (err_no == 0 && pFileContext->sync_flag != '\0')
 	{
+		set_file_utimes(pFileContext->filename, \
+			pFileContext->timestamp2log);
 		result = storage_binlog_write(pFileContext->timestamp2log, \
 			pFileContext->sync_flag, pFileContext->fname2log);
 	}
@@ -511,6 +513,9 @@ static void storage_sync_copy_file_done_callback(struct fast_task_info *pTask, \
 			if (!(pFileContext->extra_info.upload.file_type & \
 					_FILE_TYPE_TRUNK))
 			{
+			set_file_utimes(pFileContext->filename, \
+				pFileContext->timestamp2log);
+
 			result = storage_sync_copy_file_rename_filename( \
 					pFileContext);
 			}
@@ -583,8 +588,11 @@ static void storage_sync_modify_file_done_callback( \
 	{
 		if (result == 0)
 		{
-		storage_binlog_write(pFileContext->timestamp2log, \
-			pFileContext->sync_flag, pFileContext->fname2log);
+			set_file_utimes(pFileContext->filename, \
+				pFileContext->timestamp2log);
+
+			storage_binlog_write(pFileContext->timestamp2log, \
+			    pFileContext->sync_flag, pFileContext->fname2log);
 
 			CHECK_AND_WRITE_TO_STAT_FILE1_WITH_BYTES( \
 				g_storage_stat.total_sync_in_bytes, \
@@ -1294,6 +1302,22 @@ static void storage_append_file_done_callback(struct fast_task_info *pTask, \
 
 	if (err_no == 0)
 	{
+		struct stat stat_buf;
+		if (stat(pFileContext->filename, &stat_buf) == 0)
+		{
+			pFileContext->timestamp2log = stat_buf.st_mtime;
+		}
+		else
+		{
+			result = errno != 0 ? errno : ENOENT;
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip:%s, call stat file %s " \
+				"fail, errno: %d, error info: %s", \
+				__LINE__, pTask->client_ip, \
+				pFileContext->filename, \
+				result, STRERROR(result));
+		}
+
 		sprintf(extra, INT64_PRINTF_FORMAT" "INT64_PRINTF_FORMAT, \
 				pFileContext->start, \
 				pFileContext->end - pFileContext->start);
@@ -1352,6 +1376,22 @@ static void storage_modify_file_done_callback(struct fast_task_info *pTask, \
 
 	if (err_no == 0)
 	{
+		struct stat stat_buf;
+		if (stat(pFileContext->filename, &stat_buf) == 0)
+		{
+			pFileContext->timestamp2log = stat_buf.st_mtime;
+		}
+		else
+		{
+			result = errno != 0 ? errno : ENOENT;
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip:%s, call stat file %s " \
+				"fail, errno: %d, error info: %s", \
+				__LINE__, pTask->client_ip, \
+				pFileContext->filename, \
+				result, STRERROR(result));
+		}
+
 		sprintf(extra, INT64_PRINTF_FORMAT" "INT64_PRINTF_FORMAT, \
 				pFileContext->start, \
 				pFileContext->end - pFileContext->start);
@@ -1410,6 +1450,21 @@ static void storage_do_truncate_file_done_callback(struct fast_task_info *pTask,
 
 	if (err_no == 0)
 	{
+		struct stat stat_buf;
+		if (stat(pFileContext->filename, &stat_buf) == 0)
+		{
+			pFileContext->timestamp2log = stat_buf.st_mtime;
+		}
+		else
+		{
+			result = errno != 0 ? errno : ENOENT;
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip:%s, call stat file %s " \
+				"fail, errno: %d, error info: %s", \
+				__LINE__, pTask->client_ip, \
+				pFileContext->filename, \
+				result, STRERROR(result));
+		}
 		sprintf(extra, INT64_PRINTF_FORMAT" "INT64_PRINTF_FORMAT, \
 				pFileContext->end - pFileContext->start,
 				pFileContext->offset);
@@ -2223,14 +2278,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	*new_full_filename = '\0';
 	*new_filename = '\0';
 	new_filename_len = 0;
-
-	if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_APPENDER)
-	{
-		end_time = time(NULL);
-		COMBINE_RAND_FILE_SIZE(0, file_size_in_name);
-		file_size_in_name |= FDFS_APPENDER_FILE_SIZE;
-	}
-	else if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_TRUNK)
+	if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_TRUNK)
 	{
 		end_time = pFileContext->extra_info.upload.start_time;
 		COMBINE_RAND_FILE_SIZE(file_size, file_size_in_name);
@@ -2238,8 +2286,32 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 	}
 	else
 	{
-		end_time = time(NULL);
-		file_size_in_name = file_size;
+		struct stat stat_buf;
+		if (stat(pFileContext->filename, &stat_buf) == 0)
+		{
+			end_time = stat_buf.st_mtime;
+		}
+		else
+		{
+			result = errno != 0 ? errno : ENOENT;
+			logWarning("file: "__FILE__", line: %d, " \
+				"client ip:%s, call stat file %s " \
+				"fail, errno: %d, error info: %s", \
+				__LINE__, pTask->client_ip, \
+				pFileContext->filename, \
+				result, STRERROR(result));
+			end_time = time(NULL);
+		}
+
+		if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_APPENDER)
+		{
+			COMBINE_RAND_FILE_SIZE(0, file_size_in_name);
+			file_size_in_name |= FDFS_APPENDER_FILE_SIZE;
+		}
+		else
+		{
+			file_size_in_name = file_size;
+		}
 	}
 
 	if ((result=storage_get_filename(pClientInfo, end_time, \
@@ -6409,7 +6481,12 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 		snprintf(src_full_filename, sizeof(src_full_filename), \
 			"%s/data/%s", g_fdfs_store_paths[src_store_path_index], \
 			src_true_filename);
-		if (symlink(src_full_filename, pFileContext->filename) != 0)
+		if (symlink(src_full_filename, pFileContext->filename) == 0)
+		{
+			set_file_utimes(pFileContext->filename, \
+				pFileContext->timestamp2log);
+		}
+		else
 		{
 			result = errno != 0 ? errno : EPERM;
 			if (result == EEXIST)
@@ -6430,6 +6507,7 @@ static int storage_do_sync_link_file(struct fast_task_info *pTask)
 				result, STRERROR(result));
 			break;
 			}
+
 		}
 		}
 	}
