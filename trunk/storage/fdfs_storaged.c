@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	g_current_time = g_current_time;
+	g_current_time = time(NULL);
 	g_up_time = g_current_time;
 
 	log_init();
