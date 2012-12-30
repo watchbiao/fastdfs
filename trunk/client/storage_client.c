@@ -286,7 +286,7 @@ int storage_get_metadata(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		tracker_disconnect_server(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, result != 0);
 	}
 
 	return result;
@@ -405,7 +405,7 @@ int storage_query_file_info_ex(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		tracker_disconnect_server(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, result != 0);
 	}
 
 	return result;
@@ -497,7 +497,7 @@ int storage_delete_file(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		tracker_disconnect_server(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, result != 0);
 	}
 
 	return result;
@@ -666,7 +666,7 @@ int storage_do_download_file_ex(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		tracker_disconnect_server(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, result != 0);
 	}
 
 	return result;
@@ -857,8 +857,10 @@ int storage_do_upload_file(ConnectionInfo *pTrackerServer, \
 
 	*group_name = '\0';
 
-	logInfo("upload to storage %s:%d\n", \
+	/*
+	//logInfo("upload to storage %s:%d\n", \
 		pStorageServer->ip_addr, pStorageServer->port);
+	*/
 
 	do
 	{
@@ -993,9 +995,6 @@ int storage_do_upload_file(ConnectionInfo *pTrackerServer, \
 	memcpy(remote_filename, in_buff + FDFS_GROUP_NAME_MAX_LEN, \
 		in_bytes - FDFS_GROUP_NAME_MAX_LEN + 1);
 
-	logInfo("filename length: %d", (int)(in_bytes - FDFS_GROUP_NAME_MAX_LEN));
-	logInfo("bytes:%d, group_name: %s, remote_filename: %s\n", (int)in_bytes, group_name, remote_filename);
-
 	} while (0);
 
 	if (result == 0 && meta_count > 0)
@@ -1015,7 +1014,7 @@ int storage_do_upload_file(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		tracker_disconnect_server(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, result != 0);
 	}
 
 	return result;
@@ -1239,7 +1238,7 @@ int storage_set_metadata(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		tracker_disconnect_server(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, result != 0);
 	}
 
 	return result;
@@ -1451,7 +1450,7 @@ int storage_client_create_link(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		tracker_disconnect_server(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, result != 0);
 	}
 
 	return result;
@@ -1769,7 +1768,7 @@ int storage_do_append_file(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		tracker_disconnect_server(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, result != 0);
 	}
 
 	return result;
@@ -1897,7 +1896,7 @@ int storage_do_modify_file(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		tracker_disconnect_server(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, result != 0);
 	}
 
 	return result;
@@ -2185,7 +2184,8 @@ int fdfs_get_file_info_ex(const char *group_name, const char *remote_filename, \
 
 			result = storage_query_file_info(conn, \
 				NULL,  group_name, remote_filename, pFileInfo);
-			tracker_disconnect_server(conn);
+			tracker_disconnect_server_ex(conn, result != 0 && \
+							result != ENOENT);
 
 			return result;
 		}
@@ -2306,7 +2306,7 @@ int storage_truncate_file(ConnectionInfo *pTrackerServer, \
 
 	if (new_connection)
 	{
-		tracker_disconnect_server(pStorageServer);
+		tracker_disconnect_server_ex(pStorageServer, result != 0);
 	}
 
 	return result;

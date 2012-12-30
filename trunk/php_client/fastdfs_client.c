@@ -761,7 +761,7 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -816,7 +816,7 @@ static void php_fdfs_tracker_list_groups_impl(INTERNAL_FUNCTION_PARAMETERS, \
 				&storage_count);
 		if (result != 0)
 		{
-			if (tracker_obj == NULL && result >= ENETDOWN) //network error
+			if (tracker_obj == NULL)
 			{
 				conn_pool_disconnect_server(pTrackerServer);
 			}
@@ -1179,7 +1179,7 @@ static void php_fdfs_tracker_query_storage_store_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -1291,7 +1291,7 @@ static void php_fdfs_tracker_query_storage_store_list_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -1442,7 +1442,7 @@ static void php_fdfs_tracker_do_query_storage_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -1658,7 +1658,7 @@ static void php_fdfs_storage_delete_file_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -1820,7 +1820,7 @@ static void php_fdfs_storage_truncate_file_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -1978,7 +1978,7 @@ static void php_fdfs_storage_download_file_to_callback_impl( \
 				&php_callback);
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -2001,7 +2001,7 @@ static void php_fdfs_storage_download_file_to_callback_impl( \
 
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -2168,7 +2168,7 @@ static void php_fdfs_storage_download_file_to_buff_impl( \
 
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -2354,7 +2354,7 @@ static void php_fdfs_storage_download_file_to_file_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -2519,7 +2519,7 @@ static void php_fdfs_storage_get_metadata_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -2821,7 +2821,7 @@ static void php_fdfs_tracker_query_storage_list_impl( \
 	pContext->err_no = result;
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -3163,12 +3163,10 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	buff = local_filename;
 	buff_len = filename_len;
 
-	logInfo("local_filename: %s, filename_len: %d", local_filename, filename_len);
 	result = storage_do_upload_file(pTrackerServer, pStorageServer, \
                 store_path_index, cmd, FDFS_UPLOAD_BY_BUFF, buff, NULL, \
                 buff_len, NULL, NULL, file_ext_name, meta_list, meta_count, \
                 group_name, remote_filename);
-	logInfo("local_filename: %s, filename_len: %d, result: %d", local_filename, filename_len, result);
 	}
 	else  //by callback
 	{
@@ -3209,7 +3207,7 @@ static void php_fdfs_storage_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	}
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -3517,7 +3515,7 @@ static void php_fdfs_storage_upload_slave_file_impl( \
 	}
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
@@ -4205,7 +4203,7 @@ static void php_fdfs_storage_set_metadata_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	}
 	if (result != 0)
 	{
-		if (tracker_obj == NULL && result >= ENETDOWN) //network error
+		if (tracker_obj == NULL)
 		{
 			conn_pool_disconnect_server(pTrackerServer);
 		}
