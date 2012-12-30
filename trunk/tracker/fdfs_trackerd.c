@@ -91,7 +91,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	g_up_time = time(NULL);
+	g_current_time = time(NULL);
+	g_up_time = g_current_time;
 	srand(g_up_time);
 
 	log_init();
@@ -100,6 +101,7 @@ int main(int argc, char *argv[])
 	if (getExeAbsoluteFilename(argv[0], g_exe_name, \
 		sizeof(g_exe_name)) == NULL)
 	{
+		logCrit("exit abnormally!\n");
 		log_destroy();
 		return errno != 0 ? errno : ENOENT;
 	}
@@ -110,12 +112,14 @@ int main(int argc, char *argv[])
 	if ((result=tracker_load_from_conf_file(conf_filename, \
 			bind_addr, sizeof(bind_addr))) != 0)
 	{
+		logCrit("exit abnormally!\n");
 		log_destroy();
 		return result;
 	}
 
 	if ((result=tracker_load_status_from_file(&g_tracker_last_status)) != 0)
 	{
+		logCrit("exit abnormally!\n");
 		log_destroy();
 		return result;
 	}
@@ -130,6 +134,7 @@ int main(int argc, char *argv[])
 
 	if ((result=tracker_mem_init()) != 0)
 	{
+		logCrit("exit abnormally!\n");
 		log_destroy();
 		return result;
 	}
@@ -137,12 +142,14 @@ int main(int argc, char *argv[])
 	sock = socketServer(bind_addr, g_server_port, &result);
 	if (sock < 0)
 	{
+		logCrit("exit abnormally!\n");
 		log_destroy();
 		return result;
 	}
 
 	if ((result=tcpsetserveropt(sock, g_fdfs_network_timeout)) != 0)
 	{
+		logCrit("exit abnormally!\n");
 		log_destroy();
 		return result;
 	}
@@ -162,6 +169,7 @@ int main(int argc, char *argv[])
 
 	if ((result=tracker_service_init()) != 0)
 	{
+		logCrit("exit abnormally!\n");
 		log_destroy();
 		return result;
 	}
@@ -176,6 +184,7 @@ int main(int argc, char *argv[])
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
 			__LINE__, errno, STRERROR(errno));
+		logCrit("exit abnormally!\n");
 		return errno;
 	}
 
@@ -185,6 +194,7 @@ int main(int argc, char *argv[])
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
 			__LINE__, errno, STRERROR(errno));
+		logCrit("exit abnormally!\n");
 		return errno;
 	}
 	
@@ -194,6 +204,7 @@ int main(int argc, char *argv[])
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
 			__LINE__, errno, STRERROR(errno));
+		logCrit("exit abnormally!\n");
 		return errno;
 	}
 
@@ -205,6 +216,7 @@ int main(int argc, char *argv[])
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
 			__LINE__, errno, STRERROR(errno));
+		logCrit("exit abnormally!\n");
 		return errno;
 	}
 
@@ -221,6 +233,7 @@ int main(int argc, char *argv[])
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
 			__LINE__, errno, STRERROR(errno));
+		logCrit("exit abnormally!\n");
 		return errno;
 	}
 #endif
@@ -235,6 +248,7 @@ int main(int argc, char *argv[])
 		logCrit("file: "__FILE__", line: %d, " \
 			"call sigaction fail, errno: %d, error info: %s", \
 			__LINE__, errno, STRERROR(errno));
+		logCrit("exit abnormally!\n");
 		return errno;
 	}
 #endif
@@ -263,6 +277,7 @@ int main(int argc, char *argv[])
 
 	if ((result=set_run_by(g_run_by_group, g_run_by_user)) != 0)
 	{
+		logCrit("exit abnormally!\n");
 		log_destroy();
 		return result;
 	}
@@ -309,12 +324,14 @@ int main(int argc, char *argv[])
 	if ((result=sched_start(&scheduleArray, &schedule_tid, \
 		g_thread_stack_size, &g_continue_flag)) != 0)
 	{
+		logCrit("exit abnormally!\n");
 		log_destroy();
 		return result;
 	}
 
 	if ((result=tracker_relationship_init()) != 0)
 	{
+		logCrit("exit abnormally!\n");
 		log_destroy();
 		return result;
 	}
@@ -364,7 +381,7 @@ int main(int argc, char *argv[])
 	tracker_service_destroy();
 	tracker_relationship_destroy();
 	
-	logInfo("exit nomally.\n");
+	logInfo("exit normally.\n");
 	log_destroy();
 	
 	return 0;

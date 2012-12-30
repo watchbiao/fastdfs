@@ -19,12 +19,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <time.h>
 #include "fdfs_define.h"
 #include "logger.h"
 #include "sockopt.h"
 #include "shared_func.h"
 #include "pthread_func.h"
+#include "sched_thread.h"
 #include "avl_tree.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
@@ -1120,7 +1120,7 @@ static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 
 	if (bWriteBinLog)
 	{
-		result = trunk_mem_binlog_write(time(NULL), \
+		result = trunk_mem_binlog_write(g_current_time, \
 				TRUNK_OP_TYPE_ADD_SPACE, &(pNode->trunk));
 	}
 	else
@@ -1220,7 +1220,7 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 
 	if (bWriteBinLog)
 	{
-		result = trunk_mem_binlog_write(time(NULL), \
+		result = trunk_mem_binlog_write(g_current_time, \
 				TRUNK_OP_TYPE_DEL_SPACE, &(pCurrent->trunk));
 	}
 	else
@@ -1287,7 +1287,7 @@ static int trunk_split(FDFSTrunkNode *pNode, const int size)
 
 	if (pNode->trunk.file.size - size < g_slot_min_size)
 	{
-		return trunk_mem_binlog_write(time(NULL), \
+		return trunk_mem_binlog_write(g_current_time, \
 			TRUNK_OP_TYPE_DEL_SPACE, &(pNode->trunk));
 	}
 
@@ -1303,7 +1303,7 @@ static int trunk_split(FDFSTrunkNode *pNode, const int size)
 		return result;
 	}
 
-	result = trunk_mem_binlog_write(time(NULL), \
+	result = trunk_mem_binlog_write(g_current_time, \
 			TRUNK_OP_TYPE_DEL_SPACE, &(pNode->trunk));
 	if (result != 0)
 	{
@@ -1362,7 +1362,7 @@ static FDFSTrunkNode *trunk_create_trunk_file(int *err_no)
 		return NULL;
 	}
 
-	*err_no = trunk_mem_binlog_write(time(NULL), \
+	*err_no = trunk_mem_binlog_write(g_current_time, \
 			TRUNK_OP_TYPE_ADD_SPACE, &(pTrunkNode->trunk));
 	return pTrunkNode;
 }
@@ -1616,7 +1616,7 @@ static int trunk_wait_file_ready(const char *filename, const int64_t file_size,
 			return 0;
 		}
 
-		if (abs(time(NULL) - file_mtime) > 10)
+		if (abs(g_current_time - file_mtime) > 10)
 		{
 			return ETIMEDOUT;
 		}

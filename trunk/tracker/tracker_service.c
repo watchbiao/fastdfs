@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <time.h>
 #include <fcntl.h>
 #include "fdfs_define.h"
 #include "base64.h"
@@ -26,6 +25,7 @@
 #include "sockopt.h"
 #include "shared_func.h"
 #include "pthread_func.h"
+#include "sched_thread.h"
 #include "tracker_types.h"
 #include "tracker_global.h"
 #include "tracker_mem.h"
@@ -2901,7 +2901,7 @@ static int tracker_deal_storage_sync_dest_req(struct fast_task_info *pTask)
 	pClientInfo = (TrackerClientInfo *)pTask->arg;
 
 	pSrcStorage = NULL;
-	sync_until_timestamp = (int)time(NULL);
+	sync_until_timestamp = (int)g_current_time;
 
 	do
 	{
@@ -3507,7 +3507,7 @@ static int tracker_deal_storage_beat(struct fast_task_info *pTask)
 	{
 		tracker_mem_active_store_server(pClientInfo->pGroup, \
 				pClientInfo->pStorage);
-		pClientInfo->pStorage->stat.last_heart_beat_time = time(NULL);
+		pClientInfo->pStorage->stat.last_heart_beat_time = g_current_time;
 
 	}
 

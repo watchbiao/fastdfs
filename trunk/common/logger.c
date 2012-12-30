@@ -21,6 +21,7 @@
 #include <pthread.h>
 #include "shared_func.h"
 #include "pthread_func.h"
+#include "sched_thread.h"
 #include "logger.h"
 
 #ifndef LINE_MAX
@@ -201,7 +202,7 @@ static int log_rotate(LogContext *pContext)
 
 	close(pContext->log_fd);
 
-	current_time = time(NULL);
+	current_time = get_current_time();
 	localtime_r(&current_time, &tm);
 	sprintf(new_filename, "%s.%04d%02d%02d_%02d%02d%02d", \
 			pContext->log_filename, \
@@ -432,7 +433,7 @@ static void doLog(LogContext *pContext, const char *caption, \
 
 	if (pContext->time_precision == LOG_TIME_PRECISION_SECOND)
 	{
-		tv.tv_sec = time(NULL);
+		tv.tv_sec = get_current_time();
 		tv.tv_usec = 0;
 	}
 	else

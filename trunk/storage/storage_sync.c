@@ -25,6 +25,7 @@
 #include "sockopt.h"
 #include "shared_func.h"
 #include "pthread_func.h"
+#include "sched_thread.h"
 #include "ini_file_reader.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
@@ -2426,7 +2427,7 @@ int storage_unlink_mark_file(const char *storage_id)
 	time_t t;
 	struct tm tm;
 
-	t = time(NULL);
+	t = g_current_time;
 	localtime_r(&t, &tm);
 
 	get_mark_filename_by_id(storage_id, old_filename, sizeof(old_filename));
@@ -2590,7 +2591,7 @@ static void* storage_sync_thread_entrance(void* arg)
 	reader.mark_fd = -1;
 	reader.binlog_fd = -1;
 
-	current_time =  time(NULL);
+	current_time =  g_current_time;
 	last_keep_alive_time = 0;
 	start_time = 0;
 	end_time = 0;
@@ -2628,7 +2629,7 @@ static void* storage_sync_thread_entrance(void* arg)
 
 		if (g_sync_part_time)
 		{
-			current_time = time(NULL);
+			current_time = g_current_time;
 			storage_sync_get_start_end_times(current_time, \
 				&g_sync_end_time, &g_sync_start_time, \
 				&start_time, &end_time);
@@ -2637,7 +2638,7 @@ static void* storage_sync_thread_entrance(void* arg)
 			while (g_continue_flag && (current_time >= start_time \
 					&& current_time <= end_time))
 			{
-				current_time = time(NULL);
+				current_time = g_current_time;
 				sleep(1);
 			}
 		}
@@ -2832,7 +2833,7 @@ static void* storage_sync_thread_entrance(void* arg)
 
 		if (g_sync_part_time)
 		{
-			current_time = time(NULL);
+			current_time = g_current_time;
 			storage_sync_get_start_end_times(current_time, \
 				&g_sync_start_time, &g_sync_end_time, \
 				&start_time, &end_time);
@@ -2888,7 +2889,7 @@ static void* storage_sync_thread_entrance(void* arg)
 					}
 				}
 
-				current_time = time(NULL);
+				current_time = g_current_time;
 				if (current_time - last_keep_alive_time >= \
 					g_heart_beat_interval)
 				{
@@ -2906,7 +2907,7 @@ static void* storage_sync_thread_entrance(void* arg)
 
 			if (g_sync_part_time)
 			{
-				current_time = time(NULL);
+				current_time = g_current_time;
 			}
 
 			if (read_result != 0)

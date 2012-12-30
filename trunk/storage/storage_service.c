@@ -27,6 +27,7 @@
 #include "sockopt.h"
 #include "shared_func.h"
 #include "pthread_func.h"
+#include "sched_thread.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
 #include "storage_service.h"
@@ -179,7 +180,7 @@ static FDFSStorageServer *get_storage_server(const char *storage_server_id)
 			g_sync_change_count++; \
 		} \
 \
-		g_storage_stat.last_sync_update = time(NULL); \
+		g_storage_stat.last_sync_update = g_current_time; \
 		++g_stat_change_count; \
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
@@ -199,7 +200,7 @@ static FDFSStorageServer *get_storage_server(const char *storage_server_id)
 			g_sync_change_count++; \
 		} \
 \
-		g_storage_stat.last_sync_update = time(NULL); \
+		g_storage_stat.last_sync_update = g_current_time; \
 		total_bytes += bytes; \
 		success_bytes += bytes; \
 		++g_stat_change_count; \
@@ -226,7 +227,7 @@ static FDFSStorageServer *get_storage_server(const char *storage_server_id)
 		pthread_mutex_lock(&stat_count_thread_lock); \
 		total_count++; \
 		success_count++; \
-		timestamp = time(NULL); \
+		timestamp = g_current_time; \
 		++g_stat_change_count;  \
 		pthread_mutex_unlock(&stat_count_thread_lock);
 
@@ -235,7 +236,7 @@ static FDFSStorageServer *get_storage_server(const char *storage_server_id)
 		pthread_mutex_lock(&stat_count_thread_lock); \
 		total_count++; \
 		success_count++; \
-		timestamp = time(NULL); \
+		timestamp = g_current_time; \
 		total_bytes += bytes; \
 		success_bytes += bytes; \
 		++g_stat_change_count;  \
@@ -790,7 +791,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 		{
 			sprintf(meta_filename, "%s"FDFS_STORAGE_META_FILE_EXT, \
 					pFileContext->fname2log);
-			result = storage_binlog_write(time(NULL), \
+			result = storage_binlog_write(g_current_time, \
 				STORAGE_OP_TYPE_SOURCE_DELETE_FILE, meta_filename);
 			if (result != 0)
 			{
@@ -1014,7 +1015,7 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 			return 0;
 		}
 
-		storage_binlog_write(time(NULL), \
+		storage_binlog_write(g_current_time, \
 				STORAGE_OP_TYPE_SOURCE_DELETE_FILE, value);
 		pFileContext->delete_flag |= STORAGE_DELETE_FLAG_FILE;
 	}
@@ -1042,7 +1043,7 @@ static void storage_delete_fdfs_file_done_callback( \
 				&(pFileContext->extra_info.upload.trunk_info));
 		}
 
-		result = storage_binlog_write(time(NULL), \
+		result = storage_binlog_write(g_current_time, \
 			STORAGE_OP_TYPE_SOURCE_DELETE_FILE, \
 			pFileContext->fname2log);
 	}
@@ -2300,7 +2301,7 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 				__LINE__, pTask->client_ip, \
 				pFileContext->filename, \
 				result, STRERROR(result));
-			end_time = time(NULL);
+			end_time = g_current_time;
 		}
 
 		if (pFileContext->extra_info.upload.file_type & _FILE_TYPE_APPENDER)
@@ -2756,7 +2757,7 @@ static int storage_service_do_create_link(struct fast_task_info *pTask, \
 
 		storage_format_ext_name(file_ext_name, formatted_ext_name);
 		crc32 = rand();
-		if ((result=storage_get_filename(pClientInfo, time(NULL), \
+		if ((result=storage_get_filename(pClientInfo, g_current_time, \
 			file_size, crc32, formatted_ext_name, filename, \
 			filename_len, full_filename)) != 0)
 		{
@@ -3237,7 +3238,7 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 		return result;
 	}
 
-	pFileContext->timestamp2log = time(NULL);
+	pFileContext->timestamp2log = g_current_time;
 	sprintf(pFileContext->filename, "%s/data/%s%s", \
 		g_fdfs_store_paths.paths[store_path_index], true_filename, \
 		FDFS_STORAGE_META_FILE_EXT);
@@ -4368,7 +4369,7 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 
 	pFileContext->calc_crc32 = true;
 	pFileContext->calc_file_hash = g_check_file_duplicate;
-	pFileContext->extra_info.upload.start_time = time(NULL);
+	pFileContext->extra_info.upload.start_time = g_current_time;
 
 	strcpy(pFileContext->extra_info.upload.file_ext_name, file_ext_name);
 	storage_format_ext_name(file_ext_name, \
@@ -4651,7 +4652,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 		return 0;
 	}
 
-	pFileContext->extra_info.upload.start_time = time(NULL);
+	pFileContext->extra_info.upload.start_time = g_current_time;
 	pFileContext->extra_info.upload.if_gen_filename = false;
 
 	pFileContext->calc_crc32 = false;
@@ -4859,7 +4860,7 @@ static int storage_modify_file(struct fast_task_info *pTask)
 		return 0;
 	}
 
-	pFileContext->extra_info.upload.start_time = time(NULL);
+	pFileContext->extra_info.upload.start_time = g_current_time;
 	pFileContext->extra_info.upload.if_gen_filename = false;
 
 	pFileContext->calc_crc32 = false;
@@ -5047,7 +5048,7 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
-	pFileContext->extra_info.upload.start_time = time(NULL);
+	pFileContext->extra_info.upload.start_time = g_current_time;
 	pFileContext->extra_info.upload.if_gen_filename = false;
 
 	pFileContext->calc_crc32 = false;
@@ -5238,7 +5239,7 @@ static int storage_upload_slave_file(struct fast_task_info *pTask)
 	strcpy(pFileContext->extra_info.upload.file_ext_name, file_ext_name);
 	storage_format_ext_name(file_ext_name, \
 			pFileContext->extra_info.upload.formatted_ext_name);
-	pFileContext->extra_info.upload.start_time = time(NULL);
+	pFileContext->extra_info.upload.start_time = g_current_time;
 	pFileContext->extra_info.upload.if_gen_filename = g_check_file_duplicate;
 	pFileContext->extra_info.upload.if_sub_path_alloced = false;
 	pFileContext->extra_info.upload.trunk_info.path. \
@@ -5576,7 +5577,7 @@ static int storage_sync_copy_file(struct fast_task_info *pTask, \
 
 			if (stat(pFileContext->filename, &stat_buf) == 0)
 			{
-				if (time(NULL) - stat_buf.st_mtime > 600)
+				if (g_current_time - stat_buf.st_mtime > 600)
 				{
 					if (unlink(pFileContext->filename) != 0
 						&& errno != ENOENT)
@@ -7415,7 +7416,7 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 				"%c"FDFS_STORAGE_DATA_DIR_FORMAT"/%s", \
 				FDFS_STORAGE_STORE_PATH_PREFIX_CHAR, \
 				src_store_path_index, src_true_filename);
-			storage_binlog_write(time(NULL), \
+			storage_binlog_write(g_current_time, \
 				STORAGE_OP_TYPE_SOURCE_DELETE_FILE, \
 				src_fname2log);
 		} while (0);
@@ -7577,7 +7578,7 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 	pFileContext->calc_crc32 = false;
 	pFileContext->calc_file_hash = false;
 	pFileContext->extra_info.upload.if_gen_filename = true;
-	pFileContext->extra_info.upload.start_time = time(NULL);
+	pFileContext->extra_info.upload.start_time = g_current_time;
 	pFileContext->crc32 = rand();
 	strcpy(pFileContext->extra_info.upload.file_ext_name, file_ext_name);
 	storage_format_ext_name(file_ext_name, \
@@ -7597,7 +7598,7 @@ static int storage_create_link_core(struct fast_task_info *pTask, \
 
 	snprintf(binlog_buff, sizeof(binlog_buff), "%s %s", \
 		filename, src_filename);
-	result = storage_binlog_write(time(NULL), \
+	result = storage_binlog_write(g_current_time, \
 			STORAGE_OP_TYPE_SOURCE_CREATE_LINK, binlog_buff);
 	} while (0);
 

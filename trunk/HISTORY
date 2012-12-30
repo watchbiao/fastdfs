@@ -5,6 +5,7 @@ Version 4.05  2012-12-30
  * client load storage ids config
  * common/ini_file_reader.c does NOT call chdir
  * keep the mtime of file same
+ * use g_current_time instead of call time function
  * remove embed HTTP support
 
 Version 4.04  2012-12-02

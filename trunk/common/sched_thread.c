@@ -16,7 +16,7 @@
 #include "logger.h"
 
 bool g_schedule_flag = false;
-
+time_t g_current_time = 0;
 static ScheduleArray waiting_schedule_array = {NULL, 0};
 static int waiting_del_id = -1;
 
@@ -30,7 +30,6 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 {
 	ScheduleEntry *pEntry;
 	ScheduleEntry *pEnd;
-	time_t current_time;
 	time_t time_base;
 	struct tm tm_current;
 	struct tm tm_base;
@@ -47,8 +46,8 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 		return 0;
 	}
 
-	current_time = time(NULL);
-	localtime_r(&current_time, &tm_current);
+	g_current_time = time(NULL);
+	localtime_r(&g_current_time, &tm_current);
 	pEnd = pScheduleArray->entries + pScheduleArray->count;
 	for (pEntry=pScheduleArray->entries; pEntry<pEnd; pEntry++)
 	{
@@ -62,7 +61,8 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 
 		if (pEntry->time_base.hour == TIME_NONE)
 		{
-			pEntry->next_call_time = current_time+pEntry->interval;
+			pEntry->next_call_time = g_current_time + \
+						pEntry->interval;
 		}
 		else
 		{
@@ -74,7 +74,7 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 			}
 			else
 			{
-				time_base = current_time - 24 * 3600;
+				time_base = g_current_time - 24 * 3600;
 				localtime_r(&time_base, &tm_base);
 			}
 
@@ -83,8 +83,9 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 			tm_base.tm_sec = 0;
 			time_base = mktime(&tm_base);
 
-			pEntry->next_call_time = current_time+pEntry->interval \
-				- (current_time - time_base) % pEntry->interval;
+			pEntry->next_call_time = g_current_time + \
+				pEntry->interval - (g_current_time - \
+					time_base) % pEntry->interval;
 		}
 
 		/*
@@ -92,7 +93,7 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 			char buff1[32];
 			char buff2[32];
 			logInfo("id=%d, current time=%s, first call time=%s\n", \
-				pEntry->id, formatDatetime(current_time, \
+				pEntry->id, formatDatetime(g_current_time, \
 				"%Y-%m-%d %H:%M:%S", buff1, sizeof(buff1)), \
 				formatDatetime(pEntry->next_call_time, \
 				"%Y-%m-%d %H:%M:%S", buff2, sizeof(buff2)));
@@ -267,7 +268,6 @@ static void *sched_thread_entrance(void *args)
 	ScheduleEntry *pUntil;
 	int exec_count;
 	int i;
-	time_t current_time;
 	int sleep_time;
 
 	pContext = (ScheduleContext *)args;
@@ -285,11 +285,12 @@ static void *sched_thread_entrance(void *args)
 		if (pContext->scheduleArray.count == 0)  //no schedule entry
 		{
 			sleep(1);
+			g_current_time = time(NULL);
 			continue;
 		}
 
-		current_time = time(NULL);
-		sleep_time = pContext->head->next_call_time - current_time;
+		g_current_time = time(NULL);
+		sleep_time = pContext->head->next_call_time - g_current_time;
 
 		/*
 		//fprintf(stderr, "count=%d, sleep_time=%d\n", \
@@ -298,6 +299,7 @@ static void *sched_thread_entrance(void *args)
 		while (sleep_time > 0 && *(pContext->pcontinue_flag))
 		{
 			sleep(1);
+			g_current_time = time(NULL);
 			if (sched_check_waiting(pContext) == 0)
 			{
 				break;
@@ -310,15 +312,14 @@ static void *sched_thread_entrance(void *args)
 			break;
 		}
 
-		current_time = time(NULL);
 		exec_count = 0;
 		pCurrent = pContext->head;
 		while (*(pContext->pcontinue_flag) && (pCurrent != NULL \
-			&& pCurrent->next_call_time <= current_time))
+			&& pCurrent->next_call_time <= g_current_time))
 		{
 			//fprintf(stderr, "exec task id=%d\n", pCurrent->id);
 			pCurrent->task_func(pCurrent->func_args);
-			pCurrent->next_call_time = current_time + \
+			pCurrent->next_call_time = g_current_time + \
 						pCurrent->interval;
 			pCurrent = pCurrent->next;
 			exec_count++;

@@ -472,7 +472,7 @@ static void *tracker_report_thread_entrance(void *arg)
 
 		while (g_continue_flag)
 		{
-			current_time = time(NULL);
+			current_time = g_current_time;
 			if (current_time - last_beat_time >= \
 					g_heart_beat_interval)
 			{

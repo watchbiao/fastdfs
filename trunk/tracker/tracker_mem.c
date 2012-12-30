@@ -24,6 +24,7 @@
 #include "fdfs_global.h"
 #include "shared_func.h"
 #include "pthread_func.h"
+#include "sched_thread.h"
 #include "fdfs_shared_func.h"
 #include "tracker_global.h"
 #include "tracker_proto.h"
@@ -244,7 +245,7 @@ static int tracker_write_to_changelog(FDFSGroupInfo *pGroup, \
 	tracker_mem_file_lock();
 
 	len = snprintf(buff, sizeof(buff), "%d %s %s %d %s\n", \
-		(int)time(NULL), pGroup->group_name, pStorage->id, \
+		(int)g_current_time, pGroup->group_name, pStorage->id, \
 		pStorage->status, pArg != NULL ? pArg : "");
 
 	if (write(changelog_fd, buff, len) != len)
@@ -3720,7 +3721,7 @@ int tracker_mem_get_status(ConnectionInfo *pTrackerServer, \
 
 void tracker_calc_running_times(TrackerRunningStatus *pStatus)
 {
-	pStatus->running_time = time(NULL) - g_up_time;
+	pStatus->running_time = g_current_time - g_up_time;
 
 	if (g_tracker_last_status.last_check_time == 0)
 	{
@@ -4888,7 +4889,7 @@ static int tracker_write_to_trunk_change_log(FDFSGroupInfo *pGroup, \
 		return errno != 0 ? errno : ENOENT;
 	}
 
-	current_time = time(NULL);
+	current_time = g_current_time;
 	localtime_r(&current_time, &tm);
 	len = sprintf(buff, "[%04d-%02d-%02d %02d:%02d:%02d] %s ", \
 		tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, \
@@ -5577,7 +5578,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 		{
 			if (bNormalFile)
 			{
-			current_time = time(NULL);
+			current_time = g_current_time;
 			if ((file_timestamp < current_time - \
 				g_storage_sync_file_max_delay) || \
 			(ppStoreServers[0]->stat.last_synced_timestamp > \
@@ -5799,7 +5800,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 
 		if (bNormalFile)
 		{
-		current_time = time(NULL);
+		current_time = g_current_time;
 		ppServerEnd = (*ppGroup)->active_servers + \
 				(*ppGroup)->active_count;
 
@@ -5861,7 +5862,7 @@ int tracker_mem_check_alive(void *arg)
 	int deactiveCount;
 	time_t current_time;
 
-	current_time = time(NULL);
+	current_time = g_current_time;
 	ppGroupEnd = g_groups.groups + g_groups.count;
 	for (ppGroup=g_groups.groups; ppGroup<ppGroupEnd; ppGroup++)
 	{

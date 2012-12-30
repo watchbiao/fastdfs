@@ -410,7 +410,7 @@ int fdfs_dump_storage_global_vars_to_file(const char *filename)
 	do
 	{
 		result = 0;
-		formatDatetime(time(NULL), "%Y-%m-%d %H:%M:%S", 
+		formatDatetime(g_current_time, "%Y-%m-%d %H:%M:%S", 
 				szCurrentTime, sizeof(szCurrentTime));
 
 		len = sprintf(buff, "\n====time: %s  DUMP START====\n", 
