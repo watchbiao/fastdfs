@@ -467,7 +467,7 @@ int main(int argc, char *argv[])
 				printf("\n");
 			}
 
-			tracker_disconnect_server(pTrackerServer);
+			tracker_disconnect_server_ex(pTrackerServer, result != 0);
 			fdfs_client_destroy();
 			return result;
 		}
