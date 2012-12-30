@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <time.h>
 #include <sys/statvfs.h>
 #include <sys/param.h>
 #include "fdfs_define.h"

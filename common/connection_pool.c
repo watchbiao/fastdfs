@@ -12,6 +12,7 @@
 #include "logger.h"
 #include "sockopt.h"
 #include "shared_func.h"
+#include "sched_thread.h"
 #include "connection_pool.h"
 
 int conn_pool_init(ConnectionPool *cp, int connect_timeout, \
@@ -154,7 +155,7 @@ ConnectionInfo *conn_pool_get_connection(ConnectionPool *cp,
 	}
 	pthread_mutex_unlock(&cp->lock);
 
-	current_time = time(NULL);
+	current_time = get_current_time();
 	pthread_mutex_lock(&cm->lock);
 	while (1)
 	{
@@ -301,7 +302,7 @@ int conn_pool_close_connection_ex(ConnectionPool *cp, ConnectionInfo *conn,
 	}
 	else
 	{
-		node->atime = time(NULL);
+		node->atime = get_current_time();
 		node->next = cm->head;
 		cm->head = node;
 		cm->free_count++;

@@ -17,11 +17,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <time.h>
 #include "fdfs_define.h"
 #include "logger.h"
 #include "fdfs_global.h"
 #include "shared_func.h"
+#include "sched_thread.h"
 #include "ini_file_reader.h"
 #include "tracker_types.h"
 #include "tracker_global.h"
@@ -43,7 +43,7 @@ int tracker_write_status_to_file(void *args)
 	len = sprintf(buff, "%s=%d\n" \
 		      "%s=%d\n",
 		TRACKER_STATUS_ITEM_UP_TIME, (int)g_up_time,
-		TRACKER_STATUS_ITEM_LAST_CHECK_TIME, (int)time(NULL)
+		TRACKER_STATUS_ITEM_LAST_CHECK_TIME, (int)g_current_time
 	);
 
 	return writeToFile(full_filename, buff, len);

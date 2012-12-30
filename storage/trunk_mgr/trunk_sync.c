@@ -26,6 +26,7 @@
 #include "sockopt.h"
 #include "shared_func.h"
 #include "pthread_func.h"
+#include "sched_thread.h"
 #include "ini_file_reader.h"
 #include "tracker_types.h"
 #include "tracker_proto.h"
@@ -857,7 +858,7 @@ int trunk_unlink_mark_file(const char *storage_id)
 	time_t t;
 	struct tm tm;
 
-	t = time(NULL);
+	t = g_current_time;
 	localtime_r(&t, &tm);
 
 	trunk_get_mark_filename_by_id(storage_id, old_filename, \
@@ -1053,7 +1054,7 @@ static void* trunk_sync_thread_entrance(void* arg)
 	reader.mark_fd = -1;
 	reader.binlog_fd = -1;
 
-	current_time =  time(NULL);
+	current_time =  g_current_time;
 	last_keep_alive_time = 0;
 
 	pStorage = (FDFSStorageBrief *)arg;
@@ -1244,7 +1245,7 @@ static void* trunk_sync_thread_entrance(void* arg)
 					}
 				}
 
-				current_time = time(NULL);
+				current_time = g_current_time;
 				if (current_time - last_keep_alive_time >= \
 					g_heart_beat_interval)
 				{

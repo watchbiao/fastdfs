@@ -28,6 +28,7 @@
 #include "sockopt.h"
 #include "shared_func.h"
 #include "pthread_func.h"
+#include "sched_thread.h"
 #include "ini_file_reader.h"
 #include "connection_pool.h"
 #include "tracker_types.h"
@@ -737,7 +738,7 @@ static int storage_check_and_make_data_dirs()
 
 		g_last_server_port = g_server_port;
 		g_last_http_port = g_http_port;
-		g_storage_join_time = time(NULL);
+		g_storage_join_time = g_current_time;
 		if ((result=storage_write_to_sync_ini_file()) != 0)
 		{
 			return result;
@@ -1762,6 +1763,10 @@ int storage_func_init(const char *filename, \
 
 	if ((result=tracker_get_my_server_id()) != 0)
 	{
+		logCrit("file: "__FILE__", line: %d, " \
+			"get my server id from tracker server fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			result, STRERROR(result));
 		return result;
 	}
 
