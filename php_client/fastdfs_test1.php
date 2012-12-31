@@ -256,7 +256,6 @@
  var_dump(fastdfs_tracker_query_storage_list1($file_id, $tracker));
 
  echo "fastdfs_tracker_close_all_connections result: " . fastdfs_tracker_close_all_connections() . "\n";
-
  $fdfs = new FastDFS();
  echo 'tracker_make_all_connections result: ' . $fdfs->tracker_make_all_connections() . "\n";
  $tracker = $fdfs->tracker_get_connection();

@@ -8,7 +8,7 @@
 
 #include "tracker_global.h"
 
-bool g_continue_flag = true;
+volatile bool g_continue_flag = true;
 int g_server_port = FDFS_TRACKER_SERVER_DEF_PORT;
 int g_max_connections = DEFAULT_MAX_CONNECTONS;
 int g_work_threads = DEFAULT_WORK_THREADS;

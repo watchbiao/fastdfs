@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
 	}
 
 	if ((result=sched_start(&scheduleArray, &schedule_tid, \
-		g_thread_stack_size, &g_continue_flag)) != 0)
+		g_thread_stack_size, (bool * volatile)&g_continue_flag)) != 0)
 	{
 		logCrit("exit abnormally!\n");
 		log_destroy();

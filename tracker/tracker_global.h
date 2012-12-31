@@ -35,7 +35,7 @@
 extern "C" {
 #endif
 
-extern bool g_continue_flag;
+extern volatile bool g_continue_flag;
 extern int g_server_port;
 extern FDFSGroups g_groups;
 extern int g_storage_stat_chg_count;
