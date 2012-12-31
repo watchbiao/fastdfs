@@ -509,7 +509,7 @@ static int fdfs_do_parameter_req(ConnectionInfo *pTrackerServer, \
 }
 
 int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
-		IniContext *iniContext, bool *continue_flag, \
+		IniContext *iniContext, bool * volatile continue_flag, \
 		const bool client_bind_addr, const char *bind_addr)
 {
 	ConnectionInfo *pGlobalServer;

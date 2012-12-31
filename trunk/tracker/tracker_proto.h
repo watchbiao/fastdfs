@@ -271,7 +271,7 @@ FDFSMetaData *fdfs_split_metadata_ex(char *meta_buff, \
 		int *meta_count, int *err_no);
 
 int fdfs_get_ini_context_from_tracker(TrackerServerGroup *pTrackerGroup, \
-                IniContext *iniContext, bool *continue_flag, \
+                IniContext *iniContext, bool * volatile continue_flag, \
                 const bool client_bind_addr, const char *bind_addr);
 
 #ifdef __cplusplus

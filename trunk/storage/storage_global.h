@@ -57,7 +57,7 @@ typedef struct
 	int free_mb;  //free spaces
 } FDFSStorePathInfo;
 
-extern bool g_continue_flag;
+extern volatile bool g_continue_flag;
 
 extern FDFSStorePathInfo *g_path_space_list;
 

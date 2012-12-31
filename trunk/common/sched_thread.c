@@ -15,8 +15,9 @@
 #include "pthread_func.h"
 #include "logger.h"
 
-bool g_schedule_flag = false;
-time_t g_current_time = 0;
+volatile bool g_schedule_flag = false;
+volatile time_t g_current_time = 0;
+
 static ScheduleArray waiting_schedule_array = {NULL, 0};
 static int waiting_del_id = -1;
 
@@ -47,7 +48,7 @@ static int sched_init_entries(ScheduleArray *pScheduleArray)
 	}
 
 	g_current_time = time(NULL);
-	localtime_r(&g_current_time, &tm_current);
+	localtime_r((time_t *)&g_current_time, &tm_current);
 	pEnd = pScheduleArray->entries + pScheduleArray->count;
 	for (pEntry=pScheduleArray->entries; pEntry<pEnd; pEntry++)
 	{
@@ -459,7 +460,7 @@ int sched_del_entry(const int id)
 }
 
 int sched_start(ScheduleArray *pScheduleArray, pthread_t *ptid, \
-		const int stack_size, bool *pcontinue_flag)
+		const int stack_size, bool * volatile pcontinue_flag)
 {
 	int result;
 	pthread_attr_t thread_attr;
