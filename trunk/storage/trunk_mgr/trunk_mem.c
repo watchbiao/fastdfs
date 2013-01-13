@@ -68,7 +68,7 @@ static pthread_mutex_t trunk_mem_lock;
 static struct fast_mblock_man free_blocks_man;
 static struct fast_mblock_man tree_nodes_man;
 
-static AVLTreeInfo tree_info_by_size = {NULL, NULL, NULL}; //for block alloc
+static AVLTreeInfo *tree_info_by_sizes = NULL; //for block alloc
 
 static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo);
 static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog);
@@ -147,6 +147,8 @@ static int storage_trunk_node_compare_offset(void *p1, void *p2)
 int storage_trunk_init()
 {
 	int result;
+	int i;
+	int count;
 
 	if (!g_if_trunker_self)
 	{
@@ -198,14 +200,29 @@ int storage_trunk_init()
 		return result;
 	}
 
-	if ((result=avl_tree_init(&tree_info_by_size, NULL, \
-			storage_trunk_node_compare_size)) != 0)
+	tree_info_by_sizes = (AVLTreeInfo *)malloc(sizeof(AVLTreeInfo) * \
+				g_fdfs_store_paths.count);
+	if (tree_info_by_sizes == NULL)
 	{
+		result = errno != 0 ? errno : ENOMEM;
 		logError("file: "__FILE__", line: %d, " \
-			"avl_tree_init fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, result, STRERROR(result));
+			"malloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, (int)(sizeof(AVLTreeInfo) * \
+			g_fdfs_store_paths.count), result, STRERROR(result));
 		return result;
+	}
+
+	for (i=0; i<g_fdfs_store_paths.count; i++)
+	{
+		if ((result=avl_tree_init(tree_info_by_sizes + i, NULL, \
+			storage_trunk_node_compare_size)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"avl_tree_init fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
+			return result;
+		}
 	}
 
 	if ((result=trunk_free_block_checker_init()) != 0)
@@ -218,12 +235,17 @@ int storage_trunk_init()
 		return result;
 	}
 
+	count = 0;
+	for (i=0; i<g_fdfs_store_paths.count; i++)
+	{
+		count += avl_tree_count(tree_info_by_sizes + i);
+	}
+
 	logInfo("file: "__FILE__", line: %d, " \
 		"tree by space size node count: %d, tree by trunk file id " \
 		"node count: %d, free block count: %d, " \
 		"trunk_total_free_space: "INT64_PRINTF_FORMAT, __LINE__, \
-		avl_tree_count(&tree_info_by_size), \
-		trunk_free_block_tree_node_count(), \
+		count, trunk_free_block_tree_node_count(), \
 		trunk_free_block_total_count(), \
 		g_trunk_total_free_space);
 
@@ -242,6 +264,7 @@ int storage_trunk_init()
 int storage_trunk_destroy_ex(const bool bNeedSleep)
 {
 	int result;
+	int i;
 
 	if (trunk_init_flag != STORAGE_TRUNK_INIT_FLAG_DONE)
 	{
@@ -260,7 +283,13 @@ int storage_trunk_destroy_ex(const bool bNeedSleep)
 		"storage trunk destroy", __LINE__);
 	result = storage_trunk_save();
 
-	avl_tree_destroy(&tree_info_by_size);
+	for (i=0; i<g_fdfs_store_paths.count; i++)
+	{
+		avl_tree_destroy(tree_info_by_sizes + i);
+	}
+	free(tree_info_by_sizes);
+	tree_info_by_sizes = NULL;
+
 	trunk_free_block_checker_destroy();
 
 	fast_mblock_destroy(&free_blocks_man);
@@ -357,6 +386,7 @@ static int storage_trunk_save()
 	struct walk_callback_args callback_args;
 	int len;
 	int result;
+	int i;
 
 	trunk_binlog_size = storage_trunk_get_binlog_size();
 	if (trunk_binlog_size < 0)
@@ -386,8 +416,17 @@ static int storage_trunk_save()
 			trunk_binlog_size);
 	callback_args.pCurrent += len;
 
+	result = 0;
 	pthread_mutex_lock(&trunk_mem_lock);
-	result = avl_tree_walk(&tree_info_by_size, tree_walk_callback, &callback_args);
+	for (i=0; i<g_fdfs_store_paths.count; i++)
+	{
+		result = avl_tree_walk(tree_info_by_sizes + i, \
+				tree_walk_callback, &callback_args);
+		if (result != 0)
+		{
+			break;
+		}
+	}
 
 	len = callback_args.pCurrent - callback_args.buff;
 	if (len > 0 && result == 0)
@@ -1079,7 +1118,8 @@ static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 
 	target_slot.size = pNode->trunk.file.size;
 	target_slot.head = NULL;
-	chain = (FDFSTrunkSlot *)avl_tree_find(&tree_info_by_size, &target_slot);
+	chain = (FDFSTrunkSlot *)avl_tree_find(tree_info_by_sizes +  \
+			pNode->trunk.path.store_path_index, &target_slot);
 	if (chain == NULL)
 	{
 		pMblockNode = fast_mblock_alloc(&tree_nodes_man);
@@ -1101,7 +1141,8 @@ static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 		pNode->next = NULL;
 		chain->head = pNode;
 
-		if (avl_tree_insert(&tree_info_by_size, chain) != 1)
+		if (avl_tree_insert(tree_info_by_sizes + pNode->trunk. \
+				path.store_path_index, chain) != 1)
 		{
 			result = errno != 0 ? errno : ENOMEM;
 			logError("file: "__FILE__", line: %d, " \
@@ -1145,9 +1186,10 @@ static int trunk_add_free_block(FDFSTrunkNode *pNode, const bool bWriteBinLog)
 	return result;
 }
 
-static void trunk_delete_size_tree_entry(FDFSTrunkSlot *pSlot)
+static void trunk_delete_size_tree_entry(const int store_path_index, \
+		FDFSTrunkSlot *pSlot)
 {
-	if (avl_tree_delete(&tree_info_by_size, pSlot) == 1)
+	if (avl_tree_delete(tree_info_by_sizes + store_path_index, pSlot) == 1)
 	{
 		fast_mblock_free(&tree_nodes_man, \
 				pSlot->pMblockNode);
@@ -1174,7 +1216,8 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 	target_slot.head = NULL;
 
 	pthread_mutex_lock(&trunk_mem_lock);
-	pSlot = (FDFSTrunkSlot *)avl_tree_find(&tree_info_by_size, &target_slot);
+	pSlot = (FDFSTrunkSlot *)avl_tree_find(tree_info_by_sizes + \
+			pTrunkInfo->path.store_path_index, &target_slot);
 	if (pSlot == NULL)
 	{
 		pthread_mutex_unlock(&trunk_mem_lock);
@@ -1207,7 +1250,8 @@ static int trunk_delete_space(const FDFSTrunkFullInfo *pTrunkInfo, \
 		pSlot->head = pCurrent->next;
 		if (pSlot->head == NULL)
 		{
-			trunk_delete_size_tree_entry(pSlot);
+			trunk_delete_size_tree_entry(pTrunkInfo->path. \
+					store_path_index, pSlot);
 		}
 	}
 	else
@@ -1246,7 +1290,8 @@ static int trunk_restore_node(const FDFSTrunkFullInfo *pTrunkInfo)
 	target_slot.head = NULL;
 
 	pthread_mutex_lock(&trunk_mem_lock);
-	pSlot = (FDFSTrunkSlot *)avl_tree_find(&tree_info_by_size, &target_slot);
+	pSlot = (FDFSTrunkSlot *)avl_tree_find(tree_info_by_sizes + \
+			pTrunkInfo->path.store_path_index, &target_slot);
 	if (pSlot == NULL)
 	{
 		pthread_mutex_unlock(&trunk_mem_lock);
@@ -1330,7 +1375,8 @@ static int trunk_split(FDFSTrunkNode *pNode, const int size)
 	return 0;
 }
 
-static FDFSTrunkNode *trunk_create_trunk_file(int *err_no)
+static FDFSTrunkNode *trunk_create_trunk_file(const int store_path_index, \
+			int *err_no)
 {
 	FDFSTrunkNode *pTrunkNode;
 	struct fast_mblock_node *pMblockNode;
@@ -1349,6 +1395,26 @@ static FDFSTrunkNode *trunk_create_trunk_file(int *err_no)
 
 	pTrunkNode = (FDFSTrunkNode *)pMblockNode->data;
 	pTrunkNode->pMblockNode = pMblockNode;
+
+	if (store_path_index >= 0)
+	{
+		pTrunkNode->trunk.path.store_path_index = store_path_index;
+	}
+	else
+	{
+		int result;
+		int new_store_path_index;
+		if ((result=storage_get_storage_path_index( \
+				&new_store_path_index)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"get_storage_path_index fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				result, STRERROR(result));
+			return NULL;
+		}
+		pTrunkNode->trunk.path.store_path_index = new_store_path_index;
+	}
 
 	pTrunkNode->trunk.file.offset = 0;
 	pTrunkNode->trunk.file.size = g_trunk_file_size;
@@ -1385,8 +1451,8 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	pthread_mutex_lock(&trunk_mem_lock);
 	while (1)
 	{
-		pSlot = (FDFSTrunkSlot *)avl_tree_find_ge(&tree_info_by_size, \
-						&target_slot);
+		pSlot = (FDFSTrunkSlot *)avl_tree_find_ge(tree_info_by_sizes \
+			 + pResult->path.store_path_index, &target_slot);
 		if (pSlot == NULL)
 		{
 			break;
@@ -1416,7 +1482,8 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 			pSlot->head = pTrunkNode->next;
 			if (pSlot->head == NULL)
 			{
-				trunk_delete_size_tree_entry(pSlot);
+				trunk_delete_size_tree_entry(pResult->path. \
+					store_path_index, pSlot);
 			}
 		}
 		else
@@ -1428,7 +1495,8 @@ int trunk_alloc_space(const int size, FDFSTrunkFullInfo *pResult)
 	}
 	else
 	{
-		pTrunkNode = trunk_create_trunk_file(&result);
+		pTrunkNode = trunk_create_trunk_file(pResult->path. \
+					store_path_index, &result);
 		if (pTrunkNode == NULL)
 		{
 			pthread_mutex_unlock(&trunk_mem_lock);
@@ -1496,21 +1564,10 @@ static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo)
 	char buff[32];
 	int result;
 	int filename_len;
-	int store_path_index;
 	char short_filename[64];
 	char full_filename[MAX_PATH_SIZE];
 	int sub_path_high;
 	int sub_path_low;
-
-	if ((result=storage_get_storage_path_index(&store_path_index)) != 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"get_storage_path_index fail, " \
-			"errno: %d, error info: %s", __LINE__, \
-			result, STRERROR(result));
-		return result;
-	}
-	pTrunkInfo->path.store_path_index = store_path_index;
 
 	while (1)
 	{
@@ -1839,7 +1896,7 @@ int trunk_create_trunk_file_advance(void *args)
 	file_count = alloc_space / g_trunk_file_size;
 	for (i=0; i<file_count; i++)
 	{
-		pTrunkNode = trunk_create_trunk_file(&result);
+		pTrunkNode = trunk_create_trunk_file(-1, &result);
 		if (pTrunkNode != NULL)
 		{
 			result = trunk_add_free_block(pTrunkNode, false);

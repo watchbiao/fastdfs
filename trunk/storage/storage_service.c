@@ -2034,7 +2034,6 @@ void storage_get_store_path(const char *filename, const int filename_len, \
 		n = PJWHash(filename, filename_len) % (1 << 16);
 		*sub_path_high = ((n >> 8) & 0xFF) % g_subdir_count_per_path;
 		*sub_path_low = (n & 0xFF) % g_subdir_count_per_path;
-
 	}
 }
 
@@ -3662,6 +3661,7 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 request package format:
 FDFS_GROUP_NAME_MAX_LEN bytes: group_name
 4 bytes: file size
+1 bytes: store_path_index
 
 response package format:
 1 byte: store_path_index
@@ -3688,7 +3688,7 @@ static int storage_server_trunk_alloc_space(struct fast_task_info *pTask)
 
 	CHECK_TRUNK_SERVER(pTask)
 
-	if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN + 4)
+	if (nInPackLen != FDFS_GROUP_NAME_MAX_LEN + 5)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"cmd=%d, client ip: %s, package size " \
@@ -3696,7 +3696,7 @@ static int storage_server_trunk_alloc_space(struct fast_task_info *pTask)
 			"expect length: %d", __LINE__, \
 			STORAGE_PROTO_CMD_TRUNK_ALLOC_SPACE, \
 			pTask->client_ip,  nInPackLen, \
-			FDFS_GROUP_NAME_MAX_LEN + 4);
+			FDFS_GROUP_NAME_MAX_LEN + 5);
 		return EINVAL;
 	}
 
@@ -3722,6 +3722,7 @@ static int storage_server_trunk_alloc_space(struct fast_task_info *pTask)
 		return EINVAL;
 	}
 
+	trunkInfo.path.store_path_index = *(in_buff+FDFS_GROUP_NAME_MAX_LEN+4);
 	if ((result=trunk_alloc_space(file_size, &trunkInfo)) != 0)
 	{
 		return result;
@@ -4435,17 +4436,6 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 		return result;
 	}
 
-	if (!storage_check_reserved_space_path(g_path_space_list \
-		[store_path_index].total_mb, g_path_space_list \
-		[store_path_index].free_mb - file_bytes / FDFS_ONE_MB, \
-		g_avg_storage_reserved_mb))
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"free space is not enough!", __LINE__);
-		pClientInfo->total_length = sizeof(TrackerHeader);
-		return ENOSPC;
-	}
-
 	pFileContext->calc_crc32 = true;
 	pFileContext->calc_file_hash = g_check_file_duplicate;
 	pFileContext->extra_info.upload.start_time = g_current_time;
@@ -4453,7 +4443,8 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 	strcpy(pFileContext->extra_info.upload.file_ext_name, file_ext_name);
 	storage_format_ext_name(file_ext_name, \
 			pFileContext->extra_info.upload.formatted_ext_name);
-
+	pFileContext->extra_info.upload.trunk_info.path. \
+				store_path_index = store_path_index;
 	pFileContext->extra_info.upload.file_type = _FILE_TYPE_REGULAR;
 	pFileContext->sync_flag = STORAGE_OP_TYPE_SOURCE_CREATE_FILE;
 	pFileContext->timestamp2log = pFileContext->extra_info.upload.start_time;
@@ -4526,8 +4517,6 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 		*filename = '\0';
 		filename_len = 0;
 		pFileContext->extra_info.upload.if_sub_path_alloced = false;
-		pFileContext->extra_info.upload.trunk_info.path. \
-				store_path_index = store_path_index;
 		if ((result=storage_get_filename(pClientInfo, \
 			pFileContext->extra_info.upload.start_time, \
 			file_bytes, crc32, pFileContext->extra_info.upload.\
