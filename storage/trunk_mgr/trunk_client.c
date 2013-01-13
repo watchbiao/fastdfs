@@ -34,17 +34,20 @@ static int trunk_client_trunk_do_alloc_space(ConnectionInfo *pTrunkServer, \
 	TrackerHeader *pHeader;
 	char *p;
 	int result;
-	char out_buff[sizeof(TrackerHeader)+FDFS_GROUP_NAME_MAX_LEN+4];
+	char out_buff[sizeof(TrackerHeader) + FDFS_GROUP_NAME_MAX_LEN + 5];
 	FDFSTrunkInfoBuff trunkBuff;
 	int64_t in_bytes;
 
 	pHeader = (TrackerHeader *)out_buff;
 	memset(out_buff, 0, sizeof(out_buff));
-	snprintf(out_buff + sizeof(TrackerHeader), sizeof(out_buff) - \
-		sizeof(TrackerHeader),  "%s", g_group_name);
-	int2buff(file_size, out_buff + sizeof(TrackerHeader) \
-		 + FDFS_GROUP_NAME_MAX_LEN);
-	long2buff(FDFS_GROUP_NAME_MAX_LEN + 4, pHeader->pkg_len);
+	p = out_buff + sizeof(TrackerHeader);
+	snprintf(p, sizeof(out_buff) - sizeof(TrackerHeader), \
+		"%s", g_group_name);
+	p += FDFS_GROUP_NAME_MAX_LEN;
+	int2buff(file_size, p);
+	p += 4;
+	*p++ = pTrunkInfo->path.store_path_index;
+	long2buff(FDFS_GROUP_NAME_MAX_LEN + 5, pHeader->pkg_len);
 	pHeader->cmd = STORAGE_PROTO_CMD_TRUNK_ALLOC_SPACE;
 
 	if ((result=tcpsenddata_nb(pTrunkServer->sock, out_buff, \
