@@ -1,5 +1,6 @@
 
-Version 4.06  2013-01-12
+Version 4.06  2013-01-13
+ * fdfs_upload_file tool enhancement
  * fdfs_download_file tool support offset and download size
 
 Version 4.05  2012-12-30

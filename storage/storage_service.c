@@ -1928,6 +1928,59 @@ static void *work_thread_entrance(void* arg)
 	return NULL;
 }
 
+int storage_get_storage_path_index(int *store_path_index)
+{
+	int i;
+
+	*store_path_index = g_store_path_index;
+	if (g_store_path_mode == FDFS_STORE_PATH_LOAD_BALANCE)
+	{
+		if (*store_path_index < 0 || *store_path_index >= \
+			g_fdfs_store_paths.count)
+		{
+			return ENOSPC;
+		}
+	}
+	else
+	{
+		if (*store_path_index >= g_fdfs_store_paths.count)
+		{
+			*store_path_index = 0;
+		}
+
+		if (!storage_check_reserved_space_path(g_path_space_list \
+			[*store_path_index].total_mb, g_path_space_list \
+			[*store_path_index].free_mb, g_avg_storage_reserved_mb))
+		{
+			for (i=0; i<g_fdfs_store_paths.count; i++)
+			{
+				if (storage_check_reserved_space_path( \
+					g_path_space_list[i].total_mb, \
+					g_path_space_list[i].free_mb, \
+			 		g_avg_storage_reserved_mb))
+				{
+					*store_path_index = i;
+					g_store_path_index = i;
+					break;
+				}
+			}
+
+			if (i == g_fdfs_store_paths.count)
+			{
+				return ENOSPC;
+			}
+		}
+
+		g_store_path_index++;
+		if (g_store_path_index >= g_fdfs_store_paths.count)
+		{
+			g_store_path_index = 0;
+		}
+	}
+
+	return 0;
+}
+
 void storage_get_store_path(const char *filename, const int filename_len, \
 		int *sub_path_high, int *sub_path_low)
 {
@@ -4329,7 +4382,22 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 
 	p = pTask->data + sizeof(TrackerHeader);
 	store_path_index = *p++;
-	if (store_path_index < 0 || store_path_index >= g_fdfs_store_paths.count)
+
+	if (store_path_index == -1)
+	{
+		if ((result=storage_get_storage_path_index( \
+			&store_path_index)) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"get_storage_path_index fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				result, STRERROR(result));
+			pClientInfo->total_length = sizeof(TrackerHeader);
+			return result;
+		}
+	}
+	else if (store_path_index < 0 || store_path_index >= \
+		g_fdfs_store_paths.count)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, store_path_index: %d " \
@@ -4365,6 +4433,17 @@ static int storage_upload_file(struct fast_task_info *pTask, bool bAppenderFile)
 			pTask->client_ip, file_ext_name);
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
+	}
+
+	if (!storage_check_reserved_space_path(g_path_space_list \
+		[store_path_index].total_mb, g_path_space_list \
+		[store_path_index].free_mb - file_bytes / FDFS_ONE_MB, \
+		g_avg_storage_reserved_mb))
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"free space is not enough!", __LINE__);
+		pClientInfo->total_length = sizeof(TrackerHeader);
+		return ENOSPC;
 	}
 
 	pFileContext->calc_crc32 = true;
