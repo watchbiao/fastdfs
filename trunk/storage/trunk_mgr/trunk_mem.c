@@ -1494,60 +1494,22 @@ int trunk_alloc_confirm(const FDFSTrunkFullInfo *pTrunkInfo, const int status)
 static int trunk_create_next_file(FDFSTrunkFullInfo *pTrunkInfo)
 {
 	char buff[32];
-	int i;
 	int result;
 	int filename_len;
+	int store_path_index;
 	char short_filename[64];
 	char full_filename[MAX_PATH_SIZE];
-	int store_path_index;
 	int sub_path_high;
 	int sub_path_low;
 
-	store_path_index = g_store_path_index;
-	if (g_store_path_mode == FDFS_STORE_PATH_LOAD_BALANCE)
+	if ((result=storage_get_storage_path_index(&store_path_index)) != 0)
 	{
-		if (store_path_index < 0)
-		{
-			return ENOSPC;
-		}
+		logError("file: "__FILE__", line: %d, " \
+			"get_storage_path_index fail, " \
+			"errno: %d, error info: %s", __LINE__, \
+			result, STRERROR(result));
+		return result;
 	}
-	else
-	{
-		if (store_path_index >= g_fdfs_store_paths.count)
-		{
-			store_path_index = 0;
-		}
-
-		if (!storage_check_reserved_space_path(g_path_space_list \
-			[store_path_index].total_mb, g_path_space_list \
-			[store_path_index].free_mb, g_avg_storage_reserved_mb))
-		{
-			for (i=0; i<g_fdfs_store_paths.count; i++)
-			{
-				if (storage_check_reserved_space_path( \
-					g_path_space_list[i].total_mb, \
-					g_path_space_list[i].free_mb, \
-			 		g_avg_storage_reserved_mb))
-				{
-					store_path_index = i;
-					g_store_path_index = i;
-					break;
-				}
-			}
-
-			if (i == g_fdfs_store_paths.count)
-			{
-				return ENOSPC;
-			}
-		}
-
-		g_store_path_index++;
-		if (g_store_path_index >= g_fdfs_store_paths.count)
-		{
-			g_store_path_index = 0;
-		}
-	}
-
 	pTrunkInfo->path.store_path_index = store_path_index;
 
 	while (1)

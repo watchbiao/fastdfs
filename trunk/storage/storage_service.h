@@ -41,6 +41,8 @@ void storage_nio_notify(struct fast_task_info *pTask);
 void storage_accept_loop(int server_sock);
 int storage_terminate_threads();
 
+int storage_get_storage_path_index(int *store_path_index);
+
 void storage_get_store_path(const char *filename, const int filename_len, \
 		int *sub_path_high, int *sub_path_low);
 
