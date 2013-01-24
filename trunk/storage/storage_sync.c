@@ -532,13 +532,11 @@ static int storage_sync_truncate_file(ConnectionInfo *pStorageServer, \
 
 	if (stat_buf.st_size != new_file_size)
 	{
-		logWarning("file: "__FILE__", line: %d, " \
+		logDebug("file: "__FILE__", line: %d, " \
 			"appender file: %s 'size: "INT64_PRINTF_FORMAT \
-			" != "INT64_PRINTF_FORMAT", skip sync truncate " \
-			"operation of this appender file", __LINE__, \
-			full_filename, stat_buf.st_size, new_file_size);
-
-		return 0;
+			" != "INT64_PRINTF_FORMAT", maybe append/modify later",\
+			__LINE__, full_filename, stat_buf.st_size, 
+			new_file_size);
 	}
 
 	do
