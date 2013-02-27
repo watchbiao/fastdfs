@@ -89,30 +89,46 @@ elif [ "$uname" = "HP-UX" ]; then
   CFLAGS="$CFLAGS -DOS_HPUX"
 fi
 
+have_pthread=0
 if [ -f /usr/lib/libpthread.so ] || [ -f /usr/local/lib/libpthread.so ] || [ -f /lib64/libpthread.so ] || [ -f /usr/lib64/libpthread.so ] || [ -f /usr/lib/libpthread.a ] || [ -f /usr/local/lib/libpthread.a ] || [ -f /lib64/libpthread.a ] || [ -f /usr/lib64/libpthread.a ]; then
   LIBS="$LIBS -lpthread"
+  have_pthread=1
 elif [ "$uname" = "HP-UX" ]; then
   lib_path="/usr/lib/hpux$OS_BITS"
   if [ -f $lib_path/libpthread.so ]; then
     LIBS="-L$lib_path -lpthread"
+    have_pthread=1
   fi
 elif [ "$uname" = "FreeBSD" ]; then
   if [ -f /usr/lib/libc_r.so ]; then
     line=$(nm -D /usr/lib/libc_r.so | grep pthread_create | grep -w T)
     if [ $? -eq 0 ]; then
       LIBS="$LIBS -lc_r"
+      have_pthread=1
     fi
   elif [ -f /lib64/libc_r.so ]; then
     line=$(nm -D /lib64/libc_r.so | grep pthread_create | grep -w T)
     if [ $? -eq 0 ]; then
       LIBS="$LIBS -lc_r"
+      have_pthread=1
     fi
   elif [ -f /usr/lib64/libc_r.so ]; then
     line=$(nm -D /usr/lib64/libc_r.so | grep pthread_create | grep -w T)
     if [ $? -eq 0 ]; then
       LIBS="$LIBS -lc_r"
+      have_pthread=1
     fi
   fi
+fi
+
+if [ $have_pthread -eq 0 ]; then
+   /sbin/ldconfig -p | fgrep libpthread.so > /dev/null
+   if [ $? -eq 0 ]; then
+      LIBS="$LIBS -lpthread"
+   else
+      echo -E 'Require pthread lib, please check!'
+      exit 2
+   fi
 fi
 
 TRACKER_HTTPD_OBJS=''
