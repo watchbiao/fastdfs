@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 	
 	if (argc < 3)
 	{
-		printf("Usage: %s <config_file> <remote file id>\n", argv[0]);
+		printf("Usage: %s <config_file> <file_id>\n", argv[0]);
 		return 1;
 	}
 

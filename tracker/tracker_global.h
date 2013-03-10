@@ -41,6 +41,7 @@ extern FDFSGroups g_groups;
 extern int g_storage_stat_chg_count;
 extern int g_storage_sync_time_chg_count; //sync timestamp
 extern int g_max_connections;
+extern int g_accept_threads;
 extern int g_work_threads;
 extern FDFSStorageReservedSpace g_storage_reserved_space;
 extern int g_sync_log_buff_interval; //sync log buff to disk every interval seconds

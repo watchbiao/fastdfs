@@ -70,6 +70,7 @@ extern int g_last_server_port;
 extern int g_last_http_port;  //last http server port
 extern char g_http_domain[FDFS_DOMAIN_NAME_MAX_SIZE];  //http server domain name
 extern int g_max_connections;
+extern int g_accept_threads;
 extern int g_work_threads;
 extern int g_buff_size;
  

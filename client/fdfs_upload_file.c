@@ -18,7 +18,7 @@
 
 static void usage(char *argv[])
 {
-	printf("Usage: %s <config_filename> <local_filename> " \
+	printf("Usage: %s <config_file> <local_filename> " \
 		"[storage_ip:port] [store_path_index]\n", argv[0]);
 }
 

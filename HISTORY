@@ -1,6 +1,7 @@
 
-Version 4.07  2013-02-27
+Version 4.07  2013-03-10
  * make.sh add -lpthread by ldconfig check
+ * support multi accept threads
 
 Version 4.06  2013-01-24
  * fdfs_upload_file tool enhancement

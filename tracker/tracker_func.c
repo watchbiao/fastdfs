@@ -305,6 +305,17 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_max_connections = DEFAULT_MAX_CONNECTONS;
 		}
 	
+		g_accept_threads = iniGetIntValue(NULL, "accept_threads", \
+				&iniContext, 1);
+		if (g_accept_threads <= 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"item \"accept_threads\" is invalid, " \
+				"value: %d <= 0!", __LINE__, g_accept_threads);
+			result = EINVAL;
+                        break;
+		}
+
 		g_work_threads = iniGetIntValue(NULL, "work_threads", \
 				&iniContext, DEFAULT_WORK_THREADS);
 		if (g_work_threads <= 0)
@@ -649,6 +660,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			"network_timeout=%ds, "    \
 			"port=%d, bind_addr=%s, " \
 			"max_connections=%d, "    \
+			"accept_threads=%d, "    \
 			"work_threads=%d, "    \
 			"store_lookup=%d, store_group=%s, " \
 			"store_server=%d, store_path=%d, " \
@@ -683,7 +695,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			g_fdfs_base_path, g_run_by_group, g_run_by_user, \
 			g_fdfs_connect_timeout, \
 			g_fdfs_network_timeout, g_server_port, bind_addr, \
-			g_max_connections, g_work_threads, \
+			g_max_connections, g_accept_threads, g_work_threads, \
 			g_groups.store_lookup, g_groups.store_group, \
 			g_groups.store_server, g_groups.store_path, \
 			fdfs_storage_reserved_space_to_string( \

@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 	
 	if (argc < 3)
 	{
-		printf("Usage: %s <config_filename> <local_filename>\n", argv[0]);
+		printf("Usage: %s <config_file> <local_filename>\n", argv[0]);
 		return 1;
 	}
 
