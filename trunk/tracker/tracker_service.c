@@ -209,13 +209,15 @@ int tracker_service_destroy()
 	return 0;
 }
 
-void tracker_accept_loop(int server_sock)
+static void *accept_thread_entrance(void* arg)
 {
+	int server_sock;
 	int incomesock;
 	struct sockaddr_in inaddr;
 	socklen_t sockaddr_len;
 	struct tracker_thread_data *pThreadData;
 
+	server_sock = (long)arg;
 	while (g_continue_flag)
 	{
 		sockaddr_len = sizeof(inaddr);
@@ -244,6 +246,45 @@ void tracker_accept_loop(int server_sock)
 				__LINE__, errno, STRERROR(errno));
 		}
 	}
+
+	return NULL;
+}
+
+void tracker_accept_loop(int server_sock)
+{
+	if (g_accept_threads > 1)
+	{
+		pthread_t tid;
+		pthread_attr_t thread_attr;
+		int result;
+		int i;
+
+		if ((result=init_pthread_attr(&thread_attr, g_thread_stack_size)) != 0)
+		{
+			logWarning("file: "__FILE__", line: %d, " \
+				"init_pthread_attr fail!", __LINE__);
+		}
+		else
+		{
+			for (i=1; i<g_accept_threads; i++)
+			{
+			if ((result=pthread_create(&tid, &thread_attr, \
+				accept_thread_entrance, \
+				(void *)(long)server_sock)) != 0)
+			{
+				logError("file: "__FILE__", line: %d, " \
+				"create thread failed, startup threads: %d, " \
+				"errno: %d, error info: %s", \
+				__LINE__, i, result, STRERROR(result));
+				break;
+			}
+			}
+
+			pthread_attr_destroy(&thread_attr);
+		}
+	}
+
+	accept_thread_entrance((void *)(long)server_sock);
 }
 
 static void *work_thread_entrance(void* arg)

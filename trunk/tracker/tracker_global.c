@@ -11,6 +11,7 @@
 volatile bool g_continue_flag = true;
 int g_server_port = FDFS_TRACKER_SERVER_DEF_PORT;
 int g_max_connections = DEFAULT_MAX_CONNECTONS;
+int g_accept_threads = 1;
 int g_work_threads = DEFAULT_WORK_THREADS;
 int g_sync_log_buff_interval = SYNC_LOG_BUFF_DEF_INTERVAL;
 int g_check_active_interval = CHECK_ACTIVE_DEF_INTERVAL;

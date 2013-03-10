@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 	
 	if (argc < 4)
 	{
-		printf("Usage: %s <config_filename> <appender_file_id> " \
+		printf("Usage: %s <config_file> <appender_file_id> " \
 			"<local_filename>\n", argv[0]);
 		return 1;
 	}

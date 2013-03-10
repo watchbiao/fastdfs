@@ -24,6 +24,7 @@ int g_http_port = 80;
 int g_last_server_port = 0;
 int g_last_http_port = 0;
 int g_max_connections = DEFAULT_MAX_CONNECTONS;
+int g_accept_threads = 1;
 int g_work_threads = DEFAULT_WORK_THREADS;
 int g_buff_size = STORAGE_DEFAULT_BUFF_SIZE;
 

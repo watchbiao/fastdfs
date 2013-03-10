@@ -1177,6 +1177,17 @@ int storage_func_init(const char *filename, \
 			break;
 		}
 
+		g_accept_threads = iniGetIntValue(NULL, "accept_threads", \
+				&iniContext, 1);
+		if (g_accept_threads <= 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"item \"accept_threads\" is invalid, " \
+				"value: %d <= 0!", __LINE__, g_accept_threads);
+			result = EINVAL;
+                        break;
+		}
+
 		g_work_threads = iniGetIntValue(NULL, "work_threads", \
 				&iniContext, DEFAULT_WORK_THREADS);
 		if (g_work_threads <= 0)
@@ -1646,7 +1657,8 @@ int storage_func_init(const char *filename, \
 			"run_by_group=%s, run_by_user=%s, " \
 			"connect_timeout=%ds, network_timeout=%ds, "\
 			"port=%d, bind_addr=%s, client_bind=%d, " \
-			"max_connections=%d, work_threads=%d, "    \
+			"max_connections=%d, accept_threads=%d, " \
+			"work_threads=%d, "    \
 			"disk_rw_separated=%d, disk_reader_threads=%d, " \
 			"disk_writer_threads=%d, " \
 			"buff_size=%dKB, heart_beat_interval=%ds, " \
@@ -1677,12 +1689,13 @@ int storage_func_init(const char *filename, \
 			"use_connection_pool=%d, " \
 			"g_connection_pool_max_idle_time=%ds", \
 			g_fdfs_version.major, g_fdfs_version.minor, \
-			g_fdfs_base_path, g_fdfs_store_paths.count, g_subdir_count_per_path,\
+			g_fdfs_base_path, g_fdfs_store_paths.count, \
+			g_subdir_count_per_path, \
 			g_group_name, g_run_by_group, g_run_by_user, \
-			g_fdfs_connect_timeout, \
-			g_fdfs_network_timeout, g_server_port, bind_addr, \
+			g_fdfs_connect_timeout, g_fdfs_network_timeout, \
+			g_server_port, bind_addr, \
 			g_client_bind_addr, g_max_connections, \
-			g_work_threads, g_disk_rw_separated, \
+			g_accept_threads, g_work_threads, g_disk_rw_separated, \
 			g_disk_reader_threads, g_disk_writer_threads, \
 			g_buff_size / 1024, \
 			g_heart_beat_interval, g_stat_report_interval, \

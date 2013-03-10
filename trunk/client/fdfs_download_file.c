@@ -29,8 +29,8 @@ int main(int argc, char *argv[])
 	
 	if (argc < 3)
 	{
-		printf("Usage: %s <config_file> <remote file id> " \
-			"[local filename] [<download_offset> " \
+		printf("Usage: %s <config_file> <file_id> " \
+			"[local_filename] [<download_offset> " \
 			"<download_bytes>]\n", argv[0]);
 		return 1;
 	}
