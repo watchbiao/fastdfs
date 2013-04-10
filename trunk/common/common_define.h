@@ -115,6 +115,10 @@ typedef char  bool;
 #define ECANCELED 125
 #endif
 
+#ifndef ENONET
+#define ENONET          64      /* Machine is not on the network */
+#endif
+
 #define IS_UPPER_HEX(ch) ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F'))
 #define STRERROR(no) (strerror(no) != NULL ? strerror(no) : "Unkown error")
 
