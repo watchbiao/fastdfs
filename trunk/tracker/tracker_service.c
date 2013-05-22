@@ -3715,6 +3715,7 @@ int tracker_deal_task(struct fast_task_info *pTask)
 				"client ip: %s, unkown cmd: %d", \
 				__LINE__, pTask->client_ip, \
 				pHeader->cmd);
+			pTask->length = sizeof(TrackerHeader);
 			result = EINVAL;
 			break;
 	}

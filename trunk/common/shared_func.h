@@ -482,6 +482,11 @@ int set_timer(const int first_remain_seconds, const int interval, \
 */
 int set_file_utimes(const char *filename, const time_t new_time);
 
+/** ignore singal pipe (SIGPIPE)
+ *  return: error no , 0 success, != 0 fail
+*/
+int ignore_signal_pipe();
+
 #ifdef __cplusplus
 }
 #endif

@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
 
 	log_init();
 	g_log_context.log_level = LOG_ERR;
+	ignore_signal_pipe();
 
 	conf_filename = argv[1];
 	if ((result=fdfs_client_init(conf_filename)) != 0)

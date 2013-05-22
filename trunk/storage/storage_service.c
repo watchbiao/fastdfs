@@ -8195,6 +8195,7 @@ int storage_deal_task(struct fast_task_info *pTask)
 				"client ip: %s, unkown cmd: %d", \
 				__LINE__, pTask->client_ip, \
 				pHeader->cmd);
+			pClientInfo->total_length = sizeof(TrackerHeader);
 			result = EINVAL;
 			break;
 	}
