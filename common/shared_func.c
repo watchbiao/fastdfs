@@ -12,6 +12,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <netinet/in.h>
@@ -2043,6 +2044,24 @@ int set_file_utimes(const char *filename, const time_t new_time)
 			", errno: %d, error info: %s", \
 			__LINE__, filename, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOENT;
+	}
+
+	return 0;
+}
+
+int ignore_signal_pipe()
+{
+	struct sigaction act;
+
+	memset(&act, 0, sizeof(act));
+	sigemptyset(&act.sa_mask);
+	act.sa_handler = SIG_IGN;
+	if(sigaction(SIGPIPE, &act, NULL) < 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"call sigaction fail, errno: %d, error info: %s", \
+			__LINE__, errno, STRERROR(errno));
+		return errno;
 	}
 
 	return 0;

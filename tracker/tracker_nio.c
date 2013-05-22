@@ -394,6 +394,18 @@ static void client_sock_write(int sock, short event, void *arg)
 		pTask->offset += bytes;
 		if (pTask->offset >= pTask->length)
 		{
+			if (pTask->length == sizeof(TrackerHeader) && \
+				((TrackerHeader *)pTask->data)->status == EINVAL)
+			{
+				logDebug("file: "__FILE__", line: %d, "\
+					"close conn: #%d, client ip: %s", \
+					__LINE__, pTask->ev_read.ev_fd,
+					pTask->client_ip);
+				close(pTask->ev_read.ev_fd);
+				task_finish_clean_up(pTask);
+				return;
+			}
+
 			pTask->offset = 0;
 			pTask->length  = 0;
 

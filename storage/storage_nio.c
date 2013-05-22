@@ -374,7 +374,6 @@ static void client_sock_write(int sock, short event, void *arg)
 			"send timeout", __LINE__);
 
 		task_finish_clean_up(pTask);
-
 		return;
 	}
 
@@ -425,6 +424,17 @@ static void client_sock_write(int sock, short event, void *arg)
 			pClientInfo->total_offset += pTask->length;
 			if (pClientInfo->total_offset>=pClientInfo->total_length)
 			{
+				if (pClientInfo->total_length == sizeof(TrackerHeader)
+					&& ((TrackerHeader *)pTask->data)->status == EINVAL)
+				{
+					logDebug("file: "__FILE__", line: %d, "\
+						"close conn: #%d, client ip: %s", \
+						__LINE__, pClientInfo->sock,
+						pTask->client_ip);
+					task_finish_clean_up(pTask);
+					return;
+				}
+
 				/*  reponse done, try to recv again */
 				pClientInfo->total_length = 0;
 				pClientInfo->total_offset = 0;

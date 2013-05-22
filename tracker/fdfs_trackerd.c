@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
 {
 	char *conf_filename;
 	int result;
+	int wait_count;
 	int sock;
 	pthread_t schedule_tid;
 	struct sigaction act;
@@ -361,6 +362,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+	wait_count = 0;
 	while ((g_tracker_thread_count != 0) || g_schedule_flag)
 	{
 
@@ -374,7 +376,12 @@ int main(int argc, char *argv[])
 #endif
 */
 
-		usleep(50000);
+		usleep(10000);
+		if (++wait_count > 3000)
+		{
+			logWarning("waiting timeout, exit!");
+			break;
+		}
 	}
 	
 	tracker_mem_destroy();

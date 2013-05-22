@@ -83,6 +83,7 @@ int main(int argc, char *argv[])
 	
 	int result;
 	int sock;
+	int wait_count;
 	pthread_t schedule_tid;
 	struct sigaction act;
 	ScheduleEntry scheduleEntries[SCHEDULE_ENTRIES_MAX_COUNT];
@@ -403,12 +404,12 @@ int main(int argc, char *argv[])
 	kill_tracker_report_threads();
 	kill_storage_sync_threads();
 
+	wait_count = 0;
 	while (g_storage_thread_count != 0 || \
 		g_dio_thread_count != 0 || \
 		g_tracker_reporter_count > 0 || \
 		g_schedule_flag)
 	{
-
 /*
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
 		if (bSegmentFault)
@@ -419,7 +420,12 @@ int main(int argc, char *argv[])
 #endif
 */
 
-		usleep(50000);
+		usleep(10000);
+		if (++wait_count > 6000)
+		{
+			logWarning("waiting timeout, exit!");
+			break;
+		}
 	}
 
 	tracker_report_destroy();
