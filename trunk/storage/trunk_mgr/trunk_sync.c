@@ -986,9 +986,10 @@ static int trunk_sync_data(TrunkBinLogReader *pReader, \
 	length = p - pReader->binlog_buff.buffer;
 	if (length == 0)
 	{
-		logError("FILE: "__FILE__", line: %d, " \
-			"no buffer to sync, buffer length: %d!", \
-			__LINE__, pReader->binlog_buff.length);
+		logWarning("FILE: "__FILE__", line: %d, " \
+			"no buffer to sync, buffer length: %d, " \
+			"should try again later", __LINE__, \
+			pReader->binlog_buff.length);
 		return ENOENT;
 	}
 	length++;
