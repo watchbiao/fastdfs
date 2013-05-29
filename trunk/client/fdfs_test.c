@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
 
 		sprintf(file_id, "%s/%s", group_name, remote_filename);
 		url_len = sprintf(file_url, "http://%s%s/%s", \
-				pTrackerServer->ip_addr, szPortPart, file_id);
+				pStorageServer->ip_addr, szPortPart, file_id);
 		if (g_anti_steal_token)
 		{
 			ts = time(NULL);
@@ -305,7 +305,7 @@ int main(int argc, char *argv[])
 			szDatetime, sizeof(szDatetime)));
 		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
 		printf("file crc32=%u\n", file_info.crc32);
-		printf("file url: %s\n", file_url);
+		printf("example file url: %s\n", file_url);
 
 		strcpy(master_filename, remote_filename);
 		*remote_filename = '\0';
@@ -377,7 +377,7 @@ int main(int argc, char *argv[])
 
 		sprintf(file_id, "%s/%s", group_name, remote_filename);
 		url_len = sprintf(file_url, "http://%s%s/%s", \
-				pTrackerServer->ip_addr, szPortPart, file_id);
+				pStorageServer->ip_addr, szPortPart, file_id);
 		if (g_anti_steal_token)
 		{
 			ts = time(NULL);
@@ -398,7 +398,7 @@ int main(int argc, char *argv[])
 			szDatetime, sizeof(szDatetime)));
 		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
 		printf("file crc32=%u\n", file_info.crc32);
-		printf("file url: %s\n", file_url);
+		printf("example file url: %s\n", file_url);
 
 		if (fdfs_gen_slave_filename(master_filename, \
                		prefix_name, file_ext_name, \
