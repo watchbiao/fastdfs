@@ -1,8 +1,9 @@
 
-Version 4.07  2013-05-22
+Version 4.07  2013-05-29
  * make.sh add -lpthread by ldconfig check
  * support multi accept threads
  * tracker and storage server close client connection when recv invalid package
+ * client/storage_client.c: file_exist with silence flag
 
 Version 4.06  2013-01-24
  * fdfs_upload_file tool enhancement

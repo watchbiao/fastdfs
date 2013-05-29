@@ -278,7 +278,7 @@ int main(int argc, char *argv[])
 		}
 
 		url_len = sprintf(file_url, "http://%s%s/%s", \
-				pTrackerServer->ip_addr, szPortPart, file_id);
+				pStorageServer->ip_addr, szPortPart, file_id);
 		if (g_anti_steal_token)
 		{
 			ts = time(NULL);
@@ -288,8 +288,6 @@ int main(int argc, char *argv[])
 				token, (int)ts);
 		}
 
-		printf("file url: %s\n", file_url);
-
 		fdfs_get_file_info1(file_id, &file_info);
 		printf("source ip address: %s\n", file_info.source_ip_addr);
 		printf("file timestamp=%s\n", formatDatetime(
@@ -297,7 +295,7 @@ int main(int argc, char *argv[])
 			szDatetime, sizeof(szDatetime)));
 		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
 		printf("file crc32=%u\n", file_info.crc32);
-		printf("file url: %s\n", file_url);
+		printf("example file url: %s\n", file_url);
 
 		strcpy(master_file_id, file_id);
 		*file_id = '\0';
@@ -365,7 +363,7 @@ int main(int argc, char *argv[])
 			sprintf(szPortPart, ":%d", g_tracker_server_http_port);
 		}
 		url_len = sprintf(file_url, "http://%s%s/%s", \
-				pTrackerServer->ip_addr, szPortPart, file_id);
+				pStorageServer->ip_addr, szPortPart, file_id);
 		if (g_anti_steal_token)
 		{
 			ts = time(NULL);
@@ -382,7 +380,7 @@ int main(int argc, char *argv[])
 			szDatetime, sizeof(szDatetime)));
 		printf("file size="INT64_PRINTF_FORMAT"\n", file_info.file_size);
 		printf("file crc32=%u\n", file_info.crc32);
-		printf("file url: %s\n", file_url);
+		printf("example file url: %s\n", file_url);
 
 		if (fdfs_gen_slave_filename(master_file_id, \
                		prefix_name, file_ext_name, \

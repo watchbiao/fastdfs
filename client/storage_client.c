@@ -2218,8 +2218,9 @@ int storage_file_exist(ConnectionInfo *pTrackerServer, \
 			const char *group_name, const char *remote_filename)
 {
 	FDFSFileInfo file_info;
-	return storage_query_file_info(pTrackerServer, \
-			pStorageServer, group_name, remote_filename, &file_info);
+	return storage_query_file_info_ex(pTrackerServer, \
+			pStorageServer, group_name, remote_filename, \
+			&file_info, true);
 }
 
 int storage_file_exist1(ConnectionInfo *pTrackerServer, \
