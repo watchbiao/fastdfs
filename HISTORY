@@ -5,7 +5,7 @@ Version 4.07  2013-06-02
  * tracker and storage server close client connection when recv invalid package
  * client/storage_client.c: file_exist with silence flag
  * tracker and storage process support start, stop and restart command
- * tracker/tracker_proto.c: logDebug change to logError
+ * tracker/tracker_proto.c fdfs_recv_header: logDebug change to logError
 
 Version 4.06  2013-01-24
  * fdfs_upload_file tool enhancement
