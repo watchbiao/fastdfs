@@ -3535,13 +3535,19 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 			true_filename_len, &file_lstat, \
 			&trunkInfo, &trunkHeader)) != 0)
 	{
-		if ((!bSilence) || (result != ENOENT))
+		if (result != ENOENT)
 		{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip:%s, call lstat logic file: %s fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, filename, \
-			result, STRERROR(result));
+			logError("file: "__FILE__", line: %d, " \
+				"client ip:%s, lstat logic file: %s fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, pTask->client_ip, filename, \
+				result, STRERROR(result));
+		}
+		else if (!bSilence)
+		{
+			logDebug("file: "__FILE__", line: %d, " \
+				"client ip:%s, logic file: %s not exist", \
+				__LINE__, pTask->client_ip, filename);
 		}
 
 		return result;
@@ -3551,7 +3557,6 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 	{
 		if (IS_TRUNK_FILE_BY_ID(trunkInfo))
 		{
-		char src_filename[128];
 		char src_true_filename[128];
 		int src_filename_len;
 		int src_store_path_index;
@@ -3585,13 +3590,19 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 				&file_stat, &trunkInfo, &trunkHeader);
 		if (result != 0)
 		{
-			if (!bSilence)
+			if (result != ENOENT)
 			{
 				logError("file: "__FILE__", line: %d, " \
 				"client ip:%s, call lstat logic file: %s " \
 				"fail, errno: %d, error info: %s", \
 				__LINE__, pTask->client_ip, src_filename, \
 				result, STRERROR(result));
+			}
+			else if (!bSilence)
+			{
+				logDebug("file: "__FILE__", line: %d, " \
+				"client ip:%s, logic file: %s not exist", \
+				__LINE__, pTask->client_ip, src_filename);
 			}
 			return result;
 		}
