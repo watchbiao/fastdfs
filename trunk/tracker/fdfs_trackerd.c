@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include "shared_func.h"
 #include "pthread_func.h"
+#include "process_ctrl.h"
 #include "logger.h"
 #include "fdfs_global.h"
 #include "base64.h"
@@ -75,6 +76,12 @@ static void sigDumpHandler(int sig);
 
 #define SCHEDULE_ENTRIES_COUNT 4
 
+static void usage(const char *program)
+{
+	fprintf(stderr, "Usage: %s <config_file> [start | stop | restart]\n",
+		program);
+}
+
 int main(int argc, char *argv[])
 {
 	char *conf_filename;
@@ -85,10 +92,12 @@ int main(int argc, char *argv[])
 	struct sigaction act;
 	ScheduleEntry scheduleEntries[SCHEDULE_ENTRIES_COUNT];
 	ScheduleArray scheduleArray;
+	char pidFilename[MAX_PATH_SIZE];
+	bool stop;
 
 	if (argc < 2)
 	{
-		printf("Usage: %s <config_file>\n", argv[0]);
+		usage(argv[0]);
 		return 1;
 	}
 
@@ -97,6 +106,31 @@ int main(int argc, char *argv[])
 	srand(g_up_time);
 
 	log_init();
+
+	conf_filename = argv[1];
+	if ((result=get_base_path_from_conf_file(conf_filename,
+		g_fdfs_base_path, sizeof(g_fdfs_base_path))) != 0)
+	{
+		log_destroy();
+		return result;
+	}
+
+	snprintf(pidFilename, sizeof(pidFilename),
+		"%s/data/fdfs_trackerd.pid", g_fdfs_base_path);
+	if ((result=proccess_action(pidFilename, argv[2], &stop)) != 0)
+	{
+		if (result == EINVAL)
+		{
+			usage(argv[0]);
+		}
+		log_destroy();
+		return result;
+	}
+	if (stop)
+	{
+		log_destroy();
+		return 0;
+	}
 
 #if defined(DEBUG_FLAG) && defined(OS_LINUX)
 	if (getExeAbsoluteFilename(argv[0], g_exe_name, \
@@ -108,7 +142,6 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	conf_filename = argv[1];
 	memset(bind_addr, 0, sizeof(bind_addr));
 	if ((result=tracker_load_from_conf_file(conf_filename, \
 			bind_addr, sizeof(bind_addr))) != 0)
@@ -158,6 +191,12 @@ int main(int argc, char *argv[])
 	daemon_init(true);
 	umask(0);
 	
+	if ((result=write_to_pid_file(pidFilename)) != 0)
+	{
+		log_destroy();
+		return result;
+	}
+
 	if (dup2(g_log_context.log_fd, STDOUT_FILENO) < 0 || \
 		dup2(g_log_context.log_fd, STDERR_FILENO) < 0)
 	{
@@ -391,6 +430,7 @@ int main(int argc, char *argv[])
 	logInfo("exit normally.\n");
 	log_destroy();
 	
+	delete_pid_file(pidFilename);
 	return 0;
 }
 
