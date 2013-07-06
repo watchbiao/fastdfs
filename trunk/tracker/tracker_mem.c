@@ -5706,7 +5706,7 @@ int tracker_mem_get_storage_by_filename(const byte cmd,FDFS_DOWNLOAD_TYPE_PARAM\
 			}
 
 			if (g_groups.store_server != \
-				FDFS_DOWNLOAD_SERVER_ROUND_ROBIN)
+				FDFS_STORE_SERVER_ROUND_ROBIN)
 			{
 #ifdef WITH_HTTPD
 				if (download_type == FDFS_DOWNLOAD_TYPE_TCP)
