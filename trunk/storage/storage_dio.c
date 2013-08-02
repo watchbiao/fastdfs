@@ -39,6 +39,7 @@ static void *dio_thread_entrance(void* arg);
 int storage_dio_init()
 {
 	int result;
+	int bytes;
 	int threads_count_per_path;
 	int context_count;
 	struct storage_dio_thread_data *pThreadData;
@@ -60,30 +61,30 @@ int storage_dio_init()
 		return result;
 	}
 
-	g_dio_thread_data = (struct storage_dio_thread_data *)malloc(sizeof( \
-				struct storage_dio_thread_data) * g_fdfs_store_paths.count);
+	bytes = sizeof(struct storage_dio_thread_data) * g_fdfs_store_paths.count;
+	g_dio_thread_data = (struct storage_dio_thread_data *)malloc(bytes);
 	if (g_dio_thread_data == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)sizeof(struct storage_dio_thread_data) * \
-			g_fdfs_store_paths.count, errno, STRERROR(errno));
+			__LINE__, bytes, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
+	memset(g_dio_thread_data, 0, bytes);
 
 	threads_count_per_path = g_disk_reader_threads + g_disk_writer_threads;
 	context_count = threads_count_per_path * g_fdfs_store_paths.count;
-	g_dio_contexts = (struct storage_dio_context *)malloc(\
-			sizeof(struct storage_dio_context) * context_count);
+	bytes = sizeof(struct storage_dio_context) * context_count;
+	g_dio_contexts = (struct storage_dio_context *)malloc(bytes);
 	if (g_dio_contexts == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, " \
 			"errno: %d, error info: %s", __LINE__, \
-			(int)sizeof(struct storage_dio_context) * \
-			context_count, errno, STRERROR(errno));
+			bytes, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
+	memset(g_dio_contexts, 0, bytes);
 
 	g_dio_thread_count = 0;
 	pDataEnd = g_dio_thread_data + g_fdfs_store_paths.count;
@@ -92,8 +93,8 @@ int storage_dio_init()
 		pThreadData->count = threads_count_per_path;
 		pThreadData->contexts = g_dio_contexts + (pThreadData - \
 				g_dio_thread_data) * threads_count_per_path;
-		pThreadData->reader=pThreadData->contexts;
-		pThreadData->writer=pThreadData->contexts+g_disk_reader_threads;
+		pThreadData->reader = pThreadData->contexts;
+		pThreadData->writer = pThreadData->contexts+g_disk_reader_threads;
 
 		pContextEnd = pThreadData->contexts + pThreadData->count;
 		for (pContext=pThreadData->contexts; pContext<pContextEnd; \

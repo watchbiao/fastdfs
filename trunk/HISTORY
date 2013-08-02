@@ -1,6 +1,7 @@
 
-Version 4.08  2013-07-06
+Version 4.08  2013-08-02
  * bug fixed: FDFS_DOWNLOAD_SERVER_ROUND_ROBIN change to FDFS_STORE_SERVER_ROUND_ROBIN
+ * dio_init use memset to init buffer
 
 Version 4.07  2013-06-02
  * make.sh add -lpthread by ldconfig check
