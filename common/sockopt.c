@@ -1276,12 +1276,16 @@ int tcpsetserveropt(int fd, const int timeout)
 	struct linger linger;
 	struct timeval waittime;
 
+/*
 	linger.l_onoff = 1;
 #ifdef OS_FREEBSD
 	linger.l_linger = timeout * 100;
 #else
 	linger.l_linger = timeout;
 #endif
+*/
+	linger.l_onoff = 0;
+	linger.l_linger = 0;
 	if (setsockopt(fd, SOL_SOCKET, SO_LINGER, \
                 &linger, (socklen_t)sizeof(struct linger)) < 0)
 	{
@@ -1293,7 +1297,6 @@ int tcpsetserveropt(int fd, const int timeout)
 
 	waittime.tv_sec = timeout;
 	waittime.tv_usec = 0;
-
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
                &waittime, (socklen_t)sizeof(struct timeval)) < 0)
 	{
@@ -1309,35 +1312,6 @@ int tcpsetserveropt(int fd, const int timeout)
 			"setsockopt failed, errno: %d, error info: %s", \
 			__LINE__, errno, STRERROR(errno));
 	}
-
-	/*
-	{
-	int bytes;
-	int size;
-
-	bytes = 0;
-	size = sizeof(int);
-	if (getsockopt(fd, SOL_SOCKET, SO_SNDBUF,
-		&bytes, (socklen_t *)&size) < 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"getsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, STRERROR(errno));
-		return errno != 0 ? errno : ENOMEM;
-	}
-	printf("send buff size: %d\n", bytes);
-
-	if (getsockopt(fd, SOL_SOCKET, SO_RCVBUF,
-		&bytes, (socklen_t *)&size) < 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"getsockopt failed, errno: %d, error info: %s", \
-			__LINE__, errno, STRERROR(errno));
-		return errno != 0 ? errno : ENOMEM;
-	}
-	printf("recv buff size: %d\n", bytes);
-	}
-	*/
 
 	flags = 1;
 	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, \
