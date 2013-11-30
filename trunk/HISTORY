@@ -1,8 +1,9 @@
 
-Version 4.08  2013-08-18
+Version 4.08  2013-11-30
  * bug fixed: FDFS_DOWNLOAD_SERVER_ROUND_ROBIN change to FDFS_STORE_SERVER_ROUND_ROBIN
  * dio_init use memset to init buffer
  * disable linger setting (setsockopt with option SO_LINGER)
+ * change log level from error to warning when file not exist on storage server
 
 Version 4.07  2013-06-02
  * make.sh add -lpthread by ldconfig check
