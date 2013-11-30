@@ -118,6 +118,21 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask);
 		memcpy(sig_buff + 8, hash_codes, 16);  \
 	}
 
+#define STORAGE_STAT_FILE_FAIL_LOG(result, client_ip, type_caption, filename) \
+	if (result == ENOENT) \
+	{ \
+		logWarning("file: "__FILE__", line: %d, " \
+			"client ip: %s, %s file: %s not exist", \
+			__LINE__, client_ip, type_caption, filename); \
+	} \
+	else \
+	{ \
+		logError("file: "__FILE__", line: %d, " \
+			"call stat fail, client ip: %s, %s file: %s, "\
+			"error no: %d, error info: %s", __LINE__, client_ip, \
+			type_caption, filename, result, STRERROR(result)); \
+	}
+
 
 typedef struct
 {
@@ -610,15 +625,9 @@ static void storage_sync_modify_file_done_callback( \
 			if (lstat(pFileContext->filename, &file_stat) != 0)
 			{
 				result = errno != 0 ? errno : ENOENT;
-				if (result != ENOENT)
-				{
-				logError("file: "__FILE__", line: %d, " \
-					"client ip:%s, call stat file %s fail"\
-					", errno: %d, error info: %s", \
-					__LINE__, pTask->client_ip, \
-					pFileContext->filename, 
-					result, STRERROR(result));
-				}
+				STORAGE_STAT_FILE_FAIL_LOG(result,
+					pTask->client_ip, "regular",
+					pFileContext->filename)
 			}
 			else if (!S_ISREG(file_stat.st_mode))
 			{
@@ -983,11 +992,8 @@ static int storage_do_delete_meta_file(struct fast_task_info *pTask)
 			&(pFileContext->extra_info.upload.trunk_info), \
 			&trunkHeader)) != 0)
 		{
-			logWarning("file: "__FILE__", line: %d, " \
-				"client ip:%s, call lstat logic file: %s " \
-				"fail, errno: %d, error info: %s", \
-				__LINE__, pTask->client_ip, value, \
-				result, STRERROR(result));
+			STORAGE_STAT_FILE_FAIL_LOG(result, pTask->client_ip,
+				"logic", value)
 			return 0;
 		}
 
@@ -1311,12 +1317,8 @@ static void storage_append_file_done_callback(struct fast_task_info *pTask, \
 		else
 		{
 			result = errno != 0 ? errno : ENOENT;
-			logWarning("file: "__FILE__", line: %d, " \
-				"client ip:%s, call stat file %s " \
-				"fail, errno: %d, error info: %s", \
-				__LINE__, pTask->client_ip, \
-				pFileContext->filename, \
-				result, STRERROR(result));
+			STORAGE_STAT_FILE_FAIL_LOG(result, pTask->client_ip,
+				"regular", pFileContext->filename)
 		}
 
 		sprintf(extra, INT64_PRINTF_FORMAT" "INT64_PRINTF_FORMAT, \
@@ -1385,12 +1387,8 @@ static void storage_modify_file_done_callback(struct fast_task_info *pTask, \
 		else
 		{
 			result = errno != 0 ? errno : ENOENT;
-			logWarning("file: "__FILE__", line: %d, " \
-				"client ip:%s, call stat file %s " \
-				"fail, errno: %d, error info: %s", \
-				__LINE__, pTask->client_ip, \
-				pFileContext->filename, \
-				result, STRERROR(result));
+			STORAGE_STAT_FILE_FAIL_LOG(result, pTask->client_ip,
+				"regular", pFileContext->filename)
 		}
 
 		sprintf(extra, INT64_PRINTF_FORMAT" "INT64_PRINTF_FORMAT, \
@@ -1459,12 +1457,8 @@ static void storage_do_truncate_file_done_callback(struct fast_task_info *pTask,
 		else
 		{
 			result = errno != 0 ? errno : ENOENT;
-			logWarning("file: "__FILE__", line: %d, " \
-				"client ip:%s, call stat file %s " \
-				"fail, errno: %d, error info: %s", \
-				__LINE__, pTask->client_ip, \
-				pFileContext->filename, \
-				result, STRERROR(result));
+			STORAGE_STAT_FILE_FAIL_LOG(result, pTask->client_ip,
+				"regular", pFileContext->filename)
 		}
 		sprintf(extra, INT64_PRINTF_FORMAT" "INT64_PRINTF_FORMAT, \
 				pFileContext->end - pFileContext->start,
@@ -2388,12 +2382,8 @@ static int storage_service_upload_file_done(struct fast_task_info *pTask)
 		else
 		{
 			result = errno != 0 ? errno : ENOENT;
-			logWarning("file: "__FILE__", line: %d, " \
-				"client ip:%s, call stat file %s " \
-				"fail, errno: %d, error info: %s", \
-				__LINE__, pTask->client_ip, \
-				pFileContext->filename, \
-				result, STRERROR(result));
+			STORAGE_STAT_FILE_FAIL_LOG(result, pTask->client_ip,
+				"regular", pFileContext->filename)
 			end_time = g_current_time;
 		}
 
@@ -3321,12 +3311,8 @@ static int storage_server_set_metadata(struct fast_task_info *pTask)
 			&(pFileContext->extra_info.upload.trunk_info), \
 			&trunkHeader)) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip:%s, call lstat logic file: %s fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, filename, \
-			result, STRERROR(result));
-
+		STORAGE_STAT_FILE_FAIL_LOG(result, pTask->client_ip,
+			"logic", filename)
 		pClientInfo->total_length = sizeof(TrackerHeader);
 		return result;
 	}
@@ -3631,11 +3617,8 @@ static int storage_server_query_file_info(struct fast_task_info *pTask)
 			if (stat(full_filename, &file_stat) != 0)
 			{
 				result = errno != 0 ? errno : ENOENT;
-				logError("file: "__FILE__", line: %d, " \
-					"client ip:%s, call stat file %s " \
-					"fail, errno: %d, error info: %s", \
-					__LINE__, pTask->client_ip, \
-					full_filename, result, STRERROR(result));
+				STORAGE_STAT_FILE_FAIL_LOG(result,
+					pTask->client_ip, "regular", full_filename)
 				return result;
 			}
 		}
@@ -4728,7 +4711,7 @@ static int storage_append_file(struct fast_task_info *pTask)
 		result = errno != 0 ? errno : ENOENT;
 		if (result == ENOENT)
 		{
-			logError("file: "__FILE__", line: %d, " \
+			logWarning("file: "__FILE__", line: %d, " \
 				"client ip: %s, appender file: %s " \
 				"not exist", __LINE__, \
 				pTask->client_ip, pFileContext->filename);
@@ -4924,7 +4907,7 @@ static int storage_modify_file(struct fast_task_info *pTask)
 		result = errno != 0 ? errno : ENOENT;
 		if (result == ENOENT)
 		{
-			logError("file: "__FILE__", line: %d, " \
+			logWarning("file: "__FILE__", line: %d, " \
 				"client ip: %s, appender file: %s " \
 				"not exist", __LINE__, \
 				pTask->client_ip, pFileContext->filename);
@@ -5109,7 +5092,7 @@ static int storage_do_truncate_file(struct fast_task_info *pTask)
 		result = errno != 0 ? errno : ENOENT;
 		if (result == ENOENT)
 		{
-			logError("file: "__FILE__", line: %d, " \
+			logWarning("file: "__FILE__", line: %d, " \
 				"client ip: %s, appender file: %s " \
 				"not exist", __LINE__, \
 				pTask->client_ip, pFileContext->filename);
@@ -6842,11 +6825,8 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 		true_filename, filename_len, &stat_buf, \
 		&trunkInfo, &trunkHeader)) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"call stat fail, logic file: %s, "\
-			"error no: %d, error info: %s", \
-			__LINE__, filename, \
-			result, STRERROR(result));
+		STORAGE_STAT_FILE_FAIL_LOG(result, pTask->client_ip,
+			"logic", filename)
 		return result;
 	}
 
@@ -6868,15 +6848,8 @@ static int storage_server_get_metadata(struct fast_task_info *pTask)
 	else
 	{
 		result = errno != 0 ? errno : ENOENT;
-		if (result != ENOENT)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"call stat fail, file: %s, "\
-				"error no: %d, error info: %s", \
-				__LINE__, pFileContext->filename, \
-				result, STRERROR(result));
-		}
-
+		STORAGE_STAT_FILE_FAIL_LOG(result, pTask->client_ip,
+			"regular", pFileContext->filename)
 		return result;
 	}
 
@@ -7019,11 +6992,9 @@ static int storage_server_download_file(struct fast_task_info *pTask)
 	}
 	else
 	{
+		STORAGE_STAT_FILE_FAIL_LOG(result, pTask->client_ip,
+			"logic", filename)
 		file_bytes = 0;
-		logError("file: "__FILE__", line: %d, " \
-			"call stat fail, logic file: %s, "\
-			"error no: %d, error info: %s", \
-			__LINE__, filename, result, STRERROR(result));
 		return result;
 	}
 
@@ -7279,11 +7250,8 @@ static int storage_sync_delete_file(struct fast_task_info *pTask)
 			&(pFileContext->extra_info.upload.trunk_info), \
 			&trunkHeader)) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, stat logic file %s fail, " \
-			"errno: %d, error info: %s.", \
-			__LINE__, pTask->client_ip, \
-			filename, result, STRERROR(result));
+		STORAGE_STAT_FILE_FAIL_LOG(result, pTask->client_ip,
+			"logic", filename)
 		return result;
 	}
 	if (S_ISREG(stat_buf.st_mode))
@@ -7412,11 +7380,8 @@ static int storage_server_delete_file(struct fast_task_info *pTask)
 			&(pFileContext->extra_info.upload.trunk_info), \
 			&trunkHeader)) != 0)
 	{
-		logError("file: "__FILE__", line: %d, " \
-			"client ip: %s, stat logic file %s fail, " \
-			"errno: %d, error info: %s", \
-			__LINE__, pTask->client_ip, \
-			filename, result, STRERROR(result));
+		STORAGE_STAT_FILE_FAIL_LOG(result, pTask->client_ip,
+			"logic", filename)
 		return result;
 	}
 	if (S_ISREG(stat_buf.st_mode))
