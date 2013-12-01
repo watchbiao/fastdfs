@@ -33,17 +33,43 @@ void fast_timer_destroy(FastTimer *timer)
   }
 }
 
-int fast_timer_add(FastTimer *timer, const int64_t expires,
-    FastTimerEntry *entry)
+#define TIMER_GET_SLOT_INDEX(timer, expires) \
+  (((expires) - timer->base_time) % timer->slot_count)
+
+#define TIMER_GET_SLOT_POINTER(timer, expires) \
+  (timer->slots + TIMER_GET_SLOT_INDEX(timer, expires))
+
+int fast_timer_add(FastTimer *timer, FastTimerEntry *entry)
 {
   FastTimerSlot *slot;
-  slot = timer->slots + (expires - timer->base_time) % timer->slot_count;
+
+  slot = TIMER_GET_SLOT_POINTER(timer, entry->expires >
+     timer->current_time ? entry->expires : timer->current_time);
   entry->next = slot->head.next;
   if (slot->head.next != NULL) {
     slot->head.next->prev = entry;
   }
   entry->prev = &slot->head;
   slot->head.next = entry;
+  return 0;
+}
+
+int fast_timer_modify(FastTimer *timer, FastTimerEntry *entry,
+    const int64_t new_expires)
+{
+  if (new_expires == entry->expires) {
+    return 0;
+  }
+
+  if (new_expires < entry->expires) {
+    fast_timer_remove(timer, entry);
+    entry->expires = new_expires;
+    return fast_timer_add(timer, entry);
+  }
+
+  entry->rehash = TIMER_GET_SLOT_INDEX(timer, new_expires) !=
+      TIMER_GET_SLOT_INDEX(timer, entry->expires);
+  entry->expires = new_expires;
   return 0;
 }
 
@@ -72,8 +98,7 @@ FastTimerSlot *fast_timer_slot_get(FastTimer *timer, const int64_t current_time)
     return NULL;
   }
 
-  return timer->slots + (timer->current_time++ - timer->base_time) %
-     timer->slot_count;
+  return TIMER_GET_SLOT_POINTER(timer, timer->current_time++);
 }
 
 int fast_timer_timeouts_get(FastTimer *timer, const int64_t current_time,
@@ -97,8 +122,7 @@ int fast_timer_timeouts_get(FastTimer *timer, const int64_t current_time,
   tail = head;
   count = 0;
   while (timer->current_time < current_time) {
-    slot = timer->slots + (timer->current_time++ - timer->base_time) %
-       timer->slot_count;
+    slot = TIMER_GET_SLOT_POINTER(timer, timer->current_time++);
     entry = slot->head.next;
     while (entry != NULL) {
       if (entry->expires >= current_time) {
@@ -110,6 +134,15 @@ int fast_timer_timeouts_get(FastTimer *timer, const int64_t current_time,
             first->prev = tail;
             tail = last;
             first = NULL;
+         }
+         if (entry->rehash) {
+           last = entry;
+           entry = entry->next;
+
+           last->rehash = false;
+           fast_timer_remove(timer, last);
+           fast_timer_add(timer, last);
+           continue;
          }
       }
       else {
