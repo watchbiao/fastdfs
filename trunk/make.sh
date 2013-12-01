@@ -76,11 +76,11 @@ fi
 LIBS=''
 uname=$(uname)
 if [ "$uname" = "Linux" ]; then
-  CFLAGS="$CFLAGS -DOS_LINUX"
+  CFLAGS="$CFLAGS -DOS_LINUX -DIOEVENT_USE_EPOLL"
 elif [ "$uname" = "FreeBSD" ]; then
-  CFLAGS="$CFLAGS -DOS_FREEBSD"
+  CFLAGS="$CFLAGS -DOS_FREEBSD -DIOEVENT_USE_KQUEUE"
 elif [ "$uname" = "SunOS" ]; then
-  CFLAGS="$CFLAGS -DOS_SUNOS -D_THREAD_SAFE"
+  CFLAGS="$CFLAGS -DOS_SUNOS -D_THREAD_SAFE -DIOEVENT_USE_PORT"
   LIBS="$LIBS -lsocket -lnsl -lresolv"
   export CC=gcc
 elif [ "$uname" = "AIX" ]; then

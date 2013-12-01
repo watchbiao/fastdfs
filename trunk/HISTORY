@@ -1,4 +1,7 @@
 
+Version 5.00  2013-12-01
+ * discard libevent, use epoll in Linux, kqueue in FreeBSD, port in SunOS directly
+
 Version 4.08  2013-11-30
  * bug fixed: FDFS_DOWNLOAD_SERVER_ROUND_ROBIN change to FDFS_STORE_SERVER_ROUND_ROBIN
  * dio_init use memset to init buffer
