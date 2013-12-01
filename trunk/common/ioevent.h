@@ -25,7 +25,16 @@
 #define IOEVENT_READ  KPOLLIN
 #define IOEVENT_WRITE KPOLLOUT
 #define IOEVENT_ERROR (KPOLLHUP | KPOLLPRI | KPOLLHUP)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int kqueue_ev_convert(int16_t event, uint16_t flags);
+
+#ifdef __cplusplus
+}
+#endif
 
 #elif IOEVENT_USE_PORT
 #include <port.h>
@@ -53,18 +62,6 @@ typedef struct ioevent_puller {
 #endif
 } IOEventPoller;
 
-int ioevent_init(IOEventPoller *ioevent, const int size,
-    const int timeout, const int extra_events);
-void ioevent_destroy(IOEventPoller *ioevent);
-
-int ioevent_attach(IOEventPoller *ioevent, const int fd, const int e,
-    void *data, const int64_t expires);
-int ioevent_modify(IOEventPoller *ioevent, const int fd, const int e,
-    void *data, const int64_t expires);
-int ioevent_detach(IOEventPoller *ioevent, const int fd);
-int ioevent_poll(IOEventPoller *ioevent);
-
-
 #if IOEVENT_USE_EPOLL
   #define IOEVENT_GET_EVENTS(ioevent, index) \
       ioevent->events[index].events
@@ -89,6 +86,25 @@ int ioevent_poll(IOEventPoller *ioevent);
       ioevent->events[index].portev_user
 #else
 #error port me
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int ioevent_init(IOEventPoller *ioevent, const int size,
+    const int timeout, const int extra_events);
+void ioevent_destroy(IOEventPoller *ioevent);
+
+int ioevent_attach(IOEventPoller *ioevent, const int fd, const int e,
+    void *data, const int64_t expires);
+int ioevent_modify(IOEventPoller *ioevent, const int fd, const int e,
+    void *data, const int64_t expires);
+int ioevent_detach(IOEventPoller *ioevent, const int fd);
+int ioevent_poll(IOEventPoller *ioevent);
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif
