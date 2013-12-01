@@ -69,7 +69,7 @@ int fast_timer_modify(FastTimer *timer, FastTimerEntry *entry,
 
   entry->rehash = TIMER_GET_SLOT_INDEX(timer, new_expires) !=
       TIMER_GET_SLOT_INDEX(timer, entry->expires);
-  entry->expires = new_expires;
+  entry->expires = new_expires;  //lazy move
   return 0;
 }
 
@@ -125,7 +125,7 @@ int fast_timer_timeouts_get(FastTimer *timer, const int64_t current_time,
     slot = TIMER_GET_SLOT_POINTER(timer, timer->current_time++);
     entry = slot->head.next;
     while (entry != NULL) {
-      if (entry->expires >= current_time) {
+      if (entry->expires >= current_time) {  //not expired
          if (first != NULL) {
             first->prev->next = entry;
             entry->prev = first->prev;
@@ -163,6 +163,10 @@ int fast_timer_timeouts_get(FastTimer *timer, const int64_t current_time,
        tail = last;
        first = NULL;
     }
+  }
+
+  if (count > 0) {
+     tail->next = NULL;
   }
 
   return count;
