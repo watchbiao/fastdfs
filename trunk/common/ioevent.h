@@ -3,15 +3,20 @@
 
 #include <stdint.h>
 #include <poll.h>
+#include <sys/time.h>
 
 #if IOEVENT_USE_EPOLL
 #include <sys/epoll.h>
+#define IOEVENT_EDGE_TRIGGER EPOLLET
+
 #define IOEVENT_READ  EPOLLIN
 #define IOEVENT_WRITE EPOLLOUT
 #define IOEVENT_ERROR (EPOLLERR | EPOLLPRI | EPOLLHUP)
 
 #elif IOEVENT_USE_KQUEUE
 #include <sys/event.h>
+#define IOEVENT_EDGE_TRIGGER EV_CLEAR
+
 #define KPOLLIN    0x001
 #define KPOLLPRI   0x002
 #define KPOLLOUT   0x004
@@ -24,6 +29,8 @@ int kqueue_ev_convert(int16_t event, uint16_t flags);
 
 #elif IOEVENT_USE_PORT
 #include <port.h>
+#define IOEVENT_EDGE_TRIGGER 0
+
 #define IOEVENT_READ  POLLIN
 #define IOEVENT_WRITE POLLOUT
 #define IOEVENT_ERROR (POLLERR | POLLPRI | POLLHUP)
@@ -46,11 +53,14 @@ typedef struct ioevent_puller {
 #endif
 } IOEventPoller;
 
-int ioevent_init(IOEventPoller *ioevent, const int size, int timeout);
+int ioevent_init(IOEventPoller *ioevent, const int size,
+    const int timeout, const int extra_events);
 void ioevent_destroy(IOEventPoller *ioevent);
 
-int ioevent_attach(IOEventPoller *ioevent, const int fd, const int e, void *data);
-int ioevent_modify(IOEventPoller *ioevent, const int fd, const int e, void *data);
+int ioevent_attach(IOEventPoller *ioevent, const int fd, const int e,
+    void *data, const int64_t expires);
+int ioevent_modify(IOEventPoller *ioevent, const int fd, const int e,
+    void *data, const int64_t expires);
 int ioevent_detach(IOEventPoller *ioevent, const int fd);
 int ioevent_poll(IOEventPoller *ioevent);
 

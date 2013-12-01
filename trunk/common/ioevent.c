@@ -29,26 +29,26 @@ int kqueue_ev_convert(int16_t event, uint16_t flags)
 }
 #endif
 
-int ioevent_init(IOEventPoller *ioevent, const int size, int timeout)
+int ioevent_init(IOEventPoller *ioevent, const int size,
+    const int timeout, const int extra_events)
 {
   int bytes;
 
   ioevent->size = size;
+  ioevent->extra_events = extra_events;
+
 #if IOEVENT_USE_EPOLL
-  ioevent->extra_events = EPOLLET;
   ioevent->timeout = timeout;
   ioevent->poll_fd = epoll_create(ioevent->size);
   bytes = sizeof(struct epoll_event) * size;
   ioevent->events = (struct epoll_event *)malloc(bytes);
 #elif IOEVENT_USE_KQUEUE
-  ioevent->extra_events = EV_CLEAR;
   ioevent->timeout.tv_sec = timeout / 1000;
   ioevent->timeout.tv_nsec = 1000000 * (timeout % 1000);
   ioevent->poll_fd = kqueue();
   bytes = sizeof(struct kevent) * size;
   ioevent->events = (struct kevent *)malloc(bytes);
 #elif IOEVENT_USE_PORT
-  ioevent->extra_events = 0;
   ioevent->timeout.tv_sec = timeout / 1000;
   ioevent->timeout.tv_nsec = 1000000 * (timeout % 1000);
   ioevent->poll_fd = port_create();
@@ -74,7 +74,8 @@ void ioevent_destroy(IOEventPoller *ioevent)
   }
 }
 
-int ioevent_attach(IOEventPoller *ioevent, const int fd, const int e, void *data)
+int ioevent_attach(IOEventPoller *ioevent, const int fd, const int e,
+    void *data, const int64_t expires)
 {
 #if IOEVENT_USE_EPOLL
   struct epoll_event ev;
@@ -97,7 +98,8 @@ int ioevent_attach(IOEventPoller *ioevent, const int fd, const int e, void *data
 #endif
 }
 
-int ioevent_modify(IOEventPoller *ioevent, const int fd, const int e, void *data)
+int ioevent_modify(IOEventPoller *ioevent, const int fd, const int e,
+    void *data, const int64_t expires)
 {
 #if IOEVENT_USE_EPOLL
   struct epoll_event ev;
