@@ -1,5 +1,5 @@
 
-Version 5.00  2013-12-01
+Version 5.00  2013-12-07
  * discard libevent, use epoll in Linux, kqueue in FreeBSD, port in SunOS directly
 
 Version 4.08  2013-11-30

@@ -17,14 +17,32 @@
 #include <pthread.h>
 #include <event.h>
 #include "common_define.h"
-#include "chain.h"
+#include "ioevent.h"
+#include "fast_timer.h"
 
 struct fast_task_info;
 
 typedef int (*TaskFinishCallBack) (struct fast_task_info *pTask);
 
+typedef void (*IOEventCallback) (int sock, short event, void *arg);
+
+typedef struct ioevent_entry
+{
+	int fd;
+	FastTimerEntry timer;
+	IOEventCallback callback;
+} IOEventEntry;
+
+struct tracker_thread_data
+{
+	struct ioevent_puller ev_puller;
+	struct fast_timer timer;
+        int pipe_fds[2];
+};
+
 struct fast_task_info
 {
+	IOEventEntry event;
 	char client_ip[IP_ADDRESS_SIZE];
 	struct event ev_read;
 	struct event ev_write;
@@ -34,8 +52,9 @@ struct fast_task_info
 	int length; //data length
 	int offset; //current offset
 	int req_count; //request count
-	struct fast_task_info *next;
 	TaskFinishCallBack finish_callback;
+	struct tracker_thread_data *thread_data;
+	struct fast_task_info *next;
 };
 
 struct fast_task_queue

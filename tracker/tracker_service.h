@@ -14,19 +14,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <event.h>
 #include "fdfs_define.h"
+#include "ioevent.h"
 #include "fast_task_queue.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct tracker_thread_data
-{
-        struct event_base *ev_base;
-        int pipe_fds[2];
-};
+//typedef struct nio_thread_data struct tracker_thread_data;
 
 extern int g_tracker_thread_count;
 extern struct tracker_thread_data *g_thread_data;

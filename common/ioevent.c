@@ -75,7 +75,7 @@ void ioevent_destroy(IOEventPoller *ioevent)
 }
 
 int ioevent_attach(IOEventPoller *ioevent, const int fd, const int e,
-    void *data, const int64_t expires)
+    void *data)
 {
 #if IOEVENT_USE_EPOLL
   struct epoll_event ev;
@@ -99,7 +99,7 @@ int ioevent_attach(IOEventPoller *ioevent, const int fd, const int e,
 }
 
 int ioevent_modify(IOEventPoller *ioevent, const int fd, const int e,
-    void *data, const int64_t expires)
+    void *data)
 {
 #if IOEVENT_USE_EPOLL
   struct epoll_event ev;
