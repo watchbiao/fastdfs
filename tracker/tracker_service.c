@@ -96,10 +96,10 @@ int tracker_service_init()
 	pDataEnd = g_thread_data + g_work_threads;
 	for (pThreadData=g_thread_data; pThreadData<pDataEnd; pThreadData++)
 	{
-		result = ioevent_init(&pThreadData->ev_puller,
-			g_max_connections + 2, g_fdfs_network_timeout, 0);
-		if (result != 0)
+		if (ioevent_init(&pThreadData->ev_puller,
+			g_max_connections + 2, 1000, 0) != 0)
 		{
+			result  = errno != 0 ? errno : ENOMEM;
 			logError("file: "__FILE__", line: %d, " \
 				"ioevent_init fail, " \
 				"errno: %d, error info: %s", \
@@ -351,11 +351,11 @@ static void *work_thread_entrance(void* arg)
 		memset(&ev_notify, 0, sizeof(ev_notify));
 		ev_notify.fd = pThreadData->pipe_fds[0];
 		ev_notify.callback = recv_notify_read;
-		result = ioevent_attach(&pThreadData->ev_puller,
-				pThreadData->pipe_fds[0], IOEVENT_READ,
-				&ev_notify);
-		if (result != 0)
+		if (ioevent_attach(&pThreadData->ev_puller,
+			pThreadData->pipe_fds[0], IOEVENT_READ,
+			&ev_notify) != 0)
 		{
+			result = errno != 0 ? errno : ENOMEM;
 			logCrit("file: "__FILE__", line: %d, " \
 				"ioevent_attach fail, " \
 				"errno: %d, error info: %s", \
@@ -369,6 +369,15 @@ static void *work_thread_entrance(void* arg)
 			if (count > 0)
 			{
 				deal_ioevents(&pThreadData->ev_puller, count);
+			}
+			else if (count < 0)
+			{
+				result = errno != 0 ? errno : EINVAL;
+				logError("file: "__FILE__", line: %d, " \
+					"ioevent_poll fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, result, STRERROR(result));
+				break;
 			}
 
 			if (g_current_time - last_check_time > 0)
@@ -1441,7 +1450,7 @@ static int tracker_deal_storage_join(struct fast_task_info *pTask)
 	joinBody.init_flag = pBody->init_flag;
 	joinBody.status = pBody->status;
 
-	getSockIpaddr(pTask->ev_read.ev_fd, \
+	getSockIpaddr(pTask->event.fd, \
 		tracker_ip, IP_ADDRESS_SIZE);
 	insert_into_local_host_ip(tracker_ip);
 
@@ -3738,7 +3747,6 @@ int tracker_deal_task(struct fast_task_info *pTask)
 			result = tracker_deal_parameter_req(pTask);
 			break;
 		case FDFS_PROTO_CMD_QUIT:
-			close(pTask->ev_read.ev_fd);
 			task_finish_clean_up(pTask);
 			return 0;
 		case FDFS_PROTO_CMD_ACTIVE_TEST:

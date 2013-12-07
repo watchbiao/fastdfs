@@ -67,6 +67,7 @@ static struct mpool_chain *malloc_mpool(const int block_size, \
 		free(mpool);
 		return NULL;
 	}
+	memset(mpool->blocks, 0, total_alloc_size);
 
 	pCharEnd = ((char *)mpool->blocks) + total_alloc_size;
 	for (p=(char *)mpool->blocks; p<pCharEnd; p += block_size)
