@@ -26,7 +26,7 @@ SHARED_OBJS = ../common/hash.o ../common/chain.o \
               ../client/storage_client.o ../client/client_func.o \
               fdht_client/fdht_proto.o fdht_client/fdht_client.o \
               fdht_client/fdht_func.o fdht_client/fdht_global.o \
-              $(STORAGE_HTTPD_OBJS)
+              $(STORAGE_EXTRA_OBJS)
 
 ALL_OBJS = $(SHARED_OBJS)
 

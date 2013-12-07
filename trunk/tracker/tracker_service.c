@@ -96,12 +96,25 @@ int tracker_service_init()
 	pDataEnd = g_thread_data + g_work_threads;
 	for (pThreadData=g_thread_data; pThreadData<pDataEnd; pThreadData++)
 	{
-		pThreadData->ev_base = event_base_new();
-		if (pThreadData->ev_base == NULL)
+		result = ioevent_init(&pThreadData->ev_puller,
+			g_max_connections + 2, g_fdfs_network_timeout, 0);
+		if (result != 0)
 		{
-			result = errno != 0 ? errno : ENOMEM;
 			logError("file: "__FILE__", line: %d, " \
-				"event_base_new fail.", __LINE__);
+				"ioevent_init fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
+			return result;
+		}
+
+		result = fast_timer_init(&pThreadData->timer,
+				2 * g_fdfs_network_timeout, g_current_time);
+		if (result != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"fast_timer_init fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
 			return result;
 		}
 
@@ -287,37 +300,91 @@ void tracker_accept_loop(int server_sock)
 	accept_thread_entrance((void *)(long)server_sock);
 }
 
+static void deal_ioevents(IOEventPoller *ioevent, const int count)
+{
+	int i;
+	int event;
+	IOEventEntry *pEntry;
+	for (i=0; i<count; i++)
+	{
+		event = IOEVENT_GET_EVENTS(ioevent, i);
+		pEntry = (IOEventEntry *)IOEVENT_GET_DATA(ioevent, i);
+
+		pEntry->callback(pEntry->fd, event, pEntry->timer.data);
+	}
+}
+
+static void deal_timeouts(FastTimerEntry *head)
+{
+	FastTimerEntry *entry;
+	FastTimerEntry *curent;
+	IOEventEntry *pEventEntry;
+
+	entry = head->next;
+	while (entry != NULL)
+	{
+		curent = entry;
+		entry = entry->next;
+
+		pEventEntry = (IOEventEntry *)curent->data;
+		if (pEventEntry != NULL)
+		{
+			pEventEntry->callback(pEventEntry->fd, IOEVENT_TIMEOUT,
+						curent->data);
+		}
+	}
+}
+
 static void *work_thread_entrance(void* arg)
 {
 	int result;
 	struct tracker_thread_data *pThreadData;
-	struct event ev_notify;
+	IOEventEntry ev_notify;
+	FastTimerEntry head;
+	time_t last_check_time;
+	int count;
 
+	last_check_time = g_current_time;
 	pThreadData = (struct tracker_thread_data *)arg;
 	do
 	{
-		event_set(&ev_notify, pThreadData->pipe_fds[0], \
-			EV_READ | EV_PERSIST, recv_notify_read, NULL);
-		if ((result=event_base_set(pThreadData->ev_base, &ev_notify)) != 0)
+		memset(&ev_notify, 0, sizeof(ev_notify));
+		ev_notify.fd = pThreadData->pipe_fds[0];
+		ev_notify.callback = recv_notify_read;
+		result = ioevent_attach(&pThreadData->ev_puller,
+				pThreadData->pipe_fds[0], IOEVENT_READ,
+				&ev_notify);
+		if (result != 0)
 		{
 			logCrit("file: "__FILE__", line: %d, " \
-				"event_base_set fail.", __LINE__);
-			break;
-		}
-		if ((result=event_add(&ev_notify, NULL)) != 0)
-		{
-			logCrit("file: "__FILE__", line: %d, " \
-				"event_add fail.", __LINE__);
+				"ioevent_attach fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
 			break;
 		}
 
 		while (g_continue_flag)
 		{
-			event_base_loop(pThreadData->ev_base, 0);
+			count = ioevent_poll(&pThreadData->ev_puller);
+			if (count > 0)
+			{
+				deal_ioevents(&pThreadData->ev_puller, count);
+			}
+
+			if (g_current_time - last_check_time > 0)
+			{
+				last_check_time = g_current_time;
+				count = fast_timer_timeouts_get(
+				&pThreadData->timer, g_current_time, &head);
+				if (count > 0)
+				{
+					deal_timeouts(&head);
+				}
+			}
 		}
 	} while (0);
 
-	event_base_free(pThreadData->ev_base);
+	ioevent_destroy(&pThreadData->ev_puller);
 
 	if ((result=pthread_mutex_lock(&tracker_thread_lock)) != 0)
 	{

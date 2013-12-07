@@ -5,6 +5,8 @@
 #include <poll.h>
 #include <sys/time.h>
 
+#define IOEVENT_TIMEOUT  0x8000
+
 #if IOEVENT_USE_EPOLL
 #include <sys/epoll.h>
 #define IOEVENT_EDGE_TRIGGER EPOLLET
@@ -97,9 +99,9 @@ int ioevent_init(IOEventPoller *ioevent, const int size,
 void ioevent_destroy(IOEventPoller *ioevent);
 
 int ioevent_attach(IOEventPoller *ioevent, const int fd, const int e,
-    void *data, const int64_t expires);
+    void *data);
 int ioevent_modify(IOEventPoller *ioevent, const int fd, const int e,
-    void *data, const int64_t expires);
+    void *data);
 int ioevent_detach(IOEventPoller *ioevent, const int fd);
 int ioevent_poll(IOEventPoller *ioevent);
 

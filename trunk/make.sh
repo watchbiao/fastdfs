@@ -62,7 +62,6 @@ TARGET_PREFIX=/usr/local
 TARGET_CONF_PATH=/etc/fdfs
 
 #WITH_LINUX_SERVICE=1
-WITH_HTTPD=1
 
 DEBUG_FLAG=1
 
@@ -132,16 +131,16 @@ if [ $have_pthread -eq 0 ]; then
    fi
 fi
 
-TRACKER_HTTPD_OBJS=''
-STORAGE_HTTPD_OBJS=''
+TRACKER_EXTRA_OBJS=''
+STORAGE_EXTRA_OBJS=''
 if [ "$DEBUG_FLAG" = "1" ]; then
-  TRACKER_HTTPD_OBJS="$TRACKER_HTTPD_OBJS tracker_dump.o"
-  STORAGE_HTTPD_OBJS="$STORAGE_HTTPD_OBJS storage_dump.o"
+  TRACKER_EXTRA_OBJS="$TRACKER_EXTRA_OBJS tracker_dump.o"
+  STORAGE_EXTRA_OBJS="$STORAGE_EXTRA_OBJS storage_dump.o"
 
   if [ "$uname" = "Linux" ]; then
     LIBS="$LIBS -ldl -rdynamic"
-    TRACKER_HTTPD_OBJS="$TRACKER_HTTPD_OBJS ../common/linux_stack_trace.o"
-    STORAGE_HTTPD_OBJS="$STORAGE_HTTPD_OBJS ../common/linux_stack_trace.o"
+    TRACKER_EXTRA_OBJS="$TRACKER_EXTRA_OBJS ../common/linux_stack_trace.o"
+    STORAGE_EXTRA_OBJS="$STORAGE_EXTRA_OBJS ../common/linux_stack_trace.o"
   fi
 fi
 
@@ -150,7 +149,7 @@ cp Makefile.in Makefile
 perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_PREFIX\)#$TARGET_PREFIX#g" Makefile
-perl -pi -e "s#\\\$\(TRACKER_HTTPD_OBJS\)#$TRACKER_HTTPD_OBJS#g" Makefile
+perl -pi -e "s#\\\$\(TRACKER_EXTRA_OBJS\)#$TRACKER_EXTRA_OBJS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_CONF_PATH\)#$TARGET_CONF_PATH#g" Makefile
 make $1 $2
 
@@ -159,7 +158,7 @@ cp Makefile.in Makefile
 perl -pi -e "s#\\\$\(CFLAGS\)#$CFLAGS#g" Makefile
 perl -pi -e "s#\\\$\(LIBS\)#$LIBS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_PREFIX\)#$TARGET_PREFIX#g" Makefile
-perl -pi -e "s#\\\$\(STORAGE_HTTPD_OBJS\)#$STORAGE_HTTPD_OBJS#g" Makefile
+perl -pi -e "s#\\\$\(STORAGE_EXTRA_OBJS\)#$STORAGE_EXTRA_OBJS#g" Makefile
 perl -pi -e "s#\\\$\(TARGET_CONF_PATH\)#$TARGET_CONF_PATH#g" Makefile
 make $1 $2
 

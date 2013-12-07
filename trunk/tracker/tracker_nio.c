@@ -22,6 +22,8 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include "shared_func.h"
+#include "sched_thread.h"
+#include "fdfs_global.h"
 #include "logger.h"
 #include "sockopt.h"
 #include "fast_task_queue.h"
@@ -55,6 +57,10 @@ void task_finish_clean_up(struct fast_task_info *pTask)
 						pClientInfo->pStorage);
 		}
 	}
+
+	ioevent_detach(&pTask->thread_data->ev_puller, pTask->event.fd);
+	close(pTask->event.fd);
+	pTask->event.fd = -1;
 
 	memset(pTask->arg, 0, sizeof(TrackerClientInfo));
 	free_queue_push(pTask);
@@ -91,12 +97,6 @@ void recv_notify_read(int sock, short event, void *arg)
 
 		if (incomesock < 0)
 		{
-			struct timeval tv;
-                        tv.tv_sec = 1;
-                        tv.tv_usec = 0;
-			pThreadData = g_thread_data + (-1 * incomesock - 1) % \
-					g_work_threads;
-			event_base_loopexit(pThreadData->ev_base, &tv);
 			return;
 		}
 
@@ -136,40 +136,36 @@ void recv_notify_read(int sock, short event, void *arg)
 
 		pThreadData = g_thread_data + incomesock % g_work_threads;
 
+		pTask->thread_data = pThreadData;
 		strcpy(pTask->client_ip, szClientIp);
 	
-		event_set(&pTask->ev_read, incomesock, EV_READ, \
-				client_sock_read, pTask);
-		if (event_base_set(pThreadData->ev_base, &pTask->ev_read) != 0)
+		pTask->event.fd = incomesock;
+		pTask->event.callback = client_sock_read;
+		pTask->event.timer.data = pTask;
+		result = ioevent_attach(&pThreadData->ev_puller,
+				incomesock, IOEVENT_READ, pTask);
+		if (result != 0)
 		{
 			task_finish_clean_up(pTask);
-			close(incomesock);
 
 			logError("file: "__FILE__", line: %d, " \
-				"event_base_set fail.", __LINE__);
+				"ioevent_attach fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
 			continue;
 		}
 
-		event_set(&pTask->ev_write, incomesock, EV_WRITE, \
-				client_sock_write, pTask);
-		if ((result=event_base_set(pThreadData->ev_base, \
-				&pTask->ev_write)) != 0)
+		pTask->event.timer.expires = g_current_time +
+			g_fdfs_network_timeout;
+		result = fast_timer_add(&pThreadData->timer, &pTask->event.timer);
+		if (result != 0)
 		{
 			task_finish_clean_up(pTask);
-			close(incomesock);
 
 			logError("file: "__FILE__", line: %d, " \
-					"event_base_set fail.", __LINE__);
-			continue;
-		}
-
-		if (event_add(&pTask->ev_read, &g_network_tv) != 0)
-		{
-			task_finish_clean_up(pTask);
-			close(incomesock);
-
-			logError("file: "__FILE__", line: %d, " \
-				"event_add fail.", __LINE__);
+				"fast_timer_add fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
 			continue;
 		}
 	}
@@ -177,10 +173,29 @@ void recv_notify_read(int sock, short event, void *arg)
 
 int send_add_event(struct fast_task_info *pTask)
 {
+	int result;
+
 	pTask->offset = 0;
 
+	pTask->event.callback = client_sock_write;
+	result = ioevent_modify(&pTask->thread_data->ev_puller,
+		pTask->event.fd, IOEVENT_WRITE, pTask);
+	if (result != 0)
+	{
+		task_finish_clean_up(pTask);
+
+		logError("file: "__FILE__", line: %d, "\
+			"ioevent_modify fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, result, STRERROR(result));
+		return result;
+	}
+	fast_timer_modify(&pTask->thread_data->timer,
+		&pTask->event.timer, g_current_time +
+			g_fdfs_network_timeout);
+
 	/* direct send */
-	client_sock_write(pTask->ev_write.ev_fd, EV_WRITE, pTask);
+	//client_sock_write(pTask->event.fd, EV_WRITE, pTask);
 
 	return 0;
 }
@@ -197,14 +212,9 @@ static void client_sock_read(int sock, short event, void *arg)
 	{
 		if (pTask->offset == 0 && pTask->req_count > 0)
 		{
-			if (event_add(&pTask->ev_read, &g_network_tv) != 0)
-			{
-				close(pTask->ev_read.ev_fd);
-				task_finish_clean_up(pTask);
-
-				logError("file: "__FILE__", line: %d, " \
-						"event_add fail.", __LINE__);
-			}
+			fast_timer_modify(&pTask->thread_data->timer,
+				&pTask->event.timer, g_current_time +
+				g_fdfs_network_timeout);
 		}
 		else
 		{
@@ -214,7 +224,6 @@ static void client_sock_read(int sock, short event, void *arg)
 				__LINE__, pTask->client_ip, \
 				pTask->offset, pTask->length);
 
-			close(pTask->ev_read.ev_fd);
 			task_finish_clean_up(pTask);
 		}
 
@@ -237,14 +246,6 @@ static void client_sock_read(int sock, short event, void *arg)
 		{
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
 			{
-				if(event_add(&pTask->ev_read, &g_network_tv)!=0)
-				{
-					close(pTask->ev_read.ev_fd);
-					task_finish_clean_up(pTask);
-
-					logError("file: "__FILE__", line: %d, "\
-						"event_add fail.", __LINE__);
-				}
 			}
 			else
 			{
@@ -254,7 +255,6 @@ static void client_sock_read(int sock, short event, void *arg)
 					__LINE__, pTask->client_ip, \
 					errno, STRERROR(errno));
 
-				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
 			}
 
@@ -267,7 +267,6 @@ static void client_sock_read(int sock, short event, void *arg)
 				"connection disconnected.", \
 				__LINE__, pTask->client_ip);
 
-			close(pTask->ev_read.ev_fd);
 			task_finish_clean_up(pTask);
 			return;
 		}
@@ -276,14 +275,9 @@ static void client_sock_read(int sock, short event, void *arg)
 		{
 			if (pTask->offset + bytes < sizeof(TrackerHeader))
 			{
-				if (event_add(&pTask->ev_read, &g_network_tv)!=0)
-				{
-					close(pTask->ev_read.ev_fd);
-					task_finish_clean_up(pTask);
-
-					logError("file: "__FILE__", line: %d, "\
-						"event_add fail.", __LINE__);
-				}
+				fast_timer_modify(&pTask->thread_data->timer,
+					&pTask->event.timer, g_current_time +
+					g_fdfs_network_timeout);
 
 				pTask->offset += bytes;
 				return;
@@ -298,7 +292,6 @@ static void client_sock_read(int sock, short event, void *arg)
 					__LINE__, pTask->client_ip, \
 					pTask->length);
 
-				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
 				return;
 			}
@@ -312,7 +305,6 @@ static void client_sock_read(int sock, short event, void *arg)
 					pTask->client_ip, pTask->length, \
 					TRACKER_MAX_PACKAGE_SIZE);
 
-				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
 				return;
 			}
@@ -342,7 +334,6 @@ static void client_sock_write(int sock, short event, void *arg)
 		logError("file: "__FILE__", line: %d, " \
 			"send timeout", __LINE__);
 
-		close(pTask->ev_write.ev_fd);
 		task_finish_clean_up(pTask);
 
 		return;
@@ -357,14 +348,6 @@ static void client_sock_write(int sock, short event, void *arg)
 		{
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
 			{
-				if (event_add(&pTask->ev_write, &g_network_tv) != 0)
-				{
-					close(pTask->ev_write.ev_fd);
-					task_finish_clean_up(pTask);
-
-					logError("file: "__FILE__", line: %d, " \
-						"event_add fail.", __LINE__);
-				}
 			}
 			else
 			{
@@ -374,7 +357,6 @@ static void client_sock_write(int sock, short event, void *arg)
 					__LINE__, pTask->client_ip, \
 					errno, STRERROR(errno));
 
-				close(pTask->ev_write.ev_fd);
 				task_finish_clean_up(pTask);
 			}
 
@@ -386,7 +368,6 @@ static void client_sock_write(int sock, short event, void *arg)
 				"send failed, connection disconnected.", \
 				__LINE__);
 
-			close(pTask->ev_write.ev_fd);
 			task_finish_clean_up(pTask);
 			return;
 		}
@@ -399,9 +380,8 @@ static void client_sock_write(int sock, short event, void *arg)
 			{
 				logDebug("file: "__FILE__", line: %d, "\
 					"close conn: #%d, client ip: %s", \
-					__LINE__, pTask->ev_read.ev_fd,
+					__LINE__, pTask->event.fd,
 					pTask->client_ip);
-				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
 				return;
 			}
@@ -409,16 +389,22 @@ static void client_sock_write(int sock, short event, void *arg)
 			pTask->offset = 0;
 			pTask->length  = 0;
 
-			if ((result=event_add(&pTask->ev_read, \
-						&g_network_tv)) != 0)
+			pTask->event.callback = client_sock_read;
+			result = ioevent_modify(&pTask->thread_data->ev_puller,
+				pTask->event.fd, IOEVENT_READ, pTask);
+			if (result != 0)
 			{
-				close(pTask->ev_read.ev_fd);
 				task_finish_clean_up(pTask);
 
 				logError("file: "__FILE__", line: %d, "\
-					"event_add fail.", __LINE__);
+					"ioevent_modify fail, " \
+					"errno: %d, error info: %s", \
+					__LINE__, result, STRERROR(result));
 				return;
 			}
+			fast_timer_modify(&pTask->thread_data->timer,
+				&pTask->event.timer, g_current_time +
+				g_fdfs_network_timeout);
 
 			return;
 		}
