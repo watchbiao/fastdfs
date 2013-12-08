@@ -1560,6 +1560,7 @@ static void storage_set_metadata_done_callback( \
 int storage_service_init()
 {
 	int result;
+	int bytes;
 	struct storage_nio_thread_data *pThreadData;
 	struct storage_nio_thread_data *pDataEnd;
 	pthread_t tid;
@@ -1593,16 +1594,16 @@ int storage_service_init()
 		return result;
 	}
 
-	g_nio_thread_data = (struct storage_nio_thread_data *)malloc(sizeof( \
-				struct storage_nio_thread_data) * g_work_threads);
+	bytes = sizeof(struct storage_nio_thread_data) * g_work_threads;
+	g_nio_thread_data = (struct storage_nio_thread_data *)malloc(bytes);
 	if (g_nio_thread_data == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)sizeof(struct storage_nio_thread_data) * \
-			g_work_threads, errno, STRERROR(errno));
+			__LINE__, bytes, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
+	memset(g_nio_thread_data, 0, bytes);
 
 	g_storage_thread_count = 0;
 	pDataEnd = g_nio_thread_data + g_work_threads;
@@ -1614,6 +1615,16 @@ int storage_service_init()
 			result  = errno != 0 ? errno : ENOMEM;
 			logError("file: "__FILE__", line: %d, " \
 				"ioevent_init fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
+			return result;
+		}
+		result = fast_timer_init(&pThreadData->thread_data.timer,
+				2 * g_fdfs_network_timeout, g_current_time);
+		if (result != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"fast_timer_init fail, " \
 				"errno: %d, error info: %s", \
 				__LINE__, result, STRERROR(result));
 			return result;
@@ -1724,7 +1735,7 @@ int storage_terminate_threads()
 			}
 
 			pClientInfo = (StorageClientInfo *)pTask->arg;
-			pClientInfo->sock = quit_sock;
+			pTask->event.fd = quit_sock;
 			pClientInfo->nio_thread_index = pThreadData - g_nio_thread_data;
 
 			task_addr = (long)pTask;
@@ -1808,9 +1819,9 @@ static void *accept_thread_entrance(void* arg)
 		}
 
 		pClientInfo = (StorageClientInfo *)pTask->arg;
-		pClientInfo->sock = incomesock;
+		pTask->event.fd = incomesock;
 		pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_INIT;
-		pClientInfo->nio_thread_index = pClientInfo->sock % g_work_threads;
+		pClientInfo->nio_thread_index = pTask->event.fd % g_work_threads;
 		pThreadData = g_nio_thread_data + pClientInfo->nio_thread_index;
 
 		strcpy(pTask->client_ip, szClientIp);

@@ -23,9 +23,10 @@
 #include "trunk_mem.h"
 #include "md5.h"
 
-#define FDFS_STORAGE_STAGE_NIO_INIT   '\0'
-#define FDFS_STORAGE_STAGE_NIO_RECV   'r'
-#define FDFS_STORAGE_STAGE_NIO_SEND   's'
+#define FDFS_STORAGE_STAGE_NIO_INIT   0
+#define FDFS_STORAGE_STAGE_NIO_RECV   1
+#define FDFS_STORAGE_STAGE_NIO_SEND   2
+#define FDFS_STORAGE_STAGE_DIO_THREAD 4
 
 #define FDFS_STORAGE_FILE_OP_READ     'R'
 #define FDFS_STORAGE_FILE_OP_WRITE    'W'
@@ -116,7 +117,6 @@ typedef struct
 typedef struct
 {
 	int nio_thread_index;  //nio thread index
-	int sock;
 	char stage;  //nio stage, send or recv
 	char storage_server_id[FDFS_STORAGE_ID_MAX_SIZE];
 
@@ -136,8 +136,6 @@ typedef struct
 struct storage_nio_thread_data
 {
 	struct nio_thread_data thread_data;
-        struct event_base *ev_base;  //libevent base pointer
-        int pipe_fds[2];   //for notify nio thread to deal task
 	GroupArray group_array;  //FastDHT group array
 };
 

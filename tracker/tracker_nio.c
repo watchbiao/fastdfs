@@ -78,7 +78,6 @@ void recv_notify_read(int sock, short event, void *arg)
 {
 	int bytes;
 	int incomesock;
-	int result;
 	struct nio_thread_data *pThreadData;
 	struct fast_task_info *pTask;
 	char szClientIp[IP_ADDRESS_SIZE];
@@ -145,9 +144,8 @@ void recv_notify_read(int sock, short event, void *arg)
 		strcpy(pTask->client_ip, szClientIp);
 	
 		pThreadData = g_thread_data + incomesock % g_work_threads;
-		result = ioevent_set(pTask, pThreadData, incomesock,
-				IOEVENT_READ, client_sock_read);
-		if (result != 0)
+		if (ioevent_set(pTask, pThreadData, incomesock,
+				IOEVENT_READ, client_sock_read) != 0)
 		{
 			task_finish_clean_up(pTask);
 			continue;
@@ -201,9 +199,10 @@ static void client_sock_read(int sock, short event, void *arg)
 	{
 		if (pTask->offset == 0 && pTask->req_count > 0)
 		{
-			fast_timer_modify(&pTask->thread_data->timer,
-				&pTask->event.timer, g_current_time +
-				g_fdfs_network_timeout);
+			pTask->event.timer.expires = g_current_time +
+				g_fdfs_network_timeout;
+			fast_timer_add(&pTask->thread_data->timer,
+				&pTask->event.timer);
 		}
 		else
 		{
@@ -223,17 +222,17 @@ static void client_sock_read(int sock, short event, void *arg)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, recv error event: %d, "
-			"close connection", __LINE__, event);
+			"close connection", __LINE__, pTask->client_ip, event);
 
 		task_finish_clean_up(pTask);
 		return;
 	}
 
-	fast_timer_modify(&pTask->thread_data->timer,
-		&pTask->event.timer, g_current_time +
-		g_fdfs_network_timeout);
 	while (1)
 	{
+		fast_timer_modify(&pTask->thread_data->timer,
+			&pTask->event.timer, g_current_time +
+			g_fdfs_network_timeout);
 		if (pTask->length == 0) //recv header
 		{
 			recv_bytes = sizeof(TrackerHeader) - pTask->offset;
@@ -341,17 +340,18 @@ static void client_sock_write(int sock, short event, void *arg)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"client ip: %s, recv error event: %d, "
-			"close connection", __LINE__, event);
+			"close connection", __LINE__, pTask->client_ip, event);
 
 		task_finish_clean_up(pTask);
 		return;
 	}
 
-	fast_timer_modify(&pTask->thread_data->timer,
-		&pTask->event.timer, g_current_time +
-		g_fdfs_network_timeout);
 	while (1)
 	{
+		fast_timer_modify(&pTask->thread_data->timer,
+			&pTask->event.timer, g_current_time +
+			g_fdfs_network_timeout);
+
 		bytes = send(sock, pTask->data + pTask->offset, \
 				pTask->length - pTask->offset,  0);
 		//printf("%08X sended %d bytes\n", (int)pTask, bytes);
@@ -414,9 +414,6 @@ static void client_sock_write(int sock, short event, void *arg)
 					__LINE__, result, STRERROR(result));
 				return;
 			}
-			fast_timer_modify(&pTask->thread_data->timer,
-				&pTask->event.timer, g_current_time +
-				g_fdfs_network_timeout);
 
 			return;
 		}
