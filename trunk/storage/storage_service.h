@@ -19,7 +19,6 @@
 #define STORAGE_DELETE_FLAG_FILE  1
 #define STORAGE_DELETE_FLAG_LINK  2
 
-#include <event.h>
 #include "logger.h"
 #include "fdfs_define.h"
 #include "fast_task_queue.h"

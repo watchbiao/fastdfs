@@ -32,6 +32,7 @@
 #include "tracker_mem.h"
 #include "tracker_global.h"
 #include "tracker_service.h"
+#include "ioevent_loop.h"
 #include "tracker_nio.h"
 
 static void client_sock_read(int sock, short event, void *arg);
@@ -78,7 +79,7 @@ void recv_notify_read(int sock, short event, void *arg)
 	int bytes;
 	int incomesock;
 	int result;
-	struct tracker_thread_data *pThreadData;
+	struct nio_thread_data *pThreadData;
 	struct fast_task_info *pTask;
 	char szClientIp[IP_ADDRESS_SIZE];
 	in_addr_t client_addr;
@@ -141,39 +142,14 @@ void recv_notify_read(int sock, short event, void *arg)
 			continue;
 		}
 
-		pThreadData = g_thread_data + incomesock % g_work_threads;
-
 		strcpy(pTask->client_ip, szClientIp);
 	
-		pTask->thread_data = pThreadData;
-		pTask->event.fd = incomesock;
-		pTask->event.callback = client_sock_read;
-
-		if (ioevent_attach(&pThreadData->ev_puller,
-			incomesock, IOEVENT_READ, pTask) < 0)
-		{
-			result = errno != 0 ? errno : ENOENT;
-			task_finish_clean_up(pTask);
-
-			logError("file: "__FILE__", line: %d, " \
-				"ioevent_attach fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, result, STRERROR(result));
-			continue;
-		}
-
-		pTask->event.timer.data = pTask;
-		pTask->event.timer.expires = g_current_time +
-			g_fdfs_network_timeout;
-		result = fast_timer_add(&pThreadData->timer, &pTask->event.timer);
+		pThreadData = g_thread_data + incomesock % g_work_threads;
+		result = ioevent_set(pTask, pThreadData, incomesock,
+				IOEVENT_READ, client_sock_read);
 		if (result != 0)
 		{
 			task_finish_clean_up(pTask);
-
-			logError("file: "__FILE__", line: %d, " \
-				"fast_timer_add fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, result, STRERROR(result));
 			continue;
 		}
 	}
@@ -189,10 +165,10 @@ static int set_send_event(struct fast_task_info *pTask)
 	}
 
 	pTask->event.callback = client_sock_write;
-	result = ioevent_modify(&pTask->thread_data->ev_puller,
-		pTask->event.fd, IOEVENT_WRITE, pTask);
-	if (result != 0)
+	if (ioevent_modify(&pTask->thread_data->ev_puller,
+		pTask->event.fd, IOEVENT_WRITE, pTask) != 0)
 	{
+		result = errno != 0 ? errno : ENOENT;
 		task_finish_clean_up(pTask);
 
 		logError("file: "__FILE__", line: %d, "\
@@ -204,11 +180,11 @@ static int set_send_event(struct fast_task_info *pTask)
 	return 0;
 }
 
-	/* direct send */
 int send_add_event(struct fast_task_info *pTask)
 {
 	pTask->offset = 0;
 
+	/* direct send */
 	client_sock_write(pTask->event.fd, IOEVENT_WRITE, pTask);
 	return 0;
 }
@@ -253,12 +229,11 @@ static void client_sock_read(int sock, short event, void *arg)
 		return;
 	}
 
+	fast_timer_modify(&pTask->thread_data->timer,
+		&pTask->event.timer, g_current_time +
+		g_fdfs_network_timeout);
 	while (1)
 	{
-		fast_timer_modify(&pTask->thread_data->timer,
-			&pTask->event.timer, g_current_time +
-			g_fdfs_network_timeout);
-
 		if (pTask->length == 0) //recv header
 		{
 			recv_bytes = sizeof(TrackerHeader) - pTask->offset;
@@ -372,11 +347,11 @@ static void client_sock_write(int sock, short event, void *arg)
 		return;
 	}
 
+	fast_timer_modify(&pTask->thread_data->timer,
+		&pTask->event.timer, g_current_time +
+		g_fdfs_network_timeout);
 	while (1)
 	{
-		fast_timer_modify(&pTask->thread_data->timer,
-			&pTask->event.timer, g_current_time +
-			g_fdfs_network_timeout);
 		bytes = send(sock, pTask->data + pTask->offset, \
 				pTask->length - pTask->offset,  0);
 		//printf("%08X sended %d bytes\n", (int)pTask, bytes);
@@ -427,10 +402,10 @@ static void client_sock_write(int sock, short event, void *arg)
 			pTask->length  = 0;
 
 			pTask->event.callback = client_sock_read;
-			result = ioevent_modify(&pTask->thread_data->ev_puller,
-				pTask->event.fd, IOEVENT_READ, pTask);
-			if (result != 0)
+			if (ioevent_modify(&pTask->thread_data->ev_puller,
+				pTask->event.fd, IOEVENT_READ, pTask) != 0)
 			{
+				result = errno != 0 ? errno : ENOENT;
 				task_finish_clean_up(pTask);
 
 				logError("file: "__FILE__", line: %d, "\

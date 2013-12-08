@@ -33,7 +33,7 @@ typedef struct ioevent_entry
 	IOEventCallback callback;
 } IOEventEntry;
 
-struct tracker_thread_data
+struct nio_thread_data
 {
 	struct ioevent_puller ev_puller;
 	struct fast_timer timer;
@@ -44,8 +44,6 @@ struct fast_task_info
 {
 	IOEventEntry event;
 	char client_ip[IP_ADDRESS_SIZE];
-	struct event ev_read;
-	struct event ev_write;
 	void *arg;  //extra argument pointer
 	char *data; //buffer for write or recv
 	int size;   //alloc size
@@ -53,7 +51,7 @@ struct fast_task_info
 	int offset; //current offset
 	int req_count; //request count
 	TaskFinishCallBack finish_callback;
-	struct tracker_thread_data *thread_data;
+	struct nio_thread_data *thread_data;
 	struct fast_task_info *next;
 };
 

@@ -46,6 +46,7 @@
 #include "trunk_mem.h"
 #include "trunk_sync.h"
 #include "trunk_client.h"
+#include "ioevent_loop.h"
 
 //storage access log actions
 #define ACCESS_LOG_ACTION_UPLOAD_FILE    "upload"
@@ -1607,16 +1608,18 @@ int storage_service_init()
 	pDataEnd = g_nio_thread_data + g_work_threads;
 	for (pThreadData=g_nio_thread_data; pThreadData<pDataEnd; pThreadData++)
 	{
-		pThreadData->ev_base = event_base_new();
-		if (pThreadData->ev_base == NULL)
+		if (ioevent_init(&pThreadData->thread_data.ev_puller,
+			g_max_connections + 2, 1000, 0) != 0)
 		{
-			result = errno != 0 ? errno : ENOMEM;
+			result  = errno != 0 ? errno : ENOMEM;
 			logError("file: "__FILE__", line: %d, " \
-				"event_base_new fail.", __LINE__);
+				"ioevent_init fail, " \
+				"errno: %d, error info: %s", \
+				__LINE__, result, STRERROR(result));
 			return result;
 		}
 
-		if (pipe(pThreadData->pipe_fds) != 0)
+		if (pipe(pThreadData->thread_data.pipe_fds) != 0)
 		{
 			result = errno != 0 ? errno : EPERM;
 			logError("file: "__FILE__", line: %d, " \
@@ -1627,13 +1630,13 @@ int storage_service_init()
 		}
 
 #if defined(OS_LINUX)
-		if ((result=fd_add_flags(pThreadData->pipe_fds[0], \
+		if ((result=fd_add_flags(pThreadData->thread_data.pipe_fds[0], \
 				O_NONBLOCK | O_NOATIME)) != 0)
 		{
 			break;
 		}
 #else
-		if ((result=fd_add_flags(pThreadData->pipe_fds[0], \
+		if ((result=fd_add_flags(pThreadData->thread_data.pipe_fds[0], \
 				O_NONBLOCK)) != 0)
 		{
 			break;
@@ -1725,7 +1728,7 @@ int storage_terminate_threads()
 			pClientInfo->nio_thread_index = pThreadData - g_nio_thread_data;
 
 			task_addr = (long)pTask;
-			if (write(pThreadData->pipe_fds[1], &task_addr, \
+			if (write(pThreadData->thread_data.pipe_fds[1], &task_addr, \
 					sizeof(task_addr)) != sizeof(task_addr))
 			{
 				logError("file: "__FILE__", line: %d, " \
@@ -1813,7 +1816,7 @@ static void *accept_thread_entrance(void* arg)
 		strcpy(pTask->client_ip, szClientIp);
 
 		task_addr = (long)pTask;
-		if (write(pThreadData->pipe_fds[1], &task_addr, \
+		if (write(pThreadData->thread_data.pipe_fds[1], &task_addr, \
 			sizeof(task_addr)) != sizeof(task_addr))
 		{
 			close(incomesock);
@@ -1875,7 +1878,7 @@ void storage_nio_notify(struct fast_task_info *pTask)
 	pThreadData = g_nio_thread_data + pClientInfo->nio_thread_index;
 
 	task_addr = (long)pTask;
-	if (write(pThreadData->pipe_fds[1], &task_addr, \
+	if (write(pThreadData->thread_data.pipe_fds[1], &task_addr, \
 		sizeof(task_addr)) != sizeof(task_addr))
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -1890,7 +1893,6 @@ static void *work_thread_entrance(void* arg)
 {
 	int result;
 	struct storage_nio_thread_data *pThreadData;
-	struct event ev_notify;
 
 	pThreadData = (struct storage_nio_thread_data *)arg;
 	if (g_check_file_duplicate)
@@ -1905,30 +1907,9 @@ static void *work_thread_entrance(void* arg)
 		}
 	}
 	
-	do
-	{
-		event_set(&ev_notify, pThreadData->pipe_fds[0], \
-			EV_READ | EV_PERSIST, storage_recv_notify_read, NULL);
-		if ((result=event_base_set(pThreadData->ev_base, &ev_notify)) != 0)
-		{
-			logCrit("file: "__FILE__", line: %d, " \
-				"event_base_set fail.", __LINE__);
-			break;
-		}
-		if ((result=event_add(&ev_notify, NULL)) != 0)
-		{
-			logCrit("file: "__FILE__", line: %d, " \
-				"event_add fail.", __LINE__);
-			break;
-		}
-
-		while (g_continue_flag)
-		{
-			event_base_loop(pThreadData->ev_base, 0);
-		}
-	} while (0);
-
-	event_base_free(pThreadData->ev_base);
+	ioevent_loop(&pThreadData->thread_data, storage_recv_notify_read,
+		&g_continue_flag);
+	ioevent_destroy(&pThreadData->thread_data.ev_puller);
 
 	if (g_check_file_duplicate)
 	{
