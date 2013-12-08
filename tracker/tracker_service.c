@@ -34,6 +34,7 @@
 #include "tracker_nio.h"
 #include "tracker_relationship.h"
 #include "fdfs_shared_func.h"
+#include "ioevent_loop.h"
 #include "tracker_service.h"
 
 #define PKG_LEN_PRINTF_FORMAT  "%d"
@@ -42,7 +43,7 @@ static pthread_mutex_t tracker_thread_lock;
 static pthread_mutex_t lb_thread_lock;
 
 int g_tracker_thread_count = 0;
-struct tracker_thread_data *g_thread_data = NULL;
+struct nio_thread_data *g_thread_data = NULL;
 
 static int lock_by_client_count = 0;
 
@@ -53,8 +54,8 @@ static void tracker_find_max_free_space_group();
 int tracker_service_init()
 {
 	int result;
-	struct tracker_thread_data *pThreadData;
-	struct tracker_thread_data *pDataEnd;
+	struct nio_thread_data *pThreadData;
+	struct nio_thread_data *pDataEnd;
 	pthread_t tid;
 	pthread_attr_t thread_attr;
 
@@ -81,13 +82,13 @@ int tracker_service_init()
 		return result;
 	}
 
-	g_thread_data = (struct tracker_thread_data *)malloc(sizeof( \
-				struct tracker_thread_data) * g_work_threads);
+	g_thread_data = (struct nio_thread_data *)malloc(sizeof( \
+				struct nio_thread_data) * g_work_threads);
 	if (g_thread_data == NULL)
 	{
 		logError("file: "__FILE__", line: %d, " \
 			"malloc %d bytes fail, errno: %d, error info: %s", \
-			__LINE__, (int)sizeof(struct tracker_thread_data) * \
+			__LINE__, (int)sizeof(struct nio_thread_data) * \
 			g_work_threads, errno, STRERROR(errno));
 		return errno != 0 ? errno : ENOMEM;
 	}
@@ -179,8 +180,8 @@ int tracker_service_init()
 
 int tracker_terminate_threads()
 {
-        struct tracker_thread_data *pThreadData;
-        struct tracker_thread_data *pDataEnd;
+        struct nio_thread_data *pThreadData;
+        struct nio_thread_data *pDataEnd;
         int quit_sock;
 
         if (g_thread_data != NULL)
@@ -228,7 +229,7 @@ static void *accept_thread_entrance(void* arg)
 	int incomesock;
 	struct sockaddr_in inaddr;
 	socklen_t sockaddr_len;
-	struct tracker_thread_data *pThreadData;
+	struct nio_thread_data *pThreadData;
 
 	server_sock = (long)arg;
 	while (g_continue_flag)
@@ -300,99 +301,13 @@ void tracker_accept_loop(int server_sock)
 	accept_thread_entrance((void *)(long)server_sock);
 }
 
-static void deal_ioevents(IOEventPoller *ioevent, const int count)
-{
-	int i;
-	int event;
-	IOEventEntry *pEntry;
-	for (i=0; i<count; i++)
-	{
-		event = IOEVENT_GET_EVENTS(ioevent, i);
-		pEntry = (IOEventEntry *)IOEVENT_GET_DATA(ioevent, i);
-
-		pEntry->callback(pEntry->fd, event, pEntry->timer.data);
-	}
-}
-
-static void deal_timeouts(FastTimerEntry *head)
-{
-	FastTimerEntry *entry;
-	FastTimerEntry *curent;
-	IOEventEntry *pEventEntry;
-
-	entry = head->next;
-	while (entry != NULL)
-	{
-		curent = entry;
-		entry = entry->next;
-
-		pEventEntry = (IOEventEntry *)curent->data;
-		if (pEventEntry != NULL)
-		{
-			pEventEntry->callback(pEventEntry->fd, IOEVENT_TIMEOUT,
-						curent->data);
-		}
-	}
-}
-
 static void *work_thread_entrance(void* arg)
 {
 	int result;
-	struct tracker_thread_data *pThreadData;
-	IOEventEntry ev_notify;
-	FastTimerEntry head;
-	time_t last_check_time;
-	int count;
+	struct nio_thread_data *pThreadData;
 
-	last_check_time = g_current_time;
-	pThreadData = (struct tracker_thread_data *)arg;
-	do
-	{
-		memset(&ev_notify, 0, sizeof(ev_notify));
-		ev_notify.fd = pThreadData->pipe_fds[0];
-		ev_notify.callback = recv_notify_read;
-		if (ioevent_attach(&pThreadData->ev_puller,
-			pThreadData->pipe_fds[0], IOEVENT_READ,
-			&ev_notify) != 0)
-		{
-			result = errno != 0 ? errno : ENOMEM;
-			logCrit("file: "__FILE__", line: %d, " \
-				"ioevent_attach fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, result, STRERROR(result));
-			break;
-		}
-
-		while (g_continue_flag)
-		{
-			count = ioevent_poll(&pThreadData->ev_puller);
-			if (count > 0)
-			{
-				deal_ioevents(&pThreadData->ev_puller, count);
-			}
-			else if (count < 0)
-			{
-				result = errno != 0 ? errno : EINVAL;
-				logError("file: "__FILE__", line: %d, " \
-					"ioevent_poll fail, " \
-					"errno: %d, error info: %s", \
-					__LINE__, result, STRERROR(result));
-				break;
-			}
-
-			if (g_current_time - last_check_time > 0)
-			{
-				last_check_time = g_current_time;
-				count = fast_timer_timeouts_get(
-				&pThreadData->timer, g_current_time, &head);
-				if (count > 0)
-				{
-					deal_timeouts(&head);
-				}
-			}
-		}
-	} while (0);
-
+	pThreadData = (struct nio_thread_data *)arg;
+	ioevent_loop(pThreadData, recv_notify_read, &g_continue_flag);
 	ioevent_destroy(&pThreadData->ev_puller);
 
 	if ((result=pthread_mutex_lock(&tracker_thread_lock)) != 0)

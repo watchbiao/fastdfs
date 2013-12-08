@@ -22,10 +22,10 @@
 extern "C" {
 #endif
 
-//typedef struct nio_thread_data struct tracker_thread_data;
+//typedef struct nio_thread_data struct nio_thread_data;
 
 extern int g_tracker_thread_count;
-extern struct tracker_thread_data *g_thread_data;
+extern struct nio_thread_data *g_thread_data;
 
 int tracker_service_init();
 int tracker_service_destroy();

@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
-#include <event.h>
 #include "tracker_types.h"
 #include "storage_func.h"
 #include "fast_task_queue.h"
@@ -136,6 +135,7 @@ typedef struct
 
 struct storage_nio_thread_data
 {
+	struct nio_thread_data thread_data;
         struct event_base *ev_base;  //libevent base pointer
         int pipe_fds[2];   //for notify nio thread to deal task
 	GroupArray group_array;  //FastDHT group array

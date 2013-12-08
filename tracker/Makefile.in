@@ -14,7 +14,7 @@ SHARED_OBJS = ../common/hash.o ../common/chain.o ../common/base64.o \
               ../common/connection_pool.o ../common/process_ctrl.o \
               ../common/ioevent.o ../common/fast_timer.o \
               tracker_proto.o tracker_mem.o tracker_service.o tracker_status.o \
-              tracker_global.o tracker_func.o fast_task_queue.o \
+              tracker_global.o tracker_func.o fast_task_queue.o ioevent_loop.o \
               fdfs_shared_func.o tracker_nio.o tracker_relationship.o \
               $(TRACKER_EXTRA_OBJS)
 
