@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <event.h>
 #include "common_define.h"
 #include "ioevent.h"
 #include "fast_timer.h"

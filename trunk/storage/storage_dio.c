@@ -159,12 +159,16 @@ void storage_dio_terminate()
 
 int storage_dio_queue_push(struct fast_task_info *pTask)
 {
+        StorageClientInfo *pClientInfo;
 	StorageFileContext *pFileContext;
 	struct storage_dio_context *pContext;
 	int result;
 
-	pFileContext = &(((StorageClientInfo *)pTask->arg)->file_context);
+        pClientInfo = (StorageClientInfo *)pTask->arg;
+	pFileContext = &(pClientInfo->file_context);
 	pContext = g_dio_contexts + pFileContext->dio_thread_index;
+
+	pClientInfo->stage |= FDFS_STORAGE_STAGE_DIO_THREAD;
 	if ((result=task_queue_push(&(pContext->queue), pTask)) != 0)
 	{
 		task_finish_clean_up(pTask);
@@ -216,7 +220,7 @@ int storage_dio_get_thread_index(struct fast_task_info *pTask, \
 		count = pThreadData->count;
 	}
 
-	pContext = contexts + (((unsigned int)pClientInfo->sock) % count);
+	pContext = contexts + (((unsigned int)pTask->event.fd) % count);
 	return pContext - g_dio_contexts;
 }
 
