@@ -39,11 +39,13 @@ static void deal_timeouts(FastTimerEntry *head)
 }
 
 int ioevent_loop(struct nio_thread_data *pThreadData,
-	IOEventCallback recv_notify_callback, volatile bool *continue_flag)
+	IOEventCallback recv_notify_callback, TaskCleanUpCallBack
+	clean_up_callback, volatile bool *continue_flag)
 {
 	int result;
 	IOEventEntry ev_notify;
 	FastTimerEntry head;
+	struct fast_task_info *pTask;
 	time_t last_check_time;
 	int count;
 
@@ -65,6 +67,7 @@ int ioevent_loop(struct nio_thread_data *pThreadData,
 	last_check_time = g_current_time;
 	while (*continue_flag)
 	{
+		pThreadData->deleted_list = NULL;
 		count = ioevent_poll(&pThreadData->ev_puller);
 		if (count > 0)
 		{
@@ -81,6 +84,20 @@ int ioevent_loop(struct nio_thread_data *pThreadData,
 					__LINE__, result, STRERROR(result));
 				return result;
 			}
+		}
+
+		if (pThreadData->deleted_list != NULL)
+		{
+			count = 0;
+			while (pThreadData->deleted_list != NULL)
+			{
+				pTask = pThreadData->deleted_list;
+				pThreadData->deleted_list = pTask->next;
+
+				clean_up_callback(pTask);
+				count++;
+			}
+			logInfo("cleanup task count: %d", count);
 		}
 
 		if (g_current_time - last_check_time > 0)

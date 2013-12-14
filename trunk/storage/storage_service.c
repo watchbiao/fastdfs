@@ -667,6 +667,12 @@ static void storage_sync_modify_file_done_callback( \
 	storage_nio_notify(pTask);
 }
 
+#define STORAGE_NIO_NOTIFY_CLOSE(pTask) \
+do { \
+	((StorageClientInfo *)pTask->arg)->stage = FDFS_STORAGE_STAGE_NIO_CLOSE; \
+	storage_nio_notify(pTask); \
+   } while (0)
+
 static void storage_get_metadata_done_callback(struct fast_task_info *pTask, \
 			const int err_no)
 {
@@ -689,7 +695,7 @@ static void storage_get_metadata_done_callback(struct fast_task_info *pTask, \
 		}
 		else
 		{
-			task_finish_clean_up(pTask);
+			STORAGE_NIO_NOTIFY_CLOSE(pTask);
 		}
 	}
 	else
@@ -728,7 +734,7 @@ static void storage_download_file_done_callback( \
 		}
 		else
 		{
-			task_finish_clean_up(pTask);
+			STORAGE_NIO_NOTIFY_CLOSE(pTask);
 		}
 	}
 	else
@@ -1892,11 +1898,13 @@ void storage_nio_notify(struct fast_task_info *pTask)
 	if (write(pThreadData->thread_data.pipe_fds[1], &task_addr, \
 		sizeof(task_addr)) != sizeof(task_addr))
 	{
-		logError("file: "__FILE__", line: %d, " \
+		int result;
+		result = errno != 0 ? errno : EIO;
+		logCrit("file: "__FILE__", line: %d, " \
 			"call write failed, " \
 			"errno: %d, error info: %s", \
-			__LINE__, errno, STRERROR(errno));
-		task_finish_clean_up(pTask);
+			__LINE__, result, STRERROR(result));
+		abort();
 	}
 }
 
@@ -1919,7 +1927,7 @@ static void *work_thread_entrance(void* arg)
 	}
 	
 	ioevent_loop(&pThreadData->thread_data, storage_recv_notify_read,
-		&g_continue_flag);
+		task_finish_clean_up, &g_continue_flag);
 	ioevent_destroy(&pThreadData->thread_data.ev_puller);
 
 	if (g_check_file_duplicate)
@@ -4034,7 +4042,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 	if (pClientInfo->total_length - pClientInfo->total_offset <= \
 		STORAGE_LAST_AHEAD_BYTES)  //finished, close the connection
 	{
-		task_finish_clean_up(pTask);
+		STORAGE_NIO_NOTIFY_CLOSE(pTask);
 		return 0;
 	}
 
@@ -4214,7 +4222,7 @@ static int storage_server_fetch_one_path_binlog_dealer( \
 
 	if (result != 0) //error occurs
 	{
-		task_finish_clean_up(pTask);
+		STORAGE_NIO_NOTIFY_CLOSE(pTask);
 		return result;
 	}
 
@@ -8129,7 +8137,7 @@ int storage_deal_task(struct fast_task_info *pTask)
 			result = storage_server_fetch_one_path_binlog(pTask);
 			break;
 		case FDFS_PROTO_CMD_QUIT:
-			task_finish_clean_up(pTask);
+			add_to_deleted_list(pTask);
 			return 0;
 		case FDFS_PROTO_CMD_ACTIVE_TEST:
 			result = storage_deal_active_test(pTask);
