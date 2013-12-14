@@ -22,6 +22,7 @@
 struct fast_task_info;
 
 typedef int (*TaskFinishCallBack) (struct fast_task_info *pTask);
+typedef void (*TaskCleanUpCallBack) (struct fast_task_info *pTask);
 
 typedef void (*IOEventCallback) (int sock, short event, void *arg);
 
@@ -37,6 +38,7 @@ struct nio_thread_data
 	struct ioevent_puller ev_puller;
 	struct fast_timer timer;
         int pipe_fds[2];
+	struct fast_task_info *deleted_list;
 };
 
 struct fast_task_info

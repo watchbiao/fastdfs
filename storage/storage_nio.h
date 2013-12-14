@@ -26,7 +26,8 @@
 #define FDFS_STORAGE_STAGE_NIO_INIT   0
 #define FDFS_STORAGE_STAGE_NIO_RECV   1
 #define FDFS_STORAGE_STAGE_NIO_SEND   2
-#define FDFS_STORAGE_STAGE_DIO_THREAD 4
+#define FDFS_STORAGE_STAGE_NIO_CLOSE  4  //close socket
+#define FDFS_STORAGE_STAGE_DIO_THREAD 8
 
 #define FDFS_STORAGE_FILE_OP_READ     'R'
 #define FDFS_STORAGE_FILE_OP_WRITE    'W'
@@ -117,6 +118,7 @@ typedef struct
 typedef struct
 {
 	int nio_thread_index;  //nio thread index
+	bool canceled;
 	char stage;  //nio stage, send or recv
 	char storage_server_id[FDFS_STORAGE_ID_MAX_SIZE];
 
@@ -147,6 +149,7 @@ void storage_recv_notify_read(int sock, short event, void *arg);
 int storage_send_add_event(struct fast_task_info *pTask);
 
 void task_finish_clean_up(struct fast_task_info *pTask);
+void add_to_deleted_list(struct fast_task_info *pTask);
 
 #ifdef __cplusplus
 }

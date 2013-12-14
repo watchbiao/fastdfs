@@ -171,7 +171,7 @@ int storage_dio_queue_push(struct fast_task_info *pTask)
 	pClientInfo->stage |= FDFS_STORAGE_STAGE_DIO_THREAD;
 	if ((result=task_queue_push(&(pContext->queue), pTask)) != 0)
 	{
-		task_finish_clean_up(pTask);
+		add_to_deleted_list(pTask);
 		return result;
 	}
 
@@ -182,7 +182,7 @@ int storage_dio_queue_push(struct fast_task_info *pTask)
 			"errno: %d, error info: %s", \
 			__LINE__, result, STRERROR(result));
 
-		task_finish_clean_up(pTask);
+		add_to_deleted_list(pTask);
 		return result;
 	}
 

@@ -307,7 +307,8 @@ static void *work_thread_entrance(void* arg)
 	struct nio_thread_data *pThreadData;
 
 	pThreadData = (struct nio_thread_data *)arg;
-	ioevent_loop(pThreadData, recv_notify_read, &g_continue_flag);
+	ioevent_loop(pThreadData, recv_notify_read, task_finish_clean_up,
+		&g_continue_flag);
 	ioevent_destroy(&pThreadData->ev_puller);
 
 	if ((result=pthread_mutex_lock(&tracker_thread_lock)) != 0)

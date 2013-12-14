@@ -38,6 +38,13 @@ static void client_sock_read(int sock, short event, void *arg);
 static void client_sock_write(int sock, short event, void *arg);
 static int storage_nio_init(struct fast_task_info *pTask);
 
+void add_to_deleted_list(struct fast_task_info *pTask)
+{
+	((StorageClientInfo *)pTask->arg)->canceled = true;
+	pTask->next = pTask->thread_data->deleted_list;
+	pTask->thread_data->deleted_list = pTask;
+}
+
 void task_finish_clean_up(struct fast_task_info *pTask)
 {
 	StorageClientInfo *pClientInfo;
@@ -77,7 +84,7 @@ static int set_recv_event(struct fast_task_info *pTask)
 		pTask->event.fd, IOEVENT_READ, pTask) != 0)
 	{
 		result = errno != 0 ? errno : ENOENT;
-		task_finish_clean_up(pTask);
+		add_to_deleted_list(pTask);
 
 		logError("file: "__FILE__", line: %d, "\
 			"ioevent_modify fail, " \
@@ -102,7 +109,7 @@ static int set_send_event(struct fast_task_info *pTask)
 		pTask->event.fd, IOEVENT_WRITE, pTask) != 0)
 	{
 		result = errno != 0 ? errno : ENOENT;
-		task_finish_clean_up(pTask);
+		add_to_deleted_list(pTask);
 
 		logError("file: "__FILE__", line: %d, "\
 			"ioevent_modify fail, " \
@@ -187,6 +194,9 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 			case FDFS_STORAGE_STAGE_NIO_SEND:
 				result = storage_send_add_event(pTask);
 				break;
+			case FDFS_STORAGE_STAGE_NIO_CLOSE:
+				result = EIO;   //close this socket
+				break;
 			default:
 				logError("file: "__FILE__", line: %d, " \
 					"invalid stage: %d", __LINE__, \
@@ -197,7 +207,7 @@ void storage_recv_notify_read(int sock, short event, void *arg)
 
 		if (result != 0)
 		{
-			task_finish_clean_up(pTask);
+			add_to_deleted_list(pTask);
 		}
 	}
 }
@@ -234,6 +244,10 @@ static void client_sock_read(int sock, short event, void *arg)
 
 	pTask = (struct fast_task_info *)arg;
         pClientInfo = (StorageClientInfo *)pTask->arg;
+	if (pClientInfo->canceled)
+	{
+		return;
+	}
 
 	if (pClientInfo->stage != FDFS_STORAGE_STAGE_NIO_RECV)
 	{
@@ -402,6 +416,12 @@ static void client_sock_write(int sock, short event, void *arg)
         StorageClientInfo *pClientInfo;
 
 	pTask = (struct fast_task_info *)arg;
+        pClientInfo = (StorageClientInfo *)pTask->arg;
+	if (pClientInfo->canceled)
+	{
+		return;
+	}
+
 	if (event & IOEVENT_TIMEOUT)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -421,7 +441,6 @@ static void client_sock_write(int sock, short event, void *arg)
 		return;
 	}
 
-        pClientInfo = (StorageClientInfo *)pTask->arg;
 	while (1)
 	{
 		fast_timer_modify(&pTask->thread_data->timer,
