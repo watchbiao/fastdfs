@@ -298,7 +298,16 @@ static int do_notify_leader_changed(ConnectionInfo *pTrackerServer, \
 	}
 	} while (0);
 
-	tracker_disconnect_server_ex(conn, result != 0);
+	if (pTrackerServer->port == g_server_port && \
+		is_local_host_ip(pTrackerServer->ip_addr))
+	{
+		tracker_disconnect_server_ex(conn, true);
+	}
+	else
+	{
+		tracker_disconnect_server_ex(conn, result != 0);
+	}
+
 	return result;
 }
 

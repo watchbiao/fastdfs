@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include "logger.h"
 #include "fast_timer.h"
 
 int fast_timer_init(FastTimer *timer, const int slot_count,
