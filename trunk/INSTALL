@@ -6,26 +6,23 @@ Please visit the FastDFS Home Page for more detail.
 English language: http://english.csource.org/
 Chinese language: http://www.csource.org/
 
-#step 1. download libevent 1.4.x and install it
-
-#step 2. download FastDFS source package and unpack it, 
-tar xzf FastDFS_v3.x.tar.gz
+#step 1. download FastDFS source package and unpack it, 
+tar xzf FastDFS_v5.x.tar.gz
 #for example:
-tar xzf FastDFS_v3.05.tar.gz
+tar xzf FastDFS_v5.00.tar.gz
 
-#step 3. enter the FastDFS dir
+#step 2. enter the FastDFS dir
 cd FastDFS
 
-#step 4. if build-in HTTP supported, modify make.sh, uncomment the line:
-# WITH_HTTPD=1, then execute:
+#step 3. execute:
 ./make.sh
 
-#step 5. make install
+#step 4. make install
 ./make.sh install
 
-#step 6. edit/modify the config file of tracker and storage
+#step 5. edit/modify the config file of tracker and storage
 
-#step 7. run server programs
+#step 6. run server programs
 #start the tracker server:
 /usr/local/bin/fdfs_trackerd /etc/fdfs/tracker.conf
 #in Linux, you can start fdfs_trackerd as a service:
@@ -36,14 +33,14 @@ cd FastDFS
 #in Linux, you can start fdfs_storaged as a service:
 /sbin/service fdfs_storaged start
 
-#step 8. run test program
+#step 7. run test program
 #run the client test program:
 /usr/local/bin/fdfs_test <client_conf_filename> <operation>
 /usr/local/bin/fdfs_test1 <client_conf_filename> <operation>
 #for example, upload a file:
 /usr/local/bin/fdfs_test conf/client.conf upload /usr/include/stdlib.h
 
-#step 9. run monitor program
+#step 8. run monitor program
 #run the monitor program:
 /usr/local/bin/fdfs_monitor <client_conf_filename>
 
