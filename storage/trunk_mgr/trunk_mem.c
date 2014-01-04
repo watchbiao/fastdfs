@@ -353,7 +353,8 @@ static int tree_walk_callback(void *data, void *args)
 	{
 		pTrunkInfo = &pCurrent->trunk;
 		len = sprintf(pCallbackArgs->pCurrent, \
-			"%d %d %d %d %d %d\n", \
+			"%d %c %d %d %d %d %d %d\n", \
+			(int)g_current_time, TRUNK_OP_TYPE_ADD_SPACE, \
 			pTrunkInfo->path.store_path_index, \
 			pTrunkInfo->path.sub_path_high, \
 			pTrunkInfo->path.sub_path_low,  \
@@ -910,16 +911,19 @@ int storage_delete_trunk_data_file()
 
 static int storage_trunk_load()
 {
-#define TRUNK_DATA_FIELD_COUNT  6
+#define TRUNK_DATA_NEW_FIELD_COUNT  8  // >= v5.01
+#define TRUNK_DATA_OLD_FIELD_COUNT  6  // < V5.01
 #define TRUNK_LINE_MAX_LENGHT  64
 
 	int64_t restore_offset;
 	char trunk_data_filename[MAX_PATH_SIZE];
 	char buff[4 * 1024 + 1];
 	int line_count;
+	int col_count;
+	int index;
 	char *pLineStart;
 	char *pLineEnd;
-	char *cols[TRUNK_DATA_FIELD_COUNT];
+	char *cols[TRUNK_DATA_NEW_FIELD_COUNT];
 	FDFSTrunkFullInfo trunkInfo;
 	int result;
 	int fd;
@@ -1045,8 +1049,10 @@ static int storage_trunk_load()
 
 		++line_count;
 		*pLineEnd = '\0';
-		if (splitEx(pLineStart, ' ', cols, TRUNK_DATA_FIELD_COUNT) \
-			!= TRUNK_DATA_FIELD_COUNT)
+		col_count = splitEx(pLineStart, ' ', cols,
+				TRUNK_DATA_NEW_FIELD_COUNT);
+		if (col_count != TRUNK_DATA_NEW_FIELD_COUNT && \
+			col_count != TRUNK_DATA_OLD_FIELD_COUNT)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"file %s, line: %d is invalid", \
@@ -1055,12 +1061,20 @@ static int storage_trunk_load()
 			return EINVAL;
 		}
 
-		trunkInfo.path.store_path_index = atoi(cols[0]);
-		trunkInfo.path.sub_path_high = atoi(cols[1]);
-		trunkInfo.path.sub_path_low = atoi(cols[2]);
-		trunkInfo.file.id = atoi(cols[3]);
-		trunkInfo.file.offset = atoi(cols[4]);
-		trunkInfo.file.size = atoi(cols[5]);
+		if (col_count == TRUNK_DATA_OLD_FIELD_COUNT)
+		{
+			index = 0;
+		}
+		else
+		{
+			index = 2;
+		}
+		trunkInfo.path.store_path_index = atoi(cols[index++]);
+		trunkInfo.path.sub_path_high = atoi(cols[index++]);
+		trunkInfo.path.sub_path_low = atoi(cols[index++]);
+		trunkInfo.file.id = atoi(cols[index++]);
+		trunkInfo.file.offset = atoi(cols[index++]);
+		trunkInfo.file.size = atoi(cols[index++]);
 		if ((result=storage_trunk_do_add_space(&trunkInfo)) != 0)
 		{
 			close(fd);
