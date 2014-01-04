@@ -1,4 +1,7 @@
 
+Version 5.01  2014-01-04
+ * trunk binlog be compressed when trunk init
+
 Version 5.00  2013-12-23
  * discard libevent, use epoll in Linux, kqueue in FreeBSD, port in SunOS directly
  * do_notify_leader_changed force close connection when target is myself

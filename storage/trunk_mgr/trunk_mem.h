@@ -86,6 +86,8 @@ int trunk_create_trunk_file_advance(void *args);
 
 int storage_delete_trunk_data_file();
 
+char *storage_trunk_get_data_filename(char *full_filename);
+
 #define storage_check_reserved_space(pGroup) \
         fdfs_check_reserved_space(pGroup, &g_storage_reserved_space)
 
