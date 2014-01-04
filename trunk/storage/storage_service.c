@@ -3881,8 +3881,6 @@ static int storage_server_trunk_delete_binlog_marks(struct fast_task_info *pTask
 {
 	StorageClientInfo *pClientInfo;
 	TrackerHeader *pHeader;
-	FDFSStorageServer *pStorageServer;
-	FDFSStorageServer *pServerEnd;
 	int64_t nInPackLen;
 	int result;
 
@@ -3924,26 +3922,7 @@ static int storage_server_trunk_delete_binlog_marks(struct fast_task_info *pTask
 		return result;
 	}
 
-	pServerEnd = g_storage_servers + g_storage_count;
-	for (pStorageServer=g_storage_servers; pStorageServer<pServerEnd; 
-		pStorageServer++)
-	{
-		if (storage_server_is_myself(&(pStorageServer->server)))
-		{
-			continue;
-		}
-
-		if ((result=trunk_unlink_mark_file( \
-			pStorageServer->server.id)) != 0)
-		{
-			if (result != ENOENT)
-			{
-				return result;
-			}
-		}
-	}
-
-	return 0;
+	return trunk_unlink_all_mark_files();
 }
 
 /**

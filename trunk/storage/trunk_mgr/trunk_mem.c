@@ -127,6 +127,13 @@ static int storage_trunk_node_compare_offset(void *p1, void *p2)
 	return pTrunkInfo1->file.offset - pTrunkInfo2->file.offset;
 }
 
+char *storage_trunk_get_data_filename(char *full_filename)
+{
+	snprintf(full_filename, MAX_PATH_SIZE, "%s/data/%s", \
+		g_fdfs_base_path, STORAGE_TRUNK_DATA_FILENAME);
+	return full_filename;
+}
+
 #define STORAGE_TRUNK_CHECK_STATUS() \
 	do \
 	{  \
@@ -379,10 +386,10 @@ static int tree_walk_callback(void *data, void *args)
 	return 0;
 }
 
-static int storage_trunk_save()
+static int storage_trunk_do_save()
 {
 	int64_t trunk_binlog_size;
-	char true_trunk_filename[MAX_PATH_SIZE];
+	char trunk_data_filename[MAX_PATH_SIZE];
 	struct walk_callback_args callback_args;
 	int len;
 	int result;
@@ -452,7 +459,18 @@ static int storage_trunk_save()
 			result, STRERROR(result));
 	}
 
-	close(callback_args.fd);
+	if (close(callback_args.fd) != 0)
+	{
+		if (result == 0)
+		{
+			result = errno != 0 ? errno : EIO;
+		}
+		logError("file: "__FILE__", line: %d, "\
+			"close file %s fail, " \
+			"errno: %d, error info: %s", \
+			__LINE__, callback_args.temp_trunk_filename, \
+			errno, STRERROR(errno));
+	}
 	pthread_mutex_unlock(&trunk_mem_lock);
 
 	if (result != 0)
@@ -460,19 +478,42 @@ static int storage_trunk_save()
 		return result;
 	}
 
-	sprintf(true_trunk_filename, "%s/data/%s", \
-		g_fdfs_base_path, STORAGE_TRUNK_DATA_FILENAME);
-	if (rename(callback_args.temp_trunk_filename, true_trunk_filename) != 0)
+	storage_trunk_get_data_filename(trunk_data_filename);
+	if (rename(callback_args.temp_trunk_filename, trunk_data_filename) != 0)
 	{
 		result = errno != 0 ? errno : EIO;
 		logError("file: "__FILE__", line: %d, "\
 			"rename file %s to %s fail, " \
 			"errno: %d, error info: %s", __LINE__, \
-			callback_args.temp_trunk_filename, true_trunk_filename, \
+			callback_args.temp_trunk_filename, trunk_data_filename, \
 			result, STRERROR(result));
 	}
 
 	return result;
+}
+
+static int storage_trunk_save()
+{
+	int result;
+
+	if ((result=trunk_binlog_compress_apply()) != 0)
+	{
+		return result;
+	}
+
+	if ((result=storage_trunk_do_save()) != 0)
+	{
+		trunk_binlog_compress_rollback();
+		return result;
+	}
+
+	if ((result=trunk_binlog_compress_commit()) != 0)
+	{
+		trunk_binlog_compress_rollback();
+		return result;
+	}
+
+	return trunk_unlink_all_mark_files();  //because the binlog file be compressed
 }
 
 static bool storage_trunk_is_space_occupied(const FDFSTrunkFullInfo *pTrunkInfo)
@@ -848,8 +889,7 @@ int storage_delete_trunk_data_file()
 	char trunk_data_filename[MAX_PATH_SIZE];
 	int result;
 
-	snprintf(trunk_data_filename, sizeof(trunk_data_filename), \
-		"%s/data/%s", g_fdfs_base_path, STORAGE_TRUNK_DATA_FILENAME);
+	storage_trunk_get_data_filename(trunk_data_filename);
 	if (unlink(trunk_data_filename) == 0)
 	{
 		return 0;
@@ -886,8 +926,7 @@ static int storage_trunk_load()
 	int bytes;
 	int len;
 
-	snprintf(trunk_data_filename, sizeof(trunk_data_filename), \
-		"%s/data/%s", g_fdfs_base_path, STORAGE_TRUNK_DATA_FILENAME);
+	storage_trunk_get_data_filename(trunk_data_filename);
 	if (g_trunk_init_reload_from_binlog)
 	{
 		if (unlink(trunk_data_filename) != 0)

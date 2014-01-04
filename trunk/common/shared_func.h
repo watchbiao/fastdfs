@@ -406,7 +406,7 @@ int safeWriteToFile(const char *filename, const char *buff, \
  *  	fd: the fd to read
  *  	buff: the buffer to store the line
  *  	size: the buffer max size
- *  	once_bytes: the file size
+ *  	once_bytes: the bytes per read
  *  return: error no , 0 success, != 0 fail
 */
 int fd_gets(int fd, char *buff, const int size, int once_bytes);
