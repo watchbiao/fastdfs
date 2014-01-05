@@ -53,6 +53,7 @@ int g_store_path_index = 0;
 int g_current_trunk_file_id = 0;
 TimeInfo g_trunk_create_file_time_base = {0, 0};
 int g_trunk_create_file_interval = 86400;
+int g_trunk_compress_binlog_min_interval = 0;
 ConnectionInfo g_trunk_server = {-1, 0};
 bool g_if_use_trunk_file = false;
 bool g_if_trunker_self = false;
@@ -62,6 +63,7 @@ bool g_trunk_init_reload_from_binlog = false;
 static byte trunk_init_flag = STORAGE_TRUNK_INIT_FLAG_NONE;
 int64_t g_trunk_total_free_space = 0;
 int64_t g_trunk_create_file_space_threshold = 0;
+time_t g_trunk_last_compress_time = 0;
 
 static pthread_mutex_t trunk_file_lock;
 static pthread_mutex_t trunk_mem_lock;
@@ -497,6 +499,14 @@ static int storage_trunk_save()
 {
 	int result;
 
+	if (!(g_trunk_compress_binlog_min_interval > 0 && \
+		g_current_time - g_trunk_last_compress_time >
+		g_trunk_compress_binlog_min_interval))
+	{
+		return storage_trunk_do_save();
+	}
+
+	logInfo("start compress trunk binlog ...");
 	if ((result=trunk_binlog_compress_apply()) != 0)
 	{
 		return result;
@@ -514,6 +524,8 @@ static int storage_trunk_save()
 		return result;
 	}
 
+	g_trunk_last_compress_time = g_current_time;
+	logInfo("compress trunk binlog done.");
 	return trunk_unlink_all_mark_files();  //because the binlog file be compressed
 }
 

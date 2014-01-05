@@ -62,6 +62,7 @@
 #define INIT_ITEM_LAST_SERVER_PORT	"last_server_port"
 #define INIT_ITEM_LAST_HTTP_PORT	"last_http_port"
 #define INIT_ITEM_CURRENT_TRUNK_FILE_ID "current_trunk_file_id"
+#define INIT_ITEM_TRUNK_LAST_COMPRESS_TIME "trunk_last_compress_time"
 
 #define STAT_ITEM_TOTAL_UPLOAD		"total_upload_count"
 #define STAT_ITEM_SUCCESS_UPLOAD	"success_upload_count"
@@ -565,6 +566,7 @@ int storage_write_to_sync_ini_file()
 		"%s=%s\n"  \
 		"%s=%d\n"  \
 		"%s=%d\n"  \
+		"%s=%d\n"  \
 		"%s=%d\n", \
 		INIT_ITEM_STORAGE_JOIN_TIME, g_storage_join_time, \
 		INIT_ITEM_SYNC_OLD_DONE, g_sync_old_done, \
@@ -573,7 +575,8 @@ int storage_write_to_sync_ini_file()
 		INIT_ITEM_LAST_IP_ADDRESS, g_tracker_client_ip, \
 		INIT_ITEM_LAST_SERVER_PORT, g_last_server_port, \
 		INIT_ITEM_LAST_HTTP_PORT, g_last_http_port,
-		INIT_ITEM_CURRENT_TRUNK_FILE_ID, g_current_trunk_file_id
+		INIT_ITEM_CURRENT_TRUNK_FILE_ID, g_current_trunk_file_id, \
+		INIT_ITEM_TRUNK_LAST_COMPRESS_TIME, (int)g_trunk_last_compress_time
 	    );
 	if (write(fd, buff, len) != len)
 	{
@@ -688,7 +691,9 @@ static int storage_check_and_make_data_dirs()
 
 		g_current_trunk_file_id = iniGetIntValue(NULL, \
 			INIT_ITEM_CURRENT_TRUNK_FILE_ID, &iniContext, 0);
- 
+		g_trunk_last_compress_time = iniGetIntValue(NULL, \
+			INIT_ITEM_TRUNK_LAST_COMPRESS_TIME , &iniContext, 0);
+
 		iniFreeContext(&iniContext);
 
 		if (g_last_server_port == 0 || g_last_http_port == 0)
@@ -709,15 +714,18 @@ static int storage_check_and_make_data_dirs()
 			}
 		}
 
-		/*
-		printf("g_sync_old_done = %d\n", g_sync_old_done);
-		printf("g_sync_src_id = %s\n", g_sync_src_id);
-		printf("g_sync_until_timestamp = %d\n", g_sync_until_timestamp);
-		printf("g_last_storage_ip = %s\n", g_last_storage_ip);
-		printf("g_last_server_port = %d\n", g_last_server_port);
-		printf("g_last_http_port = %d\n", g_last_http_port);
-		printf("g_current_trunk_file_id = %d\n", g_current_trunk_file_id);
-		*/
+		logInfo("g_sync_old_done = %d, "
+			"g_sync_src_id = %s, "
+			"g_sync_until_timestamp = %d, "
+			"g_last_storage_ip = %s, "
+			"g_last_server_port = %d, "
+			"g_last_http_port = %d, "
+			"g_current_trunk_file_id = %d, "
+			"g_trunk_last_compress_time= %d",
+			g_sync_old_done, g_sync_src_id, g_sync_until_timestamp,
+			g_last_storage_ip, g_last_server_port, g_last_http_port,
+			g_current_trunk_file_id, (int)g_trunk_last_compress_time
+			);
 	}
 	else
 	{

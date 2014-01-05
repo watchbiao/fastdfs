@@ -13,6 +13,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 #include <pthread.h>
 #include "common_define.h"
@@ -35,6 +36,7 @@ extern int g_store_path_index;  //store to which path
 extern int g_current_trunk_file_id;  //current trunk file id
 extern TimeInfo g_trunk_create_file_time_base;
 extern int g_trunk_create_file_interval;
+extern int g_trunk_compress_binlog_min_interval;
 extern ConnectionInfo g_trunk_server;  //the trunk server
 extern bool g_if_use_trunk_file;   //if use trunk file
 extern bool g_trunk_create_file_advance;
@@ -43,6 +45,7 @@ extern bool g_trunk_init_reload_from_binlog;
 extern bool g_if_trunker_self;   //if am i trunk server
 extern int64_t g_trunk_create_file_space_threshold;
 extern int64_t g_trunk_total_free_space;  //trunk total free space in bytes
+extern time_t g_trunk_last_compress_time;
 
 typedef struct tagFDFSTrunkNode {
 	FDFSTrunkFullInfo trunk;    //trunk info
