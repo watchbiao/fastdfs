@@ -714,6 +714,7 @@ static int storage_check_and_make_data_dirs()
 			}
 		}
 
+		/*
 		logInfo("g_sync_old_done = %d, "
 			"g_sync_src_id = %s, "
 			"g_sync_until_timestamp = %d, "
@@ -721,11 +722,12 @@ static int storage_check_and_make_data_dirs()
 			"g_last_server_port = %d, "
 			"g_last_http_port = %d, "
 			"g_current_trunk_file_id = %d, "
-			"g_trunk_last_compress_time= %d",
+			"g_trunk_last_compress_time = %d",
 			g_sync_old_done, g_sync_src_id, g_sync_until_timestamp,
 			g_last_storage_ip, g_last_server_port, g_last_http_port,
 			g_current_trunk_file_id, (int)g_trunk_last_compress_time
 			);
+		*/
 	}
 	else
 	{

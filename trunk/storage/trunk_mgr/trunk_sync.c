@@ -1069,7 +1069,7 @@ static int trunk_binlog_preread(TrunkBinLogReader *pReader)
 		return ENOENT;
 	}
 
-	if (pReader->binlog_buff.length == TRUNK_BINLOG_BUFFER_SIZE)
+	if (pReader->binlog_buff.length == TRUNK_BINLOG_BUFFER_SIZE) //buff full
 	{
 		return 0;
 	}
@@ -1104,7 +1104,7 @@ static int trunk_binlog_preread(TrunkBinLogReader *pReader)
 	else if (bytes_read == 0) //end of binlog file
 	{
 		pReader->binlog_buff.version = saved_trunk_binlog_write_version;
-		return ENOENT;
+		return (pReader->binlog_buff.length == 0) ? ENOENT : 0;
 	}
 
 	pReader->binlog_buff.length += bytes_read;
