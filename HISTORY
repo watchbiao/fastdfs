@@ -1,6 +1,8 @@
 
 Version 5.01  2014-01-05
  * trunk binlog be compressed when trunk init
+ * bug fixed: sync trunk binlog file to other storage servers immediately when
+   the trunk server init done
 
 Version 5.00  2013-12-23
  * discard libevent, use epoll in Linux, kqueue in FreeBSD, port in SunOS directly

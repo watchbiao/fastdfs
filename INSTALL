@@ -9,7 +9,7 @@ Chinese language: http://www.csource.org/
 #step 1. download FastDFS source package and unpack it, 
 tar xzf FastDFS_v5.x.tar.gz
 #for example:
-tar xzf FastDFS_v5.00.tar.gz
+tar xzf FastDFS_v5.01.tar.gz
 
 #step 2. enter the FastDFS dir
 cd FastDFS
@@ -24,12 +24,12 @@ cd FastDFS
 
 #step 6. run server programs
 #start the tracker server:
-/usr/local/bin/fdfs_trackerd /etc/fdfs/tracker.conf
+/usr/local/bin/fdfs_trackerd /etc/fdfs/tracker.conf restart
 #in Linux, you can start fdfs_trackerd as a service:
 /sbin/service fdfs_trackerd start
 
 #start the storage server:
-/usr/local/bin/fdfs_storaged /etc/fdfs/storage.conf
+/usr/local/bin/fdfs_storaged /etc/fdfs/storage.conf restart
 #in Linux, you can start fdfs_storaged as a service:
 /sbin/service fdfs_storaged start
 

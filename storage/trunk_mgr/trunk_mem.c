@@ -525,6 +525,8 @@ static int storage_trunk_save()
 	}
 
 	g_trunk_last_compress_time = g_current_time;
+	storage_write_to_sync_ini_file();
+
 	logInfo("compress trunk binlog done.");
 	return trunk_unlink_all_mark_files();  //because the binlog file be compressed
 }
