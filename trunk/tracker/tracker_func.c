@@ -558,6 +558,9 @@ int tracker_load_from_conf_file(const char *filename, \
 		{
 			return result;
 		}
+		g_trunk_compress_binlog_min_interval = iniGetIntValue(NULL, \
+				"trunk_compress_binlog_min_interval", \
+				&iniContext, 0);
 
 		g_trunk_init_check_occupying = iniGetBoolValue(NULL, \
 			"trunk_init_check_occupying", &iniContext, false);
@@ -682,6 +685,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			"trunk_create_file_space_threshold=%d GB, " \
 			"trunk_init_check_occupying=%d, " \
 			"trunk_init_reload_from_binlog=%d, " \
+			"trunk_compress_binlog_min_interval=%d, " \
 			"use_storage_id=%d, " \
 			"id_type_in_filename=%s, " \
 			"storage_id_count=%d, " \
@@ -716,6 +720,7 @@ int tracker_load_from_conf_file(const char *filename, \
 			(int)(g_trunk_create_file_space_threshold / \
 			(FDFS_ONE_MB * 1024)), g_trunk_init_check_occupying, \
 			g_trunk_init_reload_from_binlog, \
+			g_trunk_compress_binlog_min_interval, \
 			g_use_storage_id, g_id_type_in_filename == \
 			FDFS_ID_TYPE_SERVER_ID ? "id" : "ip", g_storage_id_count, \
 			g_rotate_error_log, g_error_log_rotate_time.hour, \

@@ -184,27 +184,11 @@ int trunk_sync_init()
 
 int trunk_sync_destroy()
 {
-	int result;
-
 	if (trunk_binlog_fd >= 0)
 	{
 		trunk_binlog_fsync(true);
 		close(trunk_binlog_fd);
 		trunk_binlog_fd = -1;
-	}
-
-	if (trunk_binlog_write_cache_buff != NULL)
-	{
-		free(trunk_binlog_write_cache_buff);
-		trunk_binlog_write_cache_buff = NULL;
-		if ((result=pthread_mutex_destroy(&trunk_sync_thread_lock)) != 0)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"call pthread_mutex_destroy fail, " \
-				"errno: %d, error info: %s", \
-				__LINE__, result, STRERROR(result));
-			return result;
-		}
 	}
 
 	return 0;
