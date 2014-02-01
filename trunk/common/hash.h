@@ -10,6 +10,7 @@
 #define _HASH_H_
 
 #include <sys/types.h>
+#include <pthread.h>
 #include "common_define.h"
 
 #ifdef __cplusplus
@@ -53,6 +54,9 @@ typedef struct tagHashData
 	char key[0];
 } HashData;
 
+typedef int64_t (*ConvertValueFunc)(const HashData *old_data, const int inc,
+	char *new_value, int *new_value_len, void *arg);
+
 typedef struct tagHashArray
 {
 	HashData **buckets;
@@ -64,6 +68,8 @@ typedef struct tagHashArray
 	int64_t bytes_used;
 	bool is_malloc_capacity;
 	bool is_malloc_value;
+	unsigned int lock_count;
+	pthread_mutex_t *locks;
 } HashArray;
 
 typedef struct tagHashStat
@@ -89,7 +95,7 @@ typedef int (*HashWalkFunc)(const int index, const HashData *data, void *args);
 	hash_init_ex(pHash, hash_func, capacity, load_factor, 0, false)
 
 #define hash_insert(pHash, key, key_len, value) \
-	hash_insert_ex(pHash, key, key_len, value, 0)
+	hash_insert_ex(pHash, key, key_len, value, 0, true)
 
 /**
  * hash init function
@@ -107,6 +113,49 @@ int hash_init_ex(HashArray *pHash, HashFunc hash_func, \
 		const int64_t max_bytes, const bool bMallocValue);
 
 /**
+ * set hash locks function
+ * parameters:
+ *         lock_count: the lock count
+ * return 0 for success, != 0 for error
+*/
+int hash_set_locks(HashArray *pHash, const int lock_count);
+
+/**
+ * convert the value
+ * parameters:
+ *         HashData: the old hash data
+ *         inc: the increasement value
+ *         new_value: return the new value
+ *         new_value_len: return the length of the new value
+ *         arg: the user data
+ * return the number after increasement
+*/
+int64_t hash_inc_value(const HashData *old_data, const int inc,
+	char *new_value, int *new_value_len, void *arg);
+
+#define hash_inc(pHash, key, key_len, inc, value, value_len) \
+	hash_inc_ex(pHash, key, key_len, inc, value, value_len, \
+		hash_inc_value, NULL)
+
+/**
+ * atomic increase value
+ * parameters:
+ *         pHash: the hash table
+ *         key: the key to insert
+ *         key_len: length of th key 
+ *         inc: the increasement value
+ *         value: return the new value
+ *         value_len: return the length of the new value
+ *         convert_func: the convert function
+ *         arg: the arg to convert function
+ * return  0 for success, != 0 for error (errno)
+ *
+*/
+int  hash_inc_ex(HashArray *pHash, const void *key, const int key_len,
+		const int inc, char *value, int *value_len,
+		ConvertValueFunc convert_func, void *arg);
+
+/**
  * hash destroy function
  * parameters:
  *         pHash: the hash table
@@ -122,11 +171,12 @@ void hash_destroy(HashArray *pHash);
  *         key_len: length of th key 
  *         value: the value
  *         value_len: length of the value
+ *         needLock: if need lock
  * return >= 0 for success, 0 for key already exist (update), 
  *        1 for new key (insert), < 0 for error
 */
 int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
-		void *value, const int value_len);
+		void *value, const int value_len, const bool needLock);
 
 /**
  * hash find key
@@ -147,6 +197,21 @@ void *hash_find(HashArray *pHash, const void *key, const int key_len);
  * return hash data, return NULL when the key not exist
 */
 HashData *hash_find_ex(HashArray *pHash, const void *key, const int key_len);
+
+
+/**
+ * hash get the value of the key
+ * parameters:
+ *         pHash: the hash table
+ *         key: the key to find
+ *         key_len: length of th key
+ *         value: store the value
+ *         value_len: input for the max size of the value
+ *                    output for the length fo the value
+ * return 0 for success, != 0 fail (errno)
+*/
+int hash_get(HashArray *pHash, const void *key, const int key_len,
+	void *value, int *value_len);
 
 /**
  * hash delete key
@@ -207,6 +272,24 @@ int hash_stat(HashArray *pHash, HashStat *pStat, \
  * return none
 */
 void hash_stat_print(HashArray *pHash);
+
+/**
+ * lock the bucket of hash table
+ * parameters:
+ *         pHash: the hash table
+ *         bucket_index: the index of bucket
+ * return 0 for success, != 0 fail (errno)
+*/
+int hash_bucket_lock(HashArray *pHash, const unsigned int bucket_index);
+
+/**
+ * unlock the bucket of hash table
+ * parameters:
+ *         pHash: the hash table
+ *         bucket_index: the index of bucket
+ * return 0 for success, != 0 fail (errno)
+*/
+int hash_bucket_unlock(HashArray *pHash, const unsigned int bucket_index);
 
 int RSHash(const void *key, const int key_len);
 

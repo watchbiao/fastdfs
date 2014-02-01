@@ -4,6 +4,8 @@ Version 5.01  2014-02-01
  * bug fixed: sync trunk binlog file to other storage servers immediately when
    the trunk server init done
  * move ioevent_loop.[hc] and fast_task_queue.[hc] from tracker/ to common/
+ * hash table support locks
+ * hash talbe support new functions: hash_inc and hash_inc_ex
 
 Version 5.00  2013-12-23
  * discard libevent, use epoll in Linux, kqueue in FreeBSD, port in SunOS directly
