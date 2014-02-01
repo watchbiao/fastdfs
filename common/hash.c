@@ -768,7 +768,7 @@ int64_t hash_inc_value(const HashData *old_data, const int inc,
 	return n;
 }
 
-int  hash_inc_ex(HashArray *pHash, const void *key, const int key_len,
+int hash_inc_ex(HashArray *pHash, const void *key, const int key_len,
 		const int inc, char *value, int *value_len,
 		ConvertValueFunc convert_func, void *arg)
 {
@@ -816,6 +816,77 @@ int  hash_inc_ex(HashArray *pHash, const void *key, const int key_len,
 	}
 	HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
 
+	return result;
+}
+
+int hash_partial_set(HashArray *pHash, const void *key, const int key_len,
+		const char *value, const int offset, const int value_len)
+{
+	unsigned int hash_code;
+	int result;
+	HashData **ppBucket;
+	HashData *hash_data;
+	char *pNewBuff;
+
+	hash_code = pHash->hash_func(key, key_len);
+	ppBucket = pHash->buckets + (hash_code % (*pHash->capacity));
+
+	HASH_LOCK(pHash, ppBucket - pHash->buckets)
+	hash_data = _chain_find_entry(ppBucket, key, key_len, hash_code);
+	do
+	{
+		if (hash_data != NULL)
+		{
+			if (offset < 0 || offset >= hash_data->value_len)
+			{
+				result = EINVAL;
+				break;
+			}
+			if (offset + value_len <= hash_data->value_len)
+			{
+				memcpy(hash_data->value+offset, value, value_len);
+				result = 0;
+				break;
+			}
+
+			pNewBuff = (char *)malloc(offset + value_len);
+			if (pNewBuff == NULL)
+			{
+				result = errno != 0 ? errno : ENOMEM;
+				break;
+			}
+
+			if (offset > 0)
+			{
+				memcpy(pNewBuff, hash_data->value, offset);
+			}
+			memcpy(pNewBuff + offset, value, value_len);
+			result = hash_insert_ex(pHash, key, key_len, pNewBuff,
+				offset + value_len, false);
+			free(pNewBuff);
+		}
+		else
+		{
+			if (offset != 0)
+			{
+				result = ENOENT;
+				break;
+			}
+			result = hash_insert_ex(pHash, key, key_len, (void *)value,
+				value_len, false);
+		}
+
+		if (result < 0)
+		{
+			result *= -1;
+		}
+		else
+		{
+			result = 0;
+		}
+	} while (0);
+
+	HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
 	return result;
 }
 

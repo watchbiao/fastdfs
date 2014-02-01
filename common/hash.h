@@ -213,6 +213,21 @@ HashData *hash_find_ex(HashArray *pHash, const void *key, const int key_len);
 int hash_get(HashArray *pHash, const void *key, const int key_len,
 	void *value, int *value_len);
 
+
+/**
+ * hash partial set 
+ * parameters:
+ *         pHash: the hash table
+ *         key: the key to insert
+ *         key_len: length of th key 
+ *         value: the value
+ *         offset: the offset of existed value
+ *         value_len: length of the value
+ * return 0 for success, != 0 fail (errno)
+*/
+int hash_partial_set(HashArray *pHash, const void *key, const int key_len,
+		const char *value, const int offset, const int value_len);
+
 /**
  * hash delete key
  * parameters:
