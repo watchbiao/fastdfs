@@ -222,7 +222,8 @@ static int storage_nio_init(struct fast_task_info *pTask)
 
 	pClientInfo->stage = FDFS_STORAGE_STAGE_NIO_RECV;
 	return ioevent_set(pTask, &pThreadData->thread_data,
-			pTask->event.fd, IOEVENT_READ, client_sock_read);
+			pTask->event.fd, IOEVENT_READ, client_sock_read,
+			g_fdfs_network_timeout);
 }
 
 int storage_send_add_event(struct fast_task_info *pTask)

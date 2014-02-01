@@ -1,4 +1,3 @@
-#include "fdfs_global.h"
 #include "sched_thread.h"
 #include "logger.h"
 #include "ioevent_loop.h"
@@ -116,7 +115,7 @@ int ioevent_loop(struct nio_thread_data *pThreadData,
 }
 
 int ioevent_set(struct fast_task_info *pTask, struct nio_thread_data *pThread,
-	int sock, short event, IOEventCallback callback)
+	int sock, short event, IOEventCallback callback, const int timeout)
 {
 	int result;
 
@@ -135,7 +134,7 @@ int ioevent_set(struct fast_task_info *pTask, struct nio_thread_data *pThread,
 	}
 
 	pTask->event.timer.data = pTask;
-	pTask->event.timer.expires = g_current_time + g_fdfs_network_timeout;
+	pTask->event.timer.expires = g_current_time + timeout;
 	result = fast_timer_add(&pThread->timer, &pTask->event.timer);
 	if (result != 0)
 	{

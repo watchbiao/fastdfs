@@ -8,8 +8,8 @@
 
 //fast_task_queue.h
 
-#ifndef _TASK_QUEUE_H
-#define _TASK_QUEUE_H 
+#ifndef _FAST_TASK_QUEUE_H
+#define _FAST_TASK_QUEUE_H 
 
 #include <stdio.h>
 #include <stdlib.h>
