@@ -6,11 +6,12 @@
 * Please visit the FastDFS Home Page http://www.csource.org/ for more detail.
 **/
 
-#include "hash.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include "pthread_func.h"
+#include "hash.h"
 
 static unsigned int prime_array[] = {
     1,              /* 0 */
@@ -47,7 +48,7 @@ static unsigned int prime_array[] = {
 
 #define PRIME_ARRAY_SIZE  30
 
-int _hash_alloc_buckets(HashArray *pHash, const unsigned int old_capacity)
+static int _hash_alloc_buckets(HashArray *pHash, const unsigned int old_capacity)
 {
 	size_t bytes;
 
@@ -102,13 +103,51 @@ int hash_init_ex(HashArray *pHash, HashFunc hash_func, \
 	pHash->max_bytes = max_bytes;
 	pHash->is_malloc_value = bMallocValue;
 
-	if (load_factor >= 0.10 && load_factor <= 1.00)
+	if (load_factor >= 0.00 && load_factor <= 1.00)
 	{
 		pHash->load_factor = load_factor;
 	}
 	else
 	{
 		pHash->load_factor = 0.50;
+	}
+
+	return 0;
+}
+
+int hash_set_locks(HashArray *pHash, const int lock_count)
+{
+	size_t bytes;
+	pthread_mutex_t *lock;
+	pthread_mutex_t *lock_end;
+
+	if (pHash->locks != NULL)
+	{
+		return EEXIST;
+	}
+
+	if (lock_count <= 0)
+	{
+		return EINVAL;
+	}
+
+	if (pHash->load_factor >= 0.10)
+	{
+		return EINVAL;
+	}
+
+	bytes = sizeof(pthread_mutex_t) * lock_count;
+	pHash->locks = (pthread_mutex_t *)malloc(bytes);
+	if (pHash->locks == NULL)
+	{
+		return ENOMEM;
+	}
+
+	pHash->lock_count = lock_count;
+	lock_end = pHash->locks + lock_count;
+	for (lock=pHash->locks; lock<lock_end; lock++)
+	{
+		init_pthread_lock(lock);
 	}
 
 	return 0;
@@ -170,6 +209,18 @@ void hash_destroy(HashArray *pHash)
 	pHash->bytes_used -= CALC_NODE_MALLOC_BYTES(hash_data->key_len, \
 				hash_data->malloc_value_size); \
 	free(hash_data);
+
+#define HASH_LOCK(pHash, index) \
+	if (pHash->lock_count > 0) \
+	{ \
+		pthread_mutex_lock(pHash->locks + (index) % pHash->lock_count); \
+	}
+
+#define HASH_UNLOCK(pHash, index) \
+	if (pHash->lock_count > 0) \
+	{ \
+		pthread_mutex_unlock(pHash->locks + (index) % pHash->lock_count); \
+	}
 
 
 int hash_stat(HashArray *pHash, HashStat *pStat, \
@@ -354,7 +405,7 @@ static int _rehash(HashArray *pHash)
 	return result;
 }
 
-int _hash_conflict_count(HashArray *pHash)
+static int _hash_conflict_count(HashArray *pHash)
 {
 	HashData **ppBucket;
 	HashData **bucket_end;
@@ -488,11 +539,16 @@ HashData *hash_find_ex(HashArray *pHash, const void *key, const int key_len)
 {
 	unsigned int hash_code;
 	HashData **ppBucket;
+	HashData *hash_data;
 
 	hash_code = pHash->hash_func(key, key_len);
 	ppBucket = pHash->buckets + (hash_code % (*pHash->capacity));
 
-	return _chain_find_entry(ppBucket, key, key_len, hash_code);
+	HASH_LOCK(pHash, ppBucket - pHash->buckets)
+	hash_data = _chain_find_entry(ppBucket, key, key_len, hash_code);
+	HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
+
+	return hash_data;
 }
 
 void *hash_find(HashArray *pHash, const void *key, const int key_len)
@@ -504,7 +560,10 @@ void *hash_find(HashArray *pHash, const void *key, const int key_len)
 	hash_code = pHash->hash_func(key, key_len);
 	ppBucket = pHash->buckets + (hash_code % (*pHash->capacity));
 
+	HASH_LOCK(pHash, ppBucket - pHash->buckets)
 	hash_data = _chain_find_entry(ppBucket, key, key_len, hash_code);
+	HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
+
 	if (hash_data != NULL)
 	{
 		return hash_data->value;
@@ -515,8 +574,42 @@ void *hash_find(HashArray *pHash, const void *key, const int key_len)
 	}
 }
 
+int hash_get(HashArray *pHash, const void *key, const int key_len,
+	void *value, int *value_len)
+{
+	unsigned int hash_code;
+	int result;
+	HashData **ppBucket;
+	HashData *hash_data;
+
+	hash_code = pHash->hash_func(key, key_len);
+	ppBucket = pHash->buckets + (hash_code % (*pHash->capacity));
+
+	HASH_LOCK(pHash, ppBucket - pHash->buckets)
+	hash_data = _chain_find_entry(ppBucket, key, key_len, hash_code);
+	if (hash_data != NULL)
+	{
+		if (hash_data->value_len <= *value_len)
+		{
+			*value_len = hash_data->value_len;
+			memcpy(value, hash_data->value, hash_data->value_len);
+			result = 0;
+		}
+		else
+		{
+			result = ENOSPC;
+		}
+	}
+	else
+	{
+		result = ENOENT;
+	}
+	HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
+	return result;
+}
+
 int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
-		void *value, const int value_len)
+		void *value, const int value_len, const bool needLock)
 {
 	unsigned int hash_code;
 	HashData **ppBucket;
@@ -530,6 +623,12 @@ int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
 	ppBucket = pHash->buckets + (hash_code % (*pHash->capacity));
 
 	previous = NULL;
+
+	if (needLock)
+	{
+		HASH_LOCK(pHash, ppBucket - pHash->buckets)
+	}
+
 	hash_data = *ppBucket;
 	while (hash_data != NULL)
 	{
@@ -549,20 +648,33 @@ int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
 		{
 			hash_data->value_len = value_len;
 			hash_data->value = (char *)value;
+			if (needLock)
+			{
+				HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
+			}
 			return 0;
 		}
 		else
 		{
 			if (hash_data->malloc_value_size >= value_len && \
-				hash_data->malloc_value_size / 2 < value_len)
+				(hash_data->malloc_value_size <= 128 ||
+				 hash_data->malloc_value_size / 2 < value_len))
 			{
 				hash_data->value_len = value_len;
 				memcpy(hash_data->value, value, value_len);
+				if (needLock)
+				{
+					HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
+				}
 				return 0;
 			}
 
 			DELETE_FROM_BUCKET(pHash, ppBucket, previous, hash_data)
 		}
+	}
+	if (needLock)
+	{
+		HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
 	}
 
 	if (!pHash->is_malloc_value)
@@ -571,7 +683,7 @@ int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
 	}
 	else
 	{
-		malloc_value_size = value_len;
+		malloc_value_size = MEM_ALIGN(value_len);
 	}
 
 	bytes = CALC_NODE_MALLOC_BYTES(key_len, malloc_value_size);
@@ -608,15 +720,103 @@ int hash_insert_ex(HashArray *pHash, const void *key, const int key_len, \
 		memcpy(hash_data->value, value, value_len);
 	}
 
-	ADD_TO_BUCKET(pHash, ppBucket, hash_data)
+	if (needLock)
+	{
+		HASH_LOCK(pHash, ppBucket - pHash->buckets)
+		ADD_TO_BUCKET(pHash, ppBucket, hash_data)
+		HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
+	}
+	else
+	{
+		ADD_TO_BUCKET(pHash, ppBucket, hash_data)
+	}
 
-	if ((double)pHash->item_count / (double)*pHash->capacity >= \
-		pHash->load_factor)
+	if (pHash->load_factor >= 0.10 && (double)pHash->item_count /
+		(double)*pHash->capacity >= pHash->load_factor)
 	{
 		_rehash(pHash);
 	}
 
 	return 1;
+}
+
+int64_t hash_inc_value(const HashData *old_data, const int inc,
+	char *new_value, int *new_value_len, void *arg)
+{
+	int64_t n;
+	if (old_data != NULL)
+	{
+		if (old_data->value_len < *new_value_len)
+		{
+			memcpy(new_value, old_data->value, old_data->value_len);
+                        new_value[old_data->value_len] = '\0';
+                        n = strtoll(new_value, NULL, 10);
+                        n += inc;
+		}
+		else
+		{
+			n = inc;
+		}
+		*new_value_len = sprintf(new_value, INT64_PRINTF_FORMAT, n);
+	}
+	else
+	{
+		n = inc;
+		*new_value_len = sprintf(new_value, INT64_PRINTF_FORMAT, n);
+	}
+
+	return n;
+}
+
+int  hash_inc_ex(HashArray *pHash, const void *key, const int key_len,
+		const int inc, char *value, int *value_len,
+		ConvertValueFunc convert_func, void *arg)
+{
+	unsigned int hash_code;
+	int result;
+	HashData **ppBucket;
+	HashData *hash_data;
+
+	hash_code = pHash->hash_func(key, key_len);
+	ppBucket = pHash->buckets + (hash_code % (*pHash->capacity));
+
+	HASH_LOCK(pHash, ppBucket - pHash->buckets)
+	hash_data = _chain_find_entry(ppBucket, key, key_len, hash_code);
+	convert_func(hash_data, inc, value, value_len, arg);
+	if (hash_data != NULL)
+	{
+		if (!pHash->is_malloc_value)
+		{
+			hash_data->value_len = *value_len;
+			hash_data->value = (char *)value;
+			HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
+			return 0;
+		}
+		else
+		{
+			if (hash_data->malloc_value_size >= *value_len)
+			{
+				hash_data->value_len = *value_len;
+				memcpy(hash_data->value, value, *value_len);
+				HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
+				return 0;
+			}
+		}
+	}
+	result = hash_insert_ex(pHash, key, key_len, value, *value_len, false);
+	if (result < 0)
+	{
+		*value = '\0';
+		*value_len = 0;
+		result *= -1;
+	}
+	else
+	{
+		result = 0;
+	}
+	HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
+
+	return result;
 }
 
 int hash_delete(HashArray *pHash, const void *key, const int key_len)
@@ -625,11 +825,14 @@ int hash_delete(HashArray *pHash, const void *key, const int key_len)
 	HashData *hash_data;
 	HashData *previous;
 	unsigned int hash_code;
+	int result;
 
 	hash_code = pHash->hash_func(key, key_len);
 	ppBucket = pHash->buckets + (hash_code % (*pHash->capacity));
 
+	result = ENOENT;
 	previous = NULL;
+	HASH_LOCK(pHash, ppBucket - pHash->buckets)
 	hash_data = *ppBucket;
 	while (hash_data != NULL)
 	{
@@ -637,14 +840,16 @@ int hash_delete(HashArray *pHash, const void *key, const int key_len)
 			memcmp(key, hash_data->key, key_len) == 0)
 		{
 			DELETE_FROM_BUCKET(pHash, ppBucket, previous, hash_data)
-			return 0;
+			result = 0;
+			break;
 		}
 
 		previous = hash_data;
 		hash_data = hash_data->next;
 	}
+	HASH_UNLOCK(pHash, ppBucket - pHash->buckets)
 
-	return ENOENT;
+	return result;
 }
 
 int hash_walk(HashArray *pHash, HashWalkFunc walkFunc, void *args)
@@ -681,7 +886,28 @@ int hash_count(HashArray *pHash)
 	return pHash->item_count;
 }
 
-// RS Hash Function
+int hash_bucket_lock(HashArray *pHash, const unsigned int bucket_index)
+{
+	if (pHash->lock_count <= 0)
+	{
+		return 0;
+	}
+
+	return pthread_mutex_lock(pHash->locks + bucket_index %
+			pHash->lock_count);
+}
+
+int hash_bucket_unlock(HashArray *pHash, const unsigned int bucket_index)
+{
+	if (pHash->lock_count <= 0)
+	{
+		return 0;
+	}
+
+	return pthread_mutex_unlock(pHash->locks + bucket_index %
+			pHash->lock_count);
+}
+
 // RS Hash Function
 int RSHash(const void *key, const int key_len)
 {
