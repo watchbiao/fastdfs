@@ -176,7 +176,8 @@ int free_queue_init(const int max_connections, const int min_buff_size, \
 			}
 		}
 
-		if (max_data_size >= (block_size + aligned_min_size) * 32)
+		if (max_data_size >= (int64_t)(block_size + aligned_min_size) *
+			(int64_t)max_connections)
 		{
 			total_size = alloc_size + (int64_t)aligned_min_size *
 					max_connections;

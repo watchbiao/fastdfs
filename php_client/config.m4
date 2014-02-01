@@ -18,5 +18,5 @@ if test "$PHP_FASTDFS_CLIENT" != "no"; then
 
   PHP_NEW_EXTENSION(fastdfs_client, fastdfs_client.c, $ext_shared)
 
-  CFLAGS="$CFLAGS -Werror -Wall"
+  CFLAGS="$CFLAGS -Wall"
 fi

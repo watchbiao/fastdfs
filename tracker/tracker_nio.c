@@ -144,8 +144,8 @@ void recv_notify_read(int sock, short event, void *arg)
 		strcpy(pTask->client_ip, szClientIp);
 	
 		pThreadData = g_thread_data + incomesock % g_work_threads;
-		if (ioevent_set(pTask, pThreadData, incomesock,
-				IOEVENT_READ, client_sock_read) != 0)
+		if (ioevent_set(pTask, pThreadData, incomesock, IOEVENT_READ,
+			client_sock_read, g_fdfs_network_timeout) != 0)
 		{
 			task_finish_clean_up(pTask);
 			continue;
