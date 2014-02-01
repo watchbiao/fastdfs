@@ -110,7 +110,7 @@ int load_mime_types_from_file(HashArray *pHash, const char *mime_filename)
 
 			if ((result=hash_insert_ex(pHash, ext_name, \
 				strlen(ext_name)+1, content_type, \
-				strlen(content_type)+1)) < 0)
+				strlen(content_type)+1, true)) < 0)
 			{
 				free(content);
 				result *= -1;
