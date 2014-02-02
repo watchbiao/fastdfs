@@ -27,7 +27,7 @@ int process_restart(const char *pidFilename);
 
 int process_exist(const char *pidFilename);
 
-int proccess_action(const char *pidFilename, const char *action, bool *stop);
+int process_action(const char *pidFilename, const char *action, bool *stop);
 
 #ifdef __cplusplus
 }

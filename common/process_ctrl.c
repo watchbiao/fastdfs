@@ -204,7 +204,7 @@ int get_base_path_from_conf_file(const char *filename, char *base_path,
 	return result;
 }
 
-int proccess_action(const char *pidFilename, const char *action, bool *stop)
+int process_action(const char *pidFilename, const char *action, bool *stop)
 {
 	*stop = false;
 	if (action == NULL)

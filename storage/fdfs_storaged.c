@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 
 	snprintf(pidFilename, sizeof(pidFilename),
 		"%s/data/fdfs_storaged.pid", g_fdfs_base_path);
-	if ((result=proccess_action(pidFilename, argv[2], &stop)) != 0)
+	if ((result=process_action(pidFilename, argv[2], &stop)) != 0)
 	{
 		if (result == EINVAL)
 		{
