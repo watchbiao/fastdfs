@@ -1,4 +1,7 @@
 
+Version 5.02  2014-03-14
+ * corect README spell mistake
+
 Version 5.01  2014-02-02
  * trunk binlog be compressed when trunk init
  * bug fixed: sync trunk binlog file to other storage servers immediately when
